@@ -1,0 +1,67 @@
+{
+  "configVersion": "v3",
+  "app": {
+    "appType": "app",
+    "version": {
+      "code": 1,
+      "name": "1.0.0"
+    },
+    "appId": 20002,
+    "appName": "Aibolit",
+    "icon": "icon.png",
+    "vender": "your-vender",
+    "description": "Medication reminder app"
+  },
+  "runtime": {
+    "apiVersion": {
+      "compatible": "4.2",
+      "target": "4.2",
+      "minVersion": "4.2"
+    }
+  },
+  "targets": {
+    "common": {
+      "module": {
+        "page": {
+          "pages": [
+            "page/home/index",
+            "page/plan/index",
+            "page/snooze/index"
+          ]
+        },
+        "app-side": {
+          "path": "app-side/index"
+        },
+        "setting": {
+          "path": "setting/index"
+        },
+        "app-service": {
+          "services": [
+            "app-service/reminder",
+            "app-service/take",
+            "app-service/snooze-handler"
+          ]
+        }
+      },
+      "platforms": [
+        {
+          "st": "r"
+        }
+      ],
+      "designWidth": 480
+    }
+  },
+  "permissions": [
+    "device:os.alarm",
+    "device:os.notification",
+    "device:os.local_storage",
+    "device:os.bg_service"
+  ],
+  "i18n": {
+    "ru-RU": {
+      "name": "Aibolit"
+    }
+  },
+  "defaultLanguage": "ru-RU",
+  "debug": false
+}

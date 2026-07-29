@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "es2015",
+    "baseUrl": "./",
+    "checkJs": false
+  },
+  "include": [
+    "**/*.js",
+    "global.d.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

@@ -1,0 +1,76 @@
+msgid ""
+msgstr ""
+"Language: ru\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "medication_list"
+msgstr "Лекарства"
+
+msgid "add_medication"
+msgstr "Добавить лекарство"
+
+msgid "edit_medication"
+msgstr "Редактировать лекарство"
+
+msgid "medication_name"
+msgstr "Название"
+
+msgid "dosage"
+msgstr "Дозировка"
+
+msgid "comments"
+msgstr "Комментарии"
+
+msgid "enabled"
+msgstr "Активно"
+
+msgid "schedule"
+msgstr "Расписание"
+
+msgid "add_slot"
+msgstr "Добавить время"
+
+msgid "time"
+msgstr "Время"
+
+msgid "weekdays"
+msgstr "Дни недели"
+
+msgid "every_day"
+msgstr "Каждый день"
+
+msgid "label"
+msgstr "Метка"
+
+msgid "history"
+msgstr "История"
+
+msgid "settings"
+msgstr "Настройки"
+
+msgid "retry_interval"
+msgstr "Интервал повтора (мин)"
+
+msgid "sync_interval"
+msgstr "Интервал синхронизации (мин)"
+
+msgid "snooze_options"
+msgstr "Варианты отложки (мин)"
+
+msgid "save"
+msgstr "Сохранить"
+
+msgid "delete"
+msgstr "Удалить"
+
+msgid "cancel"
+msgstr "Отмена"
+
+msgid "taken"
+msgstr "Принято"
+
+msgid "cancelled"
+msgstr "Отменено"
+
+msgid "no_data"
+msgstr "Нет данных"

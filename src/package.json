@@ -1,0 +1,15 @@
+{
+  "name": "medication-reminder",
+  "version": "1.0.0",
+  "description": "Medication reminder for Amazfit Balance 2",
+  "main": "app.js",
+  "scripts": {},
+  "author": "",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@zeppos/device-types": "^3.0.0"
+  },
+  "dependencies": {
+    "@zeppos/zml": "^0.0.38"
+  }
+}
