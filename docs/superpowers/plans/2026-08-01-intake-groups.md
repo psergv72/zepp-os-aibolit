@@ -699,8 +699,7 @@ git commit -m "refactor: services operate on intake groups"
 import { log as Logger } from '@zos/utils'
 import { createWidget, widget, align, text_style } from '@zos/ui'
 import { push as routerPush } from '@zos/router'
-import { getSettings, getIntakes, addTakeLog, getTodayDateStr } from '../../utils/storage'
-import { INTAKE_STATUS } from '../../utils/constants'
+import { getSettings, getIntakes } from '../../utils/storage'
 
 const logger = Logger.getLogger('aibolit-snooze-page')
 
@@ -833,20 +832,6 @@ Page({
 
   confirmSnooze(delayMinutes) {
     const intakeId = this.state.intakeId
-    const intake = this.state.intake
-
-    const todayDateStr = getTodayDateStr()
-    const now = new Date()
-    const record = {
-      id: 'snooze_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
-      intakeId: intakeId,
-      date: todayDateStr,
-      time: intake ? intake.time : '',
-      takenTime: String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0'),
-      status: INTAKE_STATUS.SNOOZED,
-      items: intake ? (intake.items || []).map(item => ({ ...item })) : [],
-    }
-    addTakeLog(record)
 
     const param = JSON.stringify({
       intakeId: intakeId,
