@@ -1,18 +1,14 @@
 import { log as Logger } from '@zos/utils'
 import { createWidget, widget, align, text_style } from '@zos/ui'
 import { push as routerPush } from '@zos/router'
-import { getSettings } from '../../utils/storage'
-import { addIntake, getTodayDateStr } from '../../utils/storage'
-import { INTAKE_STATUS } from '../../utils/constants'
+import { getSettings, getIntakes } from '../../utils/storage'
 
 const logger = Logger.getLogger('aibolit-snooze-page')
 
 Page({
   state: {
-    slotId: null,
-    medicationId: null,
-    medicationName: '',
-    dosage: '',
+    intakeId: null,
+    intake: null,
   },
 
   build() {
@@ -30,10 +26,8 @@ Page({
       return
     }
 
-    this.state.slotId = parsed.slotId
-    this.state.medicationId = parsed.medicationId
-    this.state.medicationName = parsed.medicationName || ''
-    this.state.dosage = parsed.dosage || ''
+    this.state.intakeId = parsed.intakeId
+    this.state.intake = getIntakes().find(i => i.id === parsed.intakeId) || null
 
     this.renderSnoozeOptions()
   },
@@ -46,6 +40,7 @@ Page({
     const screenWidth = 480
     const settings = getSettings()
     const options = settings.snoozeOptions || [30, 45, 60, 90]
+    const intake = this.state.intake
     let y = 40
 
     createWidget(widget.TEXT, {
@@ -58,7 +53,7 @@ Page({
       align_h: align.CENTER_H,
       align_v: align.CENTER_V,
       text_style: text_style.NONE,
-      text: this.state.medicationName + ' ' + this.state.dosage,
+      text: intake ? (intake.label || intake.time) : '',
     })
     y += 45
 
@@ -138,29 +133,10 @@ Page({
   },
 
   confirmSnooze(delayMinutes) {
-    const slotId = this.state.slotId
-    const medicationId = this.state.medicationId
-    const medicationName = this.state.medicationName
-    const dosage = this.state.dosage
-
-    const todayDateStr = getTodayDateStr()
-    const now = new Date()
-    const record = {
-      id: 'snooze_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
-      medicationId: medicationId || '',
-      scheduleId: slotId,
-      date: todayDateStr,
-      scheduledTime: '',
-      takenTime: String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0'),
-      status: INTAKE_STATUS.SNOOZED,
-    }
-    addIntake(record)
+    const intakeId = this.state.intakeId
 
     const param = JSON.stringify({
-      slotId: slotId,
-      medicationId: medicationId,
-      medicationName: medicationName,
-      dosage: dosage,
+      intakeId: intakeId,
       delayMinutes: delayMinutes,
     })
 
