@@ -1,7 +1,7 @@
 import { log as Logger } from '@zos/utils'
 import { createWidget, widget, align, text_style } from '@zos/ui'
 import { push as routerPush } from '@zos/router'
-import { getSettings, getIntakes } from '../../utils/storage'
+import { getSettings, getIntakes, getMedications } from '../../utils/storage'
 
 const logger = Logger.getLogger('aibolit-snooze-page')
 
@@ -43,6 +43,18 @@ Page({
     const intake = this.state.intake
     let y = 40
 
+    const medications = getMedications()
+    const medMap = {}
+    for (const med of medications) medMap[med.id] = med
+
+    const itemsText = (intake && intake.items ? intake.items : [])
+      .map(item => {
+        const med = medMap[item.medicationId]
+        return med ? med.name + ' \u00d7 ' + (item.amount || '') : null
+      })
+      .filter(Boolean)
+      .join(', ')
+
     createWidget(widget.TEXT, {
       x: 0,
       y: y,
@@ -56,6 +68,22 @@ Page({
       text: intake ? (intake.label || intake.time) : '',
     })
     y += 45
+
+    if (itemsText) {
+      createWidget(widget.TEXT, {
+        x: 0,
+        y: y,
+        w: screenWidth,
+        h: 24,
+        color: 0x888888,
+        text_size: 14,
+        align_h: align.CENTER_H,
+        align_v: align.CENTER_V,
+        text_style: text_style.NONE,
+        text: itemsText,
+      })
+      y += 28
+    }
 
     createWidget(widget.TEXT, {
       x: 0,
