@@ -1,6 +1,6 @@
 const STORAGE_KEYS = {
   medications: 'medications',
-  schedule: 'schedule',
+  intakes: 'intakes',
   settings: 'settings',
 }
 
@@ -46,7 +46,9 @@ AppSettingsPage({
     props: null,
     page: 'list',
     editDraft: null,
-    slotDraft: null,
+    intakeDraft: null,
+    itemDraft: null,
+    editingItemIndex: -1,
     viewHistoryDate: null,
     settingsDraft: null,
   },
@@ -72,12 +74,12 @@ AppSettingsPage({
     this.setItem(STORAGE_KEYS.medications, meds)
   },
 
-  getSchedule() {
-    return this.getItem(STORAGE_KEYS.schedule, [])
+  getIntakes() {
+    return this.getItem(STORAGE_KEYS.intakes, [])
   },
 
-  setSchedule(sched) {
-    this.setItem(STORAGE_KEYS.schedule, sched)
+  setIntakes(intakes) {
+    this.setItem(STORAGE_KEYS.intakes, intakes)
   },
 
   getAppSettings() {
@@ -103,15 +105,17 @@ AppSettingsPage({
       this.state.editDraft = params && params.medication
         ? { ...params.medication }
         : { name: '', dosage: '', comments: '', enabled: true, id: null }
-    } else if (page === 'slotEdit') {
-      this.state.slotDraft = params && params.slot
-        ? { ...params.slot }
-        : {
-            medicationId: this.state.editDraft ? this.state.editDraft.id : null,
-            time: '08:00',
-            weekDays: null,
-            label: '',
-          }
+    } else if (page === 'intakeEdit') {
+      this.state.intakeDraft = params && params.intake
+        ? { ...params.intake, items: (params.intake.items || []).map(i => ({ ...i })) }
+        : { time: '08:00', weekDays: null, label: '', items: [], id: null }
+    } else if (page === 'itemEdit') {
+      const draft = this.state.intakeDraft
+      const index = params && params.index !== undefined ? params.index : -1
+      this.state.editingItemIndex = index
+      this.state.itemDraft = index >= 0 && draft.items[index]
+        ? { ...draft.items[index] }
+        : { medicationId: null, amount: '' }
     } else if (page === 'history') {
       if (params && params.date !== undefined) this.state.viewHistoryDate = params.date
     } else if (page === 'settings') {
@@ -125,10 +129,12 @@ AppSettingsPage({
     switch (this.state.page) {
       case 'edit':
         return this.renderMedicationEdit()
-      case 'schedule':
-        return this.renderScheduleList()
-      case 'slotEdit':
-        return this.renderSlotEdit()
+      case 'intakes':
+        return this.renderIntakeList()
+      case 'intakeEdit':
+        return this.renderIntakeEdit()
+      case 'itemEdit':
+        return this.renderItemEdit()
       case 'history':
         return this.renderHistory()
       case 'settings':
@@ -142,17 +148,18 @@ AppSettingsPage({
 
   renderMedicationList() {
     const medications = this.getMedications()
-    const schedule = this.getSchedule()
+    const intakes = this.getIntakes()
 
     const rows = []
     for (const med of medications) {
-      const slotCount = schedule.filter(s => s.medicationId === med.id).length
+      const intakeCount = intakes.filter(x => (x.items || []).some(item => item.medicationId === med.id)).length
+      const subText = intakeCount > 0 ? 'в ' + intakeCount + ' приёмах' : ''
       rows.push(
         View(
           { style: S.row, onClick: () => this.navigateTo('edit', { medication: med }) },
           [
             Text({ style: S.rowTitle }, [med.name + ' (' + med.dosage + ')' + (!med.enabled ? ' [OFF]' : '')]),
-            Text({ style: S.rowSub }, [slotCount + ' приемов']),
+            subText ? Text({ style: S.rowSub }, [subText]) : null,
           ],
         ),
       )
@@ -164,7 +171,8 @@ AppSettingsPage({
     return View({ style: S.page }, [
       Text({ style: S.title, bold: true }, ['Лекарства']),
       ...rows,
-      Button({ label: '+ Добавить', color: 'primary', style: S.btn, onClick: () => this.navigateTo('edit', { medication: null }) }),
+      Button({ label: '+ Добавить лекарство', color: 'primary', style: S.btn, onClick: () => this.navigateTo('edit', { medication: null }) }),
+      Button({ label: 'Приёмы', color: 'default', style: S.btn, onClick: () => this.navigateTo('intakes') }),
       Button({ label: 'История', color: 'default', style: S.btn, onClick: () => this.navigateTo('history') }),
       Button({ label: 'Настройки', color: 'default', style: S.btn, onClick: () => this.navigateTo('settings') }),
     ])
@@ -200,55 +208,80 @@ AppSettingsPage({
           this.navigateTo('list')
         },
       }),
-      Button({ label: 'Расписание', color: 'default', style: S.btn, onClick: () => this.navigateTo('schedule') }),
       Button({ label: 'Назад', color: 'default', style: S.btn, onClick: () => this.navigateTo('list') }),
     ])
   },
 
-  // ── Schedule List Page ──
+  // ── Intake List Page ──
 
-  renderScheduleList() {
-    const medication = this.state.editDraft || { id: null }
-    const medicationId = medication.id
-    const slots = this.getSchedule().filter(s => s.medicationId === medicationId)
+  renderIntakeList() {
+    const intakes = this.getIntakes()
+    const medications = this.getMedications()
+    const medMap = {}
+    for (const med of medications) medMap[med.id] = med
 
     const rows = []
-    for (const slot of slots) {
-      const daysText = slot.weekDays && slot.weekDays.length
-        ? slot.weekDays.map(d => dayName(d)).join(', ')
+    for (const intake of intakes) {
+      const daysText = intake.weekDays && intake.weekDays.length
+        ? intake.weekDays.map(d => dayName(d)).join(', ')
         : 'Каждый день'
+      const itemsText = (intake.items || []).map(item => {
+        const med = medMap[item.medicationId]
+        const name = med ? med.name : '?'
+        return name + ' \u00d7 ' + (item.amount || '')
+      }).join(', ')
+
       rows.push(
         View(
-          { style: S.row, onClick: () => this.navigateTo('slotEdit', { slot }) },
+          { style: S.row, onClick: () => this.navigateTo('intakeEdit', { intake }) },
           [
-            Text({ style: S.rowTitle }, [(slot.label || slot.time) + ' — ' + slot.time]),
-            Text({ style: S.rowSub }, [daysText]),
+            Text({ style: S.rowTitle }, [(intake.label || intake.time) + ' — ' + intake.time]),
+            Text({ style: S.rowSub }, [daysText + (itemsText ? ' · ' + itemsText : '')]),
           ],
         ),
       )
     }
     if (rows.length === 0) {
-      rows.push(Text({ style: S.hint }, ['Нет времени приема']))
+      rows.push(Text({ style: S.hint }, ['Нет приёмов. Добавьте первый.']))
     }
 
     return View({ style: S.page }, [
-      Text({ style: S.title, bold: true }, ['Расписание']),
+      Text({ style: S.title, bold: true }, ['Приёмы']),
       ...rows,
-      Button({ label: '+ Добавить время', color: 'primary', style: S.btn, onClick: () => this.navigateTo('slotEdit', { slot: null }) }),
-      Button({ label: 'Назад', color: 'default', style: S.btn, onClick: () => this.navigateTo('edit', { medication }) }),
+      Button({ label: '+ Добавить приём', color: 'primary', style: S.btn, onClick: () => this.navigateTo('intakeEdit', { intake: null }) }),
+      Button({ label: 'Назад', color: 'default', style: S.btn, onClick: () => this.navigateTo('list') }),
     ])
   },
 
-  // ── Slot Edit Page ──
+  // ── Intake Edit Page ──
 
-  renderSlotEdit() {
-    const draft = this.state.slotDraft
+  renderIntakeEdit() {
+    const draft = this.state.intakeDraft
     const isNew = !draft.id
+    const medications = this.getMedications()
+    const medMap = {}
+    for (const med of medications) medMap[med.id] = med
     const everyDay = !draft.weekDays || draft.weekDays.length === 0
     const weekDaysValue = everyDay ? [] : draft.weekDays.map(d => String(d))
 
+    const itemRows = []
+    for (let i = 0; i < draft.items.length; i++) {
+      const item = draft.items[i]
+      const med = medMap[item.medicationId]
+      const name = med ? med.name : '?'
+      itemRows.push(
+        View(
+          { style: S.row, onClick: () => this.navigateTo('itemEdit', { index: i }) },
+          [Text({ style: S.rowTitle }, [name + ' \u00d7 ' + (item.amount || '')])],
+        ),
+      )
+    }
+    if (itemRows.length === 0) {
+      itemRows.push(Text({ style: S.hint }, ['Нет лекарств в приёме']))
+    }
+
     return View({ style: S.page }, [
-      Text({ style: S.title, bold: true }, [isNew ? 'Добавить время' : 'Редактировать время']),
+      Text({ style: S.title, bold: true }, [isNew ? 'Добавить приём' : 'Редактировать приём']),
       View({ style: S.field }, [TextInput({ label: 'Время', placeholder: 'ЧЧ:ММ', value: draft.time, onChange: v => { draft.time = v } })]),
       View({ style: S.field }, [TextInput({ label: 'Метка (утро/день/вечер)', placeholder: 'Метка', value: draft.label, onChange: v => { draft.label = v } })]),
       View({ style: S.field }, [Toggle({ label: 'Каждый день', value: everyDay, onChange: v => { draft.weekDays = v ? null : [] } })]),
@@ -265,22 +298,25 @@ AppSettingsPage({
           },
         }),
       ]),
+      Text({ style: S.title, bold: true }, ['Лекарства']),
+      ...itemRows,
+      Button({ label: '+ Добавить лекарство', color: 'primary', style: S.btn, onClick: () => this.navigateTo('itemEdit', { index: -1 }) }),
       Button({
         label: 'Сохранить',
         color: 'primary',
         style: S.btn,
         onClick: () => {
-          if (!draft.time || !draft.medicationId) return
-          const schedule = this.getSchedule()
+          if (!draft.time.trim() || draft.items.length === 0) return
+          const intakes = this.getIntakes()
           if (isNew) {
             draft.id = generateId()
-            schedule.push(draft)
+            intakes.push(draft)
           } else {
-            const idx = schedule.findIndex(s => s.id === draft.id)
-            if (idx >= 0) schedule[idx] = draft
+            const idx = intakes.findIndex(x => x.id === draft.id)
+            if (idx >= 0) intakes[idx] = draft
           }
-          this.setSchedule(schedule)
-          this.navigateTo('schedule')
+          this.setIntakes(intakes)
+          this.navigateTo('intakes')
         },
       }),
       !isNew && Button({
@@ -288,12 +324,85 @@ AppSettingsPage({
         color: 'default',
         style: S.btn,
         onClick: () => {
-          const schedule = this.getSchedule().filter(s => s.id !== draft.id)
-          this.setSchedule(schedule)
-          this.navigateTo('schedule')
+          const intakes = this.getIntakes().filter(x => x.id !== draft.id)
+          this.setIntakes(intakes)
+          this.navigateTo('intakes')
         },
       }),
-      Button({ label: 'Назад', color: 'default', style: S.btn, onClick: () => this.navigateTo('schedule') }),
+      Button({ label: 'Назад', color: 'default', style: S.btn, onClick: () => this.navigateTo('intakes') }),
+    ])
+  },
+
+  // ── Item Edit Page ──
+
+  renderItemEdit() {
+    const draft = this.state.itemDraft
+    const medications = this.getMedications()
+    const index = this.state.editingItemIndex
+    const isEditing = index >= 0
+
+    const options = medications.map(m => ({ name: m.name + (m.dosage ? ' (' + m.dosage + ')' : ''), value: m.id }))
+    const selectedValue = draft.medicationId ? [draft.medicationId] : []
+
+    const rows = []
+    if (medications.length === 0) {
+      rows.push(Text({ style: S.hint }, ['Нет лекарств. Сначала добавьте лекарство.']))
+    } else {
+      rows.push(
+        View({ style: S.field }, [
+          Select({
+            label: 'Лекарство',
+            title: 'Лекарство',
+            options: options,
+            value: selectedValue,
+            onChange: v => {
+              const arr = Array.isArray(v) ? v : [v]
+              draft.medicationId = arr[0] || null
+            },
+          }),
+        ]),
+      )
+      rows.push(
+        View({ style: S.field }, [
+          TextInput({ label: 'Количество', placeholder: '2 таблетки', value: draft.amount, onChange: v => { draft.amount = v } }),
+        ]),
+      )
+      rows.push(
+        Button({
+          label: 'Сохранить',
+          color: 'primary',
+          style: S.btn,
+          onClick: () => {
+            if (!draft.medicationId) return
+            const intake = this.state.intakeDraft
+            if (isEditing) {
+              intake.items[index] = { ...draft }
+            } else {
+              intake.items.push({ ...draft })
+            }
+            this.navigateTo('intakeEdit', { intake })
+          },
+        }),
+      )
+      if (isEditing) {
+        rows.push(
+          Button({
+            label: 'Удалить из приёма',
+            color: 'default',
+            style: S.btn,
+            onClick: () => {
+              this.state.intakeDraft.items.splice(index, 1)
+              this.navigateTo('intakeEdit', { intake: this.state.intakeDraft })
+            },
+          }),
+        )
+      }
+    }
+
+    return View({ style: S.page }, [
+      Text({ style: S.title, bold: true }, ['Лекарство в приёме']),
+      ...rows,
+      Button({ label: 'Назад', color: 'default', style: S.btn, onClick: () => this.navigateTo('intakeEdit', { intake: this.state.intakeDraft }) }),
     ])
   },
 
@@ -303,15 +412,23 @@ AppSettingsPage({
     const dateStr = this.state.viewHistoryDate || todayDateStr()
     const records = this.getHistoryForDate(dateStr)
     const medications = this.getMedications()
+    const medMap = {}
+    for (const med of medications) medMap[med.id] = med
 
     const rows = []
     for (const rec of records) {
-      const med = medications.find(m => m.id === rec.medicationId)
-      const medName = med ? med.name : (rec.medicationId || '')
       const statusText = rec.status === 'taken'
-        ? 'Принято в ' + (rec.takenTime || rec.scheduledTime)
+        ? 'Принято в ' + (rec.takenTime || rec.time)
         : (rec.status === 'cancelled' ? 'Отменено' : rec.status)
-      rows.push(View({ style: S.row }, [Text({ style: S.rowTitle }, [medName + ' — ' + statusText])]))
+      const itemsText = (rec.items || []).map(item => {
+        const med = medMap[item.medicationId]
+        const name = med ? med.name : '?'
+        return name + ' \u00d7 ' + (item.amount || '')
+      }).join(', ')
+      rows.push(View({ style: S.row }, [
+        Text({ style: S.rowTitle }, [(rec.time || '') + ' — ' + statusText]),
+        itemsText ? Text({ style: S.rowSub }, [itemsText]) : null,
+      ]))
     }
     if (rows.length === 0) {
       rows.push(Text({ style: S.hint }, ['Нет данных за эту дату']))
