@@ -3,19 +3,9 @@ import { notify } from '@zos/notification'
 import { getSettings, getIntakes, getMedications, getTakeLogs, isIntakeCancelled, getTodayDateStr } from '../utils/storage'
 import { createRetryAlarm } from '../utils/schedule'
 import { ALARM_MODES } from '../utils/constants'
+import { buildItemsSummary } from '../utils/intake-logic.js'
 
 const logger = Logger.getLogger('aibolit-reminder')
-
-function buildContent(intake) {
-  const medications = getMedications()
-  const lines = []
-  for (const item of intake.items || []) {
-    const med = medications.find(m => m.id === item.medicationId)
-    if (!med || !med.enabled) continue
-    lines.push((med.name || '') + (item.amount ? ' \u00d7 ' + item.amount : ''))
-  }
-  return lines.join(', ') || 'Примите лекарство'
-}
 
 AppService({
   onEvent(e) {
@@ -44,7 +34,7 @@ AppService({
     if (alreadyTaken) return
 
     const title = intake.label || intake.time
-    const content = buildContent(intake)
+    const content = buildItemsSummary(intake.items || [], getMedications()) || 'Примите лекарство'
 
     notify({
       title: title,
