@@ -3,6 +3,7 @@ import { createWidget, widget, align, text_style } from '@zos/ui'
 import { push as routerPush } from '@zos/router'
 import { getMedications, getIntakes, getTakeLogs, getCancellations, addTakeLog, getTodayDateStr } from '../../utils/storage'
 import { sendTakeLogToPhone } from '../../utils/sync'
+import { getIntakeEntries, isIntakeOnDay, isIntakeTakenToday, isIntakeCancelledToday } from '../../utils/intake-logic.js'
 
 const logger = Logger.getLogger('aibolit-home')
 
@@ -33,41 +34,21 @@ Page({
     const currentTime = new Date()
     const currentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes()
 
-    const enabledMedMap = {}
-    for (const med of medications) {
-      if (med.enabled) enabledMedMap[med.id] = med
-    }
+    const dayOfWeek = currentTime.getDay() === 0 ? 7 : currentTime.getDay()
 
-    const relevant = intakes
-      .map(intake => ({
-        intake,
-        items: (intake.items || [])
-          .map(item => ({ med: enabledMedMap[item.medicationId], amount: item.amount }))
-          .filter(({ med }) => med),
-      }))
-      .filter(({ items }) => items.length > 0)
+    const relevant = getIntakeEntries(intakes, medications)
       .filter(({ intake }) => {
         const [h, m] = intake.time.split(':').map(Number)
         const intakeMinutes = h * 60 + m
         return intakeMinutes >= currentMinutes
       })
-      .filter(({ intake }) => {
-        const dayOfWeek = currentTime.getDay() === 0 ? 7 : currentTime.getDay()
-        if (intake.weekDays && intake.weekDays.length > 0 && !intake.weekDays.includes(dayOfWeek)) return false
-        return true
-      })
-      .filter(({ intake }) => {
-        const taken = takeLogs.some(i => i.intakeId === intake.id && i.date === todayDateStr && i.status === 'taken')
-        return !taken
-      })
-      .filter(({ intake }) => {
-        return !cancellations.some(c => c.intakeId === intake.id && c.date === todayDateStr)
-      })
+      .filter(({ intake }) => isIntakeOnDay(intake, dayOfWeek))
+      .filter(({ intake }) => !isIntakeTakenToday(intake.id, todayDateStr, takeLogs))
+      .filter(({ intake }) => !isIntakeCancelledToday(intake.id, todayDateStr, cancellations))
+      .sort((a, b) => a.intake.time.localeCompare(b.intake.time))
 
-    const sorted = relevant.sort((a, b) => a.intake.time.localeCompare(b.intake.time))
-
-    this.state.intakes = sorted
-    this.renderUpcoming(sorted)
+    this.state.intakes = relevant
+    this.renderUpcoming(relevant)
   },
 
   renderUpcoming(entries) {
