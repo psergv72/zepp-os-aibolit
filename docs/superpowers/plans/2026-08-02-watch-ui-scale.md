@@ -120,6 +120,7 @@ In `renderPlan`, change:
 
 In `renderPlan`, change:
 - `const btnY = 400` → `380`
+- `const btnHeight = 36` → `48`
 - bottom button `text_size: 16` → `26`
 
 - [ ] **Step 7: Verify**
