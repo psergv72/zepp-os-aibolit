@@ -71,23 +71,23 @@ Page({
 
   renderPlan(entries) {
     const screenWidth = 480
-    const btnHeight = 36
-    const btnY = 400
+    const btnHeight = 48
+    const btnY = 380
     let y = 20
 
     createWidget(widget.TEXT, {
       x: 0,
       y: y,
       w: screenWidth,
-      h: 36,
+      h: 48,
       color: 0xffffff,
-      text_size: 20,
+      text_size: 32,
       align_h: align.CENTER_H,
       align_v: align.CENTER_V,
       text_style: text_style.NONE,
       text: 'План на сегодня',
     })
-    y += 50
+    y += 60
 
     if (entries.length === 0) {
       createWidget(widget.TEXT, {
@@ -96,7 +96,7 @@ Page({
         w: screenWidth,
         h: 36,
         color: 0x888888,
-        text_size: 16,
+        text_size: 26,
         align_h: align.CENTER_H,
         align_v: align.CENTER_V,
         text_style: text_style.NONE,
@@ -105,7 +105,7 @@ Page({
     }
 
     for (const entry of entries) {
-      const blockH = 35 + entry.items.length * 28 + (entry._takenTime ? 25 : 0) + (entry._cancelled ? 25 : 0) + 15
+      const blockH = 48 + entry.items.length * 40 + (entry._takenTime ? 32 : 0) + (entry._cancelled ? 32 : 0) + 15
       if (y + blockH > btnY - 5) break
 
       const intake = entry.intake
@@ -118,15 +118,15 @@ Page({
         x: 20,
         y: y,
         w: screenWidth - 40,
-        h: 30,
+        h: 44,
         color: textColor,
-        text_size: 16,
+        text_size: 26,
         align_h: align.LEFT,
         align_v: align.CENTER_V,
         text_style: headerDecor,
         text: headerText,
       })
-      y += 35
+      y += 44
 
       for (const item of entry.items) {
         const medColor = entry._cancelled ? 0x555555 : (entry._taken ? 0x888888 : 0xffffff)
@@ -136,15 +136,15 @@ Page({
           x: 40,
           y: y,
           w: screenWidth - 80,
-          h: 28,
+          h: 40,
           color: medColor,
-          text_size: 15,
+          text_size: 24,
           align_h: align.LEFT,
           align_v: align.CENTER_V,
           text_style: medDecor,
           text: checkMark + item.med.name + ' \u00d7 ' + (item.amount || ''),
         })
-        y += 28
+        y += 40
       }
 
       if (entry._taken && entry._takenTime) {
@@ -152,15 +152,15 @@ Page({
           x: 40,
           y: y,
           w: screenWidth - 80,
-          h: 22,
+          h: 32,
           color: 0x666666,
-          text_size: 13,
+          text_size: 20,
           align_h: align.LEFT,
           align_v: align.CENTER_V,
           text_style: text_style.NONE,
           text: 'приняты в ' + entry._takenTime,
         })
-        y += 25
+        y += 32
       }
 
       if (entry._cancelled) {
@@ -168,9 +168,9 @@ Page({
           x: 40,
           y: y,
           w: screenWidth - 80,
-          h: 22,
+          h: 32,
           color: 0x4fc3f7,
-          text_size: 13,
+          text_size: 20,
           align_h: align.LEFT,
           align_v: align.CENTER_V,
           text_style: text_style.NONE,
@@ -179,11 +179,11 @@ Page({
         restoreBtn.addEventListener(event.CLICK_UP, () => {
           this.restoreIntake(intake)
         })
-        y += 25
+        y += 32
       }
 
       const indicatorX = screenWidth - 50
-      const medAreaH = entry.items.length * 28 + (entry._takenTime ? 25 : 0)
+      const medAreaH = entry.items.length * 40 + (entry._takenTime ? 32 : 0)
       const indicatorY = y - medAreaH - 5
       const indicatorH = medAreaH + 10
 
@@ -194,7 +194,7 @@ Page({
           w: 40,
           h: indicatorH,
           color: 0xffffff,
-          text_size: 22,
+          text_size: 36,
           align_h: align.CENTER_H,
           align_v: align.CENTER_V,
           text_style: text_style.NONE,
@@ -217,7 +217,7 @@ Page({
           w: 40,
           h: indicatorH,
           color: 0x4caf50,
-          text_size: 22,
+          text_size: 36,
           align_h: align.CENTER_H,
           align_v: align.CENTER_V,
           text_style: text_style.NONE,
@@ -237,7 +237,7 @@ Page({
       w: screenWidth,
       h: btnHeight,
       color: 0x888888,
-      text_size: 16,
+      text_size: 26,
       align_h: align.CENTER_H,
       align_v: align.CENTER_V,
       text_style: text_style.NONE,
