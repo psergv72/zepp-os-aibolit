@@ -1,6 +1,6 @@
 import { log as Logger } from '@zos/utils'
 import { ZML_METHODS } from './constants'
-import { getSyncQueue, addToSyncQueue, clearSyncedItems, pruneOldIntakes } from './storage'
+import { getSyncQueue, addToSyncQueue, clearSyncedItems, pruneOldTakeLogs } from './storage'
 
 const logger = Logger.getLogger('aibolit-sync')
 
@@ -11,8 +11,8 @@ export function initSync(zmlSideService) {
   logger.log('Sync module initialized')
 }
 
-export function sendIntakeToPhone(intake) {
-  addToSyncQueue(intake)
+export function sendTakeLogToPhone(takeLog) {
+  addToSyncQueue(takeLog)
   trySyncNow()
 }
 
@@ -33,27 +33,27 @@ function trySyncNow() {
     sideService.call(payload)
     const ids = queue.map(item => item.id)
     clearSyncedItems(ids)
-    pruneOldIntakes()
+    pruneOldTakeLogs()
     logger.log(`Synced ${ids.length} records to phone`)
   } catch (error) {
     logger.log(`Sync failed: ${error}, will retry later`)
   }
 }
 
-export function sendCancellationToPhone(scheduleId, date) {
+export function sendCancellationToPhone(intakeId, date) {
   if (!sideService) return
 
   const payload = {
     method: ZML_METHODS.SYNC_CANCELLATION,
     params: {
-      scheduleId,
+      intakeId,
       date,
     },
   }
 
   try {
     sideService.call(payload)
-    logger.log(`Cancellation synced for ${scheduleId} on ${date}`)
+    logger.log(`Cancellation synced for ${intakeId} on ${date}`)
   } catch (error) {
     logger.log(`Cancellation sync failed: ${error}`)
   }

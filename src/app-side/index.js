@@ -36,12 +36,12 @@ AppSideService(
       }
 
       if (req.method === ZML_METHODS.SYNC_CANCELLATION) {
-        const { scheduleId, date } = req.params
+        const { intakeId, date } = req.params
         const dateKey = `history_${date}`
         const existing = settings.settingsStorage.getItem(dateKey)
         const history = existing ? JSON.parse(existing) : []
         history.push({
-          scheduleId,
+          intakeId,
           date,
           status: 'cancelled',
           syncedAt: new Date().toISOString(),
