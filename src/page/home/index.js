@@ -62,22 +62,22 @@ Page({
   renderUpcoming(entries) {
     const screenWidth = 480
     const btnHeight = 36
-    const btnY = 400
+    const btnY = 380
     let y = 20
 
     createWidget(widget.TEXT, {
       x: 0,
       y: y,
       w: screenWidth,
-      h: 36,
+      h: 48,
       color: 0xffffff,
-      text_size: 20,
+      text_size: 32,
       align_h: align.CENTER_H,
       align_v: align.CENTER_V,
       text_style: text_style.NONE,
       text: 'Ближайшие приёмы',
     })
-    y += 50
+    y += 60
 
     if (entries.length === 0) {
       createWidget(widget.TEXT, {
@@ -86,7 +86,7 @@ Page({
         w: screenWidth,
         h: 36,
         color: 0x888888,
-        text_size: 16,
+        text_size: 26,
         align_h: align.CENTER_H,
         align_v: align.CENTER_V,
         text_style: text_style.NONE,
@@ -95,7 +95,7 @@ Page({
     }
 
     for (const entry of entries) {
-      const blockH = 35 + entry.items.length * 30 + 10
+      const blockH = 48 + entry.items.length * 40 + 12
       if (y + blockH > btnY - 5) break
 
       const intake = entry.intake
@@ -104,35 +104,35 @@ Page({
         x: 20,
         y: y,
         w: screenWidth - 60,
-        h: 30,
+        h: 44,
         color: 0x4fc3f7,
-        text_size: 16,
+        text_size: 26,
         align_h: align.LEFT,
         align_v: align.CENTER_V,
         text_style: text_style.NONE,
         text: '───── ' + intake.time + ' ────',
       })
-      y += 35
+      y += 44
 
       for (const item of entry.items) {
         createWidget(widget.TEXT, {
           x: 40,
           y: y,
           w: screenWidth - 90,
-          h: 28,
+          h: 40,
           color: 0xffffff,
-          text_size: 15,
+          text_size: 24,
           align_h: align.LEFT,
           align_v: align.CENTER_V,
           text_style: text_style.NONE,
           text: item.med.name + ' \u00d7 ' + (item.amount || ''),
         })
-        y += 30
+        y += 40
       }
 
       const checkboxX = screenWidth - 50
-      const checkboxY = y - (entry.items.length * 30) - 5
-      const checkboxH = entry.items.length * 30 + 10
+      const checkboxY = y - (entry.items.length * 40) - 5
+      const checkboxH = entry.items.length * 40 + 12
 
       const takeAllBtn = createWidget(widget.TEXT, {
         x: checkboxX,
@@ -140,7 +140,7 @@ Page({
         w: 40,
         h: checkboxH,
         color: 0x4fc3f7,
-        text_size: 22,
+        text_size: 36,
         align_h: align.CENTER_H,
         align_v: align.CENTER_V,
         text_style: text_style.NONE,
@@ -159,7 +159,7 @@ Page({
       w: screenWidth,
       h: btnHeight,
       color: 0x888888,
-      text_size: 16,
+      text_size: 26,
       align_h: align.CENTER_H,
       align_v: align.CENTER_V,
       text_style: text_style.NONE,
