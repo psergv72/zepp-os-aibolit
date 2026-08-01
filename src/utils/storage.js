@@ -21,7 +21,8 @@ function clear() {
 }
 
 export function getMedications() {
-  return getItem(STORAGE_KEYS.MEDICATIONS, [])
+  const value = getItem(STORAGE_KEYS.MEDICATIONS, [])
+  return Array.isArray(value) ? value : []
 }
 
 export function setMedications(medications) {
@@ -29,7 +30,8 @@ export function setMedications(medications) {
 }
 
 export function getIntakes() {
-  return getItem(STORAGE_KEYS.INTAKES, [])
+  const value = getItem(STORAGE_KEYS.INTAKES, [])
+  return Array.isArray(value) ? value : []
 }
 
 export function setIntakes(intakes) {
@@ -37,7 +39,8 @@ export function setIntakes(intakes) {
 }
 
 export function getTakeLogs() {
-  return getItem(STORAGE_KEYS.TAKE_LOGS, [])
+  const value = getItem(STORAGE_KEYS.TAKE_LOGS, [])
+  return Array.isArray(value) ? value : []
 }
 
 export function setTakeLogs(takeLogs) {
@@ -59,7 +62,8 @@ export function removeTakeLog(takeLogId) {
 }
 
 export function getCancellations() {
-  return getItem(STORAGE_KEYS.CANCELLATIONS, [])
+  const value = getItem(STORAGE_KEYS.CANCELLATIONS, [])
+  return Array.isArray(value) ? value : []
 }
 
 export function setCancellations(cancellations) {
@@ -88,7 +92,7 @@ export function isIntakeCancelled(intakeId, date) {
 
 export function getSettings() {
   const settings = getItem(STORAGE_KEYS.SETTINGS, null)
-  return settings || { ...DEFAULT_SETTINGS }
+  return settings && typeof settings === 'object' ? settings : { ...DEFAULT_SETTINGS }
 }
 
 export function setSettings(settings) {
@@ -96,7 +100,8 @@ export function setSettings(settings) {
 }
 
 export function getSyncQueue() {
-  return getItem(STORAGE_KEYS.SYNC_QUEUE, [])
+  const value = getItem(STORAGE_KEYS.SYNC_QUEUE, [])
+  return Array.isArray(value) ? value : []
 }
 
 export function setSyncQueue(queue) {

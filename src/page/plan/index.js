@@ -1,5 +1,5 @@
 import { log as Logger } from '@zos/utils'
-import { createWidget, widget, align, text_style } from '@zos/ui'
+import { createWidget, widget, event, align, text_style } from '@zos/ui'
 import { push as routerPush } from '@zos/router'
 import {
   getMedications,
@@ -14,6 +14,7 @@ import {
 } from '../../utils/storage'
 import { sendTakeLogToPhone, sendCancellationToPhone } from '../../utils/sync'
 import { getIntakeEntries, isIntakeOnDay, getIntakeStatus, getTakenTime } from '../../utils/intake-logic.js'
+import { fetchConfigFromSide } from '../../utils/watch-config'
 
 const logger = Logger.getLogger('aibolit-plan')
 
@@ -25,6 +26,13 @@ Page({
   build() {
     logger.log('plan page build')
     this.refreshView()
+    this.pullConfig()
+  },
+
+  pullConfig() {
+    fetchConfigFromSide().then((config) => {
+      if (config) this.refreshView()
+    })
   },
 
   onInit() {
@@ -63,6 +71,8 @@ Page({
 
   renderPlan(entries) {
     const screenWidth = 480
+    const btnHeight = 36
+    const btnY = 400
     let y = 20
 
     createWidget(widget.TEXT, {
@@ -92,11 +102,11 @@ Page({
         text_style: text_style.NONE,
         text: 'Нет приёмов на сегодня',
       })
-      return
     }
 
     for (const entry of entries) {
-      if (y > 440) break
+      const blockH = 35 + entry.items.length * 28 + (entry._takenTime ? 25 : 0) + (entry._cancelled ? 25 : 0) + 15
+      if (y + blockH > btnY - 5) break
 
       const intake = entry.intake
       const textColor = entry._cancelled ? 0x666666 : (entry._taken ? 0x4caf50 : 0xffffff)
@@ -166,7 +176,7 @@ Page({
           text_style: text_style.NONE,
           text: 'вернуть прием',
         })
-        restoreBtn.addEventListener(widget.CLICK_EVENT, () => {
+        restoreBtn.addEventListener(event.CLICK_UP, () => {
           this.restoreIntake(intake)
         })
         y += 25
@@ -190,11 +200,13 @@ Page({
           text_style: text_style.NONE,
           text: '\u2610',
         })
-        checkBtn.addEventListener(widget.CLICK_EVENT, () => {
+        checkBtn.addEventListener(event.CLICK_UP, () => {
           this.takeIntake(intake)
         })
-        checkBtn.addEventListener(widget.LONGPRESS_EVENT, () => {
-          this.cancelIntake(intake)
+        checkBtn.addEventListener(event.CLICK_DOWN, () => {
+          this._pressTimer = setTimeout(() => {
+            this.cancelIntake(intake)
+          }, 1000)
         })
       }
 
@@ -211,7 +223,7 @@ Page({
           text_style: text_style.NONE,
           text: '\u2713',
         })
-        undoBtn.addEventListener(widget.CLICK_EVENT, () => {
+        undoBtn.addEventListener(event.CLICK_UP, () => {
           this.undoIntake(intake)
         })
       }
@@ -219,12 +231,11 @@ Page({
       y += 15
     }
 
-    const backBtnY = y + 10
     const backBtn = createWidget(widget.TEXT, {
       x: 0,
-      y: backBtnY,
+      y: btnY,
       w: screenWidth,
-      h: 36,
+      h: btnHeight,
       color: 0x888888,
       text_size: 16,
       align_h: align.CENTER_H,
@@ -232,7 +243,7 @@ Page({
       text_style: text_style.NONE,
       text: '[На главную]',
     })
-    backBtn.addEventListener(widget.CLICK_EVENT, () => {
+    backBtn.addEventListener(event.CLICK_UP, () => {
       routerPush({ url: 'page/home/index' })
     })
   },

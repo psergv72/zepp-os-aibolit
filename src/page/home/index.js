@@ -1,9 +1,10 @@
 import { log as Logger } from '@zos/utils'
-import { createWidget, widget, align, text_style } from '@zos/ui'
+import { createWidget, widget, event, align, text_style } from '@zos/ui'
 import { push as routerPush } from '@zos/router'
 import { getMedications, getIntakes, getTakeLogs, getCancellations, addTakeLog, getTodayDateStr } from '../../utils/storage'
 import { sendTakeLogToPhone } from '../../utils/sync'
 import { getIntakeEntries, isIntakeOnDay, isIntakeTakenToday, isIntakeCancelledToday } from '../../utils/intake-logic.js'
+import { fetchConfigFromSide } from '../../utils/watch-config'
 
 const logger = Logger.getLogger('aibolit-home')
 
@@ -15,6 +16,13 @@ Page({
   build() {
     logger.log('home page build')
     this.refreshView()
+    this.pullConfig()
+  },
+
+  pullConfig() {
+    fetchConfigFromSide().then((config) => {
+      if (config) this.refreshView()
+    })
   },
 
   onInit() {
@@ -53,6 +61,8 @@ Page({
 
   renderUpcoming(entries) {
     const screenWidth = 480
+    const btnHeight = 36
+    const btnY = 400
     let y = 20
 
     createWidget(widget.TEXT, {
@@ -82,11 +92,11 @@ Page({
         text_style: text_style.NONE,
         text: 'Нет предстоящих приёмов',
       })
-      return
     }
 
     for (const entry of entries) {
-      if (y > 440) break
+      const blockH = 35 + entry.items.length * 30 + 10
+      if (y + blockH > btnY - 5) break
 
       const intake = entry.intake
 
@@ -136,19 +146,18 @@ Page({
         text_style: text_style.NONE,
         text: '\u2610',
       })
-      takeAllBtn.addEventListener(widget.CLICK_EVENT, () => {
+      takeAllBtn.addEventListener(event.CLICK_UP, () => {
         this.takeIntake(intake)
       })
 
       y += 10
     }
 
-    const planBtnY = y + 10
     const planBtn = createWidget(widget.TEXT, {
       x: 0,
-      y: planBtnY,
+      y: btnY,
       w: screenWidth,
-      h: 36,
+      h: btnHeight,
       color: 0x888888,
       text_size: 16,
       align_h: align.CENTER_H,
@@ -156,7 +165,7 @@ Page({
       text_style: text_style.NONE,
       text: '[Полный план \u2192]',
     })
-    planBtn.addEventListener(widget.CLICK_EVENT, () => {
+    planBtn.addEventListener(event.CLICK_UP, () => {
       routerPush({ url: 'page/plan/index' })
     })
   },

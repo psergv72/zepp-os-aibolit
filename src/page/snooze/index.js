@@ -1,5 +1,5 @@
 import { log as Logger } from '@zos/utils'
-import { createWidget, widget, align, text_style } from '@zos/ui'
+import { createWidget, widget, event, align, text_style } from '@zos/ui'
 import { push as routerPush } from '@zos/router'
 import { getSettings, getIntakes, getMedications } from '../../utils/storage'
 
@@ -148,7 +148,7 @@ Page({
         text_style: text_style.NONE,
         text: '',
       })
-      btnArea.addEventListener(widget.CLICK_EVENT, () => {
+      btnArea.addEventListener(event.CLICK_UP, () => {
         this.confirmSnooze(minutes)
       })
 

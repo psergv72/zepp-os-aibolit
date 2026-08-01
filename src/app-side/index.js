@@ -1,9 +1,6 @@
 ﻿import { BaseSideService } from '@zeppos/zml/base-side'
-import { ShareLocalStorage } from '@zos/storage'
 import { ZML_METHODS } from '../utils/constants'
 import { CONFIG_KEYS, parseSettingsItem } from '../utils/config-sync'
-
-const configStorage = new ShareLocalStorage('aibolit-data.json')
 
 AppSideService(
   BaseSideService({
@@ -27,24 +24,35 @@ AppSideService(
       }
     },
 
-    pushConfigToWatch() {
+    buildConfig() {
+      const config = {}
       for (const key of CONFIG_KEYS) {
         const raw = this.settings.getItem(key)
         const value = parseSettingsItem(raw)
         if (value !== null) {
-          configStorage.setItem(key, value)
+          config[key] = value
         }
       }
+      return config
+    },
+
+    pushConfigToWatch() {
+      const config = this.buildConfig()
       try {
-        this.call({ method: ZML_METHODS.CONFIG_SYNCED, params: {} })
+        this.call({ method: ZML_METHODS.CONFIG_SYNCED, params: { config } })
       } catch (error) {
         console.log(`Config sync notify failed: ${error}`)
       }
-      console.log('Config pushed to watch storage')
+      console.log('Config pushed to watch')
     },
 
     onRequest(req, res) {
       console.log(`onRequest method: ${req.method}`)
+
+      if (req.method === ZML_METHODS.GET_CONFIG) {
+        res(null, { config: this.buildConfig() })
+        return
+      }
 
       if (req.method === ZML_METHODS.SYNC_INTAKE) {
         const { records } = req.params
