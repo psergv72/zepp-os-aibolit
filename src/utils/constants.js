@@ -1,7 +1,7 @@
 export const STORAGE_KEYS = {
   MEDICATIONS: 'medications',
-  SCHEDULE: 'schedule',
   INTAKES: 'intakes',
+  TAKE_LOGS: 'takeLogs',
   CANCELLATIONS: 'cancellations',
   SETTINGS: 'settings',
   SYNC_QUEUE: 'syncQueue',
@@ -41,11 +41,10 @@ export const DAY_NAMES_RU = {
 }
 
 export const ZML_METHODS = {
-  SYNC_SCHEDULE: 'sync_schedule',
   SYNC_INTAKE: 'sync_intake',
   SYNC_CANCELLATION: 'sync_cancellation',
-  UNDO_INTAKE: 'undo_intake',
-  RESTORE_SLOT: 'restore_slot',
+  UNDO_TAKE: 'undo_take',
+  RESTORE_INTAKE: 'restore_intake',
 }
 
 export const ALARM_MODES = {
