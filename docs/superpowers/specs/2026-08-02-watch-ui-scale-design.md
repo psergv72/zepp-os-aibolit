@@ -59,12 +59,13 @@ Plan page specific:
 
 | Element | Was | Becomes |
 |---|---|---|
-| Intake label | 18px | 28px |
-| Meds text / "Отложить на:" | 14px | 22px |
-| Minute number | 28px | 44px |
-| "мин" caption | 14px | 22px |
+| Intake label | 18px / h30 | 28px / h44 |
+| Meds text / "Отложить на:" | 14px / h24 | 22px / h32 |
+| Minute number | 28px / h40 | 44px / h48 |
+| "мин" caption | 14px / h20 | 22px / h28 |
 | Option button size | 140x80 | 150x96 |
-| Layout offsets | y=40, +45, +28, +40 | scaled (y=48, +52, +34, +48) |
+| Layout offsets | y=40, +45, +28, +40 | y=48, +52, +34, +48 |
+| Minute / "мин" offsets | -15 / +15 | -20 / +20 |
 
 ## Verification
 

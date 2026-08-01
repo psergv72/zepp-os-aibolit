@@ -147,7 +147,7 @@ git commit -m "feat: scale up plan page UI"
 
 In `renderSnoozeOptions`, change:
 - `let y = 40` → `48`
-- intake label widget `text_size: 18` → `28`, `y += 45` → `y += 52`
+- intake label widget `text_size: 18` → `28`, `h: 30` → `44`, `y += 45` → `y += 52`
 - meds text widget `text_size: 14` → `22`, `h: 24` → `32`, `y += 28` → `y += 34`
 - "Отложить на:" widget `text_size: 14` → `22`, `h: 24` → `32`, `y += 40` → `y += 48`
 
@@ -156,9 +156,9 @@ In `renderSnoozeOptions`, change:
 In `renderSnoozeOptions`, change:
 - `const btnWidth = 140` → `150`
 - `const btnHeight = 80` → `96`
-- minute number text `text_size: 28` → `44`
+- minute number text `text_size: 28` → `44`, `h: 40` → `48`
 - minute number vertical offset: `by + Math.floor(btnHeight / 2) - 15` → `by + Math.floor(btnHeight / 2) - 20`
-- "мин" caption `text_size: 14` → `22`
+- "мин" caption `text_size: 14` → `22`, `h: 20` → `28`
 - "мин" caption vertical offset: `by + Math.floor(btnHeight / 2) + 15` → `by + Math.floor(btnHeight / 2) + 20`
 
 - [ ] **Step 3: Verify**
