@@ -35,7 +35,11 @@ AppSideService(
           configStorage.setItem(key, value)
         }
       }
-      this.call({ method: ZML_METHODS.CONFIG_SYNCED, params: {} })
+      try {
+        this.call({ method: ZML_METHODS.CONFIG_SYNCED, params: {} })
+      } catch (error) {
+        console.log(`Config sync notify failed: ${error}`)
+      }
       console.log('Config pushed to watch storage')
     },
 
