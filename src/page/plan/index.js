@@ -3,22 +3,22 @@ import { createWidget, widget, align, text_style } from '@zos/ui'
 import { push as routerPush } from '@zos/router'
 import {
   getMedications,
-  getSchedule,
   getIntakes,
+  getTakeLogs,
   getCancellations,
   addCancellation,
   removeCancellation,
   getTodayDateStr,
-  addIntake,
-  removeIntake,
+  addTakeLog,
+  removeTakeLog,
 } from '../../utils/storage'
-import { sendIntakeToPhone, sendCancellationToPhone } from '../../utils/sync'
+import { sendTakeLogToPhone, sendCancellationToPhone } from '../../utils/sync'
 
 const logger = Logger.getLogger('aibolit-plan')
 
 Page({
   state: {
-    slots: [],
+    intakes: [],
   },
 
   build() {
@@ -36,51 +36,48 @@ Page({
 
   refreshView() {
     const medications = getMedications()
-    const schedule = getSchedule()
     const intakes = getIntakes()
+    const takeLogs = getTakeLogs()
     const cancellations = getCancellations()
     const todayDateStr = getTodayDateStr()
 
-    const enabledMeds = medications.filter(m => m.enabled)
-    const medMap = {}
-    for (const med of enabledMeds) {
-      medMap[med.id] = med
+    const enabledMedMap = {}
+    for (const med of medications) {
+      if (med.enabled) enabledMedMap[med.id] = med
     }
 
     const dayOfWeek = new Date().getDay() === 0 ? 7 : new Date().getDay()
 
-    const todaySlots = schedule
-      .filter(s => medMap[s.medicationId])
-      .filter(s => {
-        if (s.weekDays && s.weekDays.length > 0 && !s.weekDays.includes(dayOfWeek)) return false
+    const today = intakes
+      .map(intake => ({
+        intake,
+        items: (intake.items || [])
+          .map(item => ({ med: enabledMedMap[item.medicationId], amount: item.amount }))
+          .filter(({ med }) => med),
+      }))
+      .filter(({ items }) => items.length > 0)
+      .filter(({ intake }) => {
+        if (intake.weekDays && intake.weekDays.length > 0 && !intake.weekDays.includes(dayOfWeek)) return false
         return true
       })
+      .sort((a, b) => a.intake.time.localeCompare(b.intake.time))
 
-    const grouped = {}
-    for (const slot of todaySlots) {
-      if (!grouped[slot.id]) {
-        grouped[slot.id] = { id: slot.id, time: slot.time, medicationId: slot.medicationId, weekDays: slot.weekDays, label: slot.label, medications: [] }
-      }
-      grouped[slot.id].medications.push(medMap[slot.medicationId])
+    for (const entry of today) {
+      const intake = entry.intake
+      const intakeLogs = takeLogs.filter(i => i.intakeId === intake.id && i.date === todayDateStr)
+      const takenLog = intakeLogs.find(i => i.status === 'taken')
+      const isCancelled = cancellations.some(c => c.intakeId === intake.id && c.date === todayDateStr)
+
+      entry._taken = !!takenLog
+      entry._takenTime = takenLog ? takenLog.takenTime : null
+      entry._cancelled = isCancelled
     }
 
-    const sortedSlots = Object.values(grouped).sort((a, b) => a.time.localeCompare(b.time))
-
-    for (const slot of sortedSlots) {
-      const slotIntakes = intakes.filter(i => i.scheduleId === slot.id && i.date === todayDateStr)
-      const takenIntake = slotIntakes.find(i => i.status === 'taken')
-      const isCancelled = cancellations.some(c => c.scheduleId === slot.id && c.date === todayDateStr)
-
-      slot._taken = !!takenIntake
-      slot._takenTime = takenIntake ? takenIntake.takenTime : null
-      slot._cancelled = isCancelled
-    }
-
-    this.state.slots = sortedSlots
-    this.renderPlan(sortedSlots)
+    this.state.intakes = today
+    this.renderPlan(today)
   },
 
-  renderPlan(slots) {
+  renderPlan(entries) {
     const screenWidth = 480
     let y = 20
 
@@ -98,7 +95,7 @@ Page({
     })
     y += 50
 
-    if (slots.length === 0) {
+    if (entries.length === 0) {
       createWidget(widget.TEXT, {
         x: 0,
         y: y,
@@ -114,13 +111,14 @@ Page({
       return
     }
 
-    for (const slot of slots) {
+    for (const entry of entries) {
       if (y > 440) break
 
-      const textColor = slot._cancelled ? 0x666666 : (slot._taken ? 0x4caf50 : 0xffffff)
-      const headerDecor = slot._cancelled ? text_style.STRIKETHROUGH : text_style.NONE
-      const statusIcon = slot._taken ? ' \u2713' : ''
-      const headerText = '───── ' + slot.time + ' ────' + statusIcon
+      const intake = entry.intake
+      const textColor = entry._cancelled ? 0x666666 : (entry._taken ? 0x4caf50 : 0xffffff)
+      const headerDecor = entry._cancelled ? text_style.STRIKETHROUGH : text_style.NONE
+      const statusIcon = entry._taken ? ' \u2713' : ''
+      const headerText = '───── ' + intake.time + ' ────' + statusIcon
 
       createWidget(widget.TEXT, {
         x: 20,
@@ -136,10 +134,10 @@ Page({
       })
       y += 35
 
-      for (const med of slot.medications) {
-        const medColor = slot._cancelled ? 0x555555 : (slot._taken ? 0x888888 : 0xffffff)
-        const medDecor = slot._cancelled ? text_style.STRIKETHROUGH : text_style.NONE
-        const checkMark = slot._taken ? '\u2713 ' : '  '
+      for (const item of entry.items) {
+        const medColor = entry._cancelled ? 0x555555 : (entry._taken ? 0x888888 : 0xffffff)
+        const medDecor = entry._cancelled ? text_style.STRIKETHROUGH : text_style.NONE
+        const checkMark = entry._taken ? '\u2713 ' : '  '
         createWidget(widget.TEXT, {
           x: 40,
           y: y,
@@ -150,12 +148,12 @@ Page({
           align_h: align.LEFT,
           align_v: align.CENTER_V,
           text_style: medDecor,
-          text: checkMark + med.name + ' ' + med.dosage,
+          text: checkMark + item.med.name + ' \u00d7 ' + (item.amount || ''),
         })
         y += 28
       }
 
-      if (slot._taken && slot._takenTime) {
+      if (entry._taken && entry._takenTime) {
         createWidget(widget.TEXT, {
           x: 40,
           y: y,
@@ -166,12 +164,12 @@ Page({
           align_h: align.LEFT,
           align_v: align.CENTER_V,
           text_style: text_style.NONE,
-          text: 'приняты в ' + slot._takenTime,
+          text: 'приняты в ' + entry._takenTime,
         })
         y += 25
       }
 
-      if (slot._cancelled) {
+      if (entry._cancelled) {
         const restoreBtn = createWidget(widget.TEXT, {
           x: 40,
           y: y,
@@ -185,17 +183,17 @@ Page({
           text: 'вернуть прием',
         })
         restoreBtn.addEventListener(widget.CLICK_EVENT, () => {
-          this.restoreSlot(slot)
+          this.restoreIntake(intake)
         })
         y += 25
       }
 
       const indicatorX = screenWidth - 50
-      const medAreaH = slot.medications.length * 28 + (slot._takenTime ? 25 : 0)
+      const medAreaH = entry.items.length * 28 + (entry._takenTime ? 25 : 0)
       const indicatorY = y - medAreaH - 5
       const indicatorH = medAreaH + 10
 
-      if (!slot._cancelled && !slot._taken) {
+      if (!entry._cancelled && !entry._taken) {
         const checkBtn = createWidget(widget.TEXT, {
           x: indicatorX,
           y: indicatorY,
@@ -209,14 +207,14 @@ Page({
           text: '\u2610',
         })
         checkBtn.addEventListener(widget.CLICK_EVENT, () => {
-          this.takeSlot(slot)
+          this.takeIntake(intake)
         })
         checkBtn.addEventListener(widget.LONGPRESS_EVENT, () => {
-          this.cancelSlot(slot)
+          this.cancelIntake(intake)
         })
       }
 
-      if (slot._taken) {
+      if (entry._taken) {
         const undoBtn = createWidget(widget.TEXT, {
           x: indicatorX,
           y: indicatorY,
@@ -230,7 +228,7 @@ Page({
           text: '\u2713',
         })
         undoBtn.addEventListener(widget.CLICK_EVENT, () => {
-          this.undoSlot(slot)
+          this.undoIntake(intake)
         })
       }
 
@@ -255,48 +253,46 @@ Page({
     })
   },
 
-  takeSlot(slot) {
+  takeIntake(intake) {
     const todayDateStr = getTodayDateStr()
     const now = new Date()
     const takenTime = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0')
 
-    for (const med of slot.medications) {
-      const intake = {
-        id: 'intake_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
-        medicationId: med.id,
-        scheduleId: slot.id,
-        date: todayDateStr,
-        scheduledTime: slot.time,
-        takenTime: takenTime,
-        status: 'taken',
-      }
-      addIntake(intake)
-      sendIntakeToPhone(intake)
+    const takeLog = {
+      id: 'log_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+      intakeId: intake.id,
+      date: todayDateStr,
+      time: intake.time,
+      takenTime: takenTime,
+      status: 'taken',
+      items: (intake.items || []).map(item => ({ ...item })),
     }
+    addTakeLog(takeLog)
+    sendTakeLogToPhone(takeLog)
 
     this.refreshView()
   },
 
-  undoSlot(slot) {
+  undoIntake(intake) {
     const todayDateStr = getTodayDateStr()
-    const intakes = getIntakes()
-    const toRemove = intakes.filter(i => i.scheduleId === slot.id && i.date === todayDateStr && i.status === 'taken')
-    for (const intake of toRemove) {
-      removeIntake(intake.id)
+    const takeLogs = getTakeLogs()
+    const toRemove = takeLogs.filter(i => i.intakeId === intake.id && i.date === todayDateStr && i.status === 'taken')
+    for (const takeLog of toRemove) {
+      removeTakeLog(takeLog.id)
     }
     this.refreshView()
   },
 
-  cancelSlot(slot) {
+  cancelIntake(intake) {
     const todayDateStr = getTodayDateStr()
-    addCancellation(slot.id, todayDateStr)
-    sendCancellationToPhone(slot.id, todayDateStr)
+    addCancellation(intake.id, todayDateStr)
+    sendCancellationToPhone(intake.id, todayDateStr)
     this.refreshView()
   },
 
-  restoreSlot(slot) {
+  restoreIntake(intake) {
     const todayDateStr = getTodayDateStr()
-    removeCancellation(slot.id, todayDateStr)
+    removeCancellation(intake.id, todayDateStr)
     this.refreshView()
   },
 })
