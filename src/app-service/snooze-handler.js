@@ -1,6 +1,6 @@
 import { log as Logger } from '@zos/utils'
 import { createSnoozeAlarm } from '../utils/schedule'
-import { addIntake, getTodayDateStr } from '../utils/storage'
+import { addTakeLog, getIntakes, getTodayDateStr } from '../utils/storage'
 import { INTAKE_STATUS } from '../utils/constants'
 
 const logger = Logger.getLogger('aibolit-snooze')
@@ -17,25 +17,28 @@ AppService({
       return
     }
 
-    const { slotId, medicationId, medicationName, dosage, delayMinutes } = params
-    if (!slotId || !delayMinutes) return
+    const { intakeId, delayMinutes } = params
+    if (!intakeId || !delayMinutes) return
 
-    createSnoozeAlarm(slotId, medicationId, medicationName, dosage, delayMinutes)
+    const intake = getIntakes().find(i => i.id === intakeId)
+    if (!intake) return
+
+    createSnoozeAlarm(intakeId, delayMinutes)
 
     const todayDateStr = getTodayDateStr()
     const now = new Date()
     const snoozeRecord = {
       id: 'snooze_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
-      medicationId: medicationId || '',
-      scheduleId: slotId,
+      intakeId: intakeId,
       date: todayDateStr,
-      scheduledTime: '',
+      time: intake.time,
       takenTime: String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0'),
       status: INTAKE_STATUS.SNOOZED,
+      items: (intake.items || []).map(item => ({ ...item })),
     }
 
-    addIntake(snoozeRecord)
-    logger.log('Snoozed ' + medicationName + ' for ' + delayMinutes + 'min')
+    addTakeLog(snoozeRecord)
+    logger.log('Snoozed intake ' + intakeId + ' for ' + delayMinutes + 'min')
   },
 
   onInit(e) {

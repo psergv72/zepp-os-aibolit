@@ -1,10 +1,21 @@
 import { log as Logger } from '@zos/utils'
 import { notify } from '@zos/notification'
-import { getSettings, getIntakes, isSlotCancelled, getTodayDateStr } from '../utils/storage'
+import { getSettings, getIntakes, getMedications, getTakeLogs, isIntakeCancelled, getTodayDateStr } from '../utils/storage'
 import { createRetryAlarm } from '../utils/schedule'
 import { ALARM_MODES } from '../utils/constants'
 
 const logger = Logger.getLogger('aibolit-reminder')
+
+function buildContent(intake) {
+  const medications = getMedications()
+  const lines = []
+  for (const item of intake.items || []) {
+    const med = medications.find(m => m.id === item.medicationId)
+    if (!med || !med.enabled) continue
+    lines.push((med.name || '') + (item.amount ? ' \u00d7 ' + item.amount : ''))
+  }
+  return lines.join(', ') || 'Примите лекарство'
+}
 
 AppService({
   onEvent(e) {
@@ -18,31 +29,22 @@ AppService({
       return
     }
 
-    const { mode, slotId, medicationId, medicationName, dosage } = params
-    if (!slotId) return
+    const { mode, intakeId } = params
+    if (!intakeId) return
+
+    const intake = getIntakes().find(i => i.id === intakeId)
+    if (!intake) return
 
     const todayDateStr = getTodayDateStr()
 
-    if (mode === ALARM_MODES.RETRY || mode === ALARM_MODES.SNOOZE) {
-      const isCancelled = isSlotCancelled(slotId, todayDateStr)
-      if (isCancelled) return
+    if (isIntakeCancelled(intakeId, todayDateStr)) return
 
-      const intakes = getIntakes()
-      const alreadyTaken = intakes.some(i => i.scheduleId === slotId && i.date === todayDateStr && i.status === 'taken')
-      if (alreadyTaken) return
-    }
+    const takeLogs = getTakeLogs()
+    const alreadyTaken = takeLogs.some(i => i.intakeId === intakeId && i.date === todayDateStr && i.status === 'taken')
+    if (alreadyTaken) return
 
-    if (mode === ALARM_MODES.REMINDER || mode === ALARM_MODES.RETRY) {
-      const isCancelled = isSlotCancelled(slotId, todayDateStr)
-      if (isCancelled) return
-
-      const intakes = getIntakes()
-      const alreadyTaken = intakes.some(i => i.scheduleId === slotId && i.date === todayDateStr && i.status === 'taken')
-      if (alreadyTaken) return
-    }
-
-    const title = medicationName || 'Напоминание'
-    const content = dosage ? dosage : 'Примите лекарство'
+    const title = intake.label || intake.time
+    const content = buildContent(intake)
 
     notify({
       title: title,
@@ -52,19 +54,19 @@ AppService({
         {
           text: 'Принял',
           file: 'app-service/take',
-          param: JSON.stringify({ slotId, medicationId, medicationName, dosage }),
+          param: JSON.stringify({ intakeId }),
         },
         {
           text: 'Отложить',
           file: 'page/snooze/index',
-          param: JSON.stringify({ slotId, medicationId, medicationName, dosage }),
+          param: JSON.stringify({ intakeId }),
         },
       ],
     })
 
     if (mode === ALARM_MODES.REMINDER) {
       const settings = getSettings()
-      createRetryAlarm(slotId, medicationId, medicationName, dosage, settings.retryInterval)
+      createRetryAlarm(intakeId, settings.retryInterval)
     }
 
     logger.log('Notification sent for ' + title)
