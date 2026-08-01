@@ -1,7 +1,7 @@
 import { set as setAlarm, cancel as cancelAlarm, getAllAlarms, REPEAT_WEEK, REPEAT_ONCE } from '@zos/alarm'
 import { log as Logger } from '@zos/utils'
 import { ALARM_MODES } from './constants'
-import { getMedications, getSchedule, getSettings, getIntakes, getCancellations, getTodayDateStr, isSlotCancelled } from './storage'
+import { getMedications, getIntakes, getTakeLogs, getTodayDateStr, isIntakeCancelled } from './storage'
 
 const logger = Logger.getLogger('aibolit-schedule')
 
@@ -25,16 +25,13 @@ export function getWeekDaysBitmask(weekDays) {
   return mask
 }
 
-export function createSlotAlarm(slot, medication) {
-  const [hours, minutes] = slot.time.split(':').map(Number)
+export function createIntakeAlarm(intake) {
+  const [hours, minutes] = intake.time.split(':').map(Number)
   const utcTime = getUTCSeconds(hours, minutes)
-  const weekDaysMask = getWeekDaysBitmask(slot.weekDays)
+  const weekDaysMask = getWeekDaysBitmask(intake.weekDays)
   const param = JSON.stringify({
     mode: ALARM_MODES.REMINDER,
-    slotId: slot.id,
-    medicationId: slot.medicationId,
-    medicationName: medication.name,
-    dosage: medication.dosage,
+    intakeId: intake.id,
   })
 
   const option = {
@@ -47,18 +44,15 @@ export function createSlotAlarm(slot, medication) {
   }
 
   const id = setAlarm(option)
-  logger.log(`Created alarm id=${id} for slot ${slot.id} at ${slot.time}`)
+  logger.log(`Created alarm id=${id} for intake ${intake.id} at ${intake.time}`)
   return id
 }
 
-export function createRetryAlarm(slotId, medicationId, medicationName, dosage, delayMinutes) {
+export function createRetryAlarm(intakeId, delayMinutes) {
   const delaySeconds = delayMinutes * 60
   const param = JSON.stringify({
     mode: ALARM_MODES.RETRY,
-    slotId: slotId,
-    medicationId: medicationId,
-    medicationName: medicationName,
-    dosage: dosage,
+    intakeId: intakeId,
   })
 
   const option = {
@@ -70,18 +64,15 @@ export function createRetryAlarm(slotId, medicationId, medicationName, dosage, d
   }
 
   const id = setAlarm(option)
-  logger.log(`Created retry alarm id=${id} for slot ${slotId} in ${delayMinutes}min`)
+  logger.log(`Created retry alarm id=${id} for intake ${intakeId} in ${delayMinutes}min`)
   return id
 }
 
-export function createSnoozeAlarm(slotId, medicationId, medicationName, dosage, delayMinutes) {
+export function createSnoozeAlarm(intakeId, delayMinutes) {
   const delaySeconds = delayMinutes * 60
   const param = JSON.stringify({
     mode: ALARM_MODES.SNOOZE,
-    slotId: slotId,
-    medicationId: medicationId,
-    medicationName: medicationName,
-    dosage: dosage,
+    intakeId: intakeId,
   })
 
   const option = {
@@ -93,13 +84,20 @@ export function createSnoozeAlarm(slotId, medicationId, medicationName, dosage, 
   }
 
   const id = setAlarm(option)
-  logger.log(`Created snooze alarm id=${id} for slot ${slotId} in ${delayMinutes}min`)
+  logger.log(`Created snooze alarm id=${id} for intake ${intakeId} in ${delayMinutes}min`)
   return id
 }
 
-export function refreshAlarms() {
+function getEnabledItems(intake) {
   const medications = getMedications()
-  const schedule = getSchedule()
+  return (intake.items || []).filter(item => {
+    const med = medications.find(m => m.id === item.medicationId)
+    return med && med.enabled
+  })
+}
+
+export function refreshAlarms() {
+  const intakes = getIntakes()
   const todayDateStr = getTodayDateStr()
   const dayOfWeek = new Date().getDay() === 0 ? 7 : new Date().getDay()
 
@@ -110,19 +108,18 @@ export function refreshAlarms() {
     }
   }
 
-  for (const slot of schedule) {
-    const medication = medications.find(m => m.id === slot.medicationId)
-    if (!medication || !medication.enabled) continue
+  for (const intake of intakes) {
+    if (getEnabledItems(intake).length === 0) continue
 
-    if (slot.weekDays && slot.weekDays.length > 0 && !slot.weekDays.includes(dayOfWeek)) continue
+    if (intake.weekDays && intake.weekDays.length > 0 && !intake.weekDays.includes(dayOfWeek)) continue
 
-    if (isSlotCancelled(slot.id, todayDateStr)) continue
+    if (isIntakeCancelled(intake.id, todayDateStr)) continue
 
-    const todayIntakes = getIntakes().filter(i => i.scheduleId === slot.id && i.date === todayDateStr)
-    const isTaken = todayIntakes.some(i => i.status === 'taken')
+    const todayLogs = getTakeLogs().filter(i => i.intakeId === intake.id && i.date === todayDateStr)
+    const isTaken = todayLogs.some(i => i.status === 'taken')
     if (isTaken) continue
 
-    createSlotAlarm(slot, medication)
+    createIntakeAlarm(intake)
   }
 
   logger.log('Alarms refreshed')
