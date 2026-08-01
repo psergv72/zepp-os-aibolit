@@ -45,6 +45,7 @@ export const ZML_METHODS = {
   SYNC_CANCELLATION: 'sync_cancellation',
   UNDO_TAKE: 'undo_take',
   RESTORE_INTAKE: 'restore_intake',
+  CONFIG_SYNCED: 'config_synced',
 }
 
 export const ALARM_MODES = {
