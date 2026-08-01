@@ -41,7 +41,7 @@ Page({
     const settings = getSettings()
     const options = settings.snoozeOptions || [30, 45, 60, 90]
     const intake = this.state.intake
-    let y = 40
+    let y = 48
 
     const medications = getMedications()
     const medMap = {}
@@ -61,46 +61,46 @@ Page({
       w: screenWidth,
       h: 30,
       color: 0xffffff,
-      text_size: 18,
+      text_size: 28,
       align_h: align.CENTER_H,
       align_v: align.CENTER_V,
       text_style: text_style.NONE,
       text: intake ? (intake.label || intake.time) : '',
     })
-    y += 45
+    y += 52
 
     if (itemsText) {
       createWidget(widget.TEXT, {
         x: 0,
         y: y,
         w: screenWidth,
-        h: 24,
+        h: 32,
         color: 0x888888,
-        text_size: 14,
+        text_size: 22,
         align_h: align.CENTER_H,
         align_v: align.CENTER_V,
         text_style: text_style.NONE,
         text: itemsText,
       })
-      y += 28
+      y += 34
     }
 
     createWidget(widget.TEXT, {
       x: 0,
       y: y,
       w: screenWidth,
-      h: 24,
+      h: 32,
       color: 0x888888,
-      text_size: 14,
+      text_size: 22,
       align_h: align.CENTER_H,
       align_v: align.CENTER_V,
       text_style: text_style.NONE,
       text: 'Отложить на:',
     })
-    y += 40
+    y += 48
 
-    const btnWidth = 140
-    const btnHeight = 80
+    const btnWidth = 150
+    const btnHeight = 96
     const gap = 20
     const startX = Math.floor((screenWidth - btnWidth * 2 - gap) / 2)
     let col = 0
@@ -112,11 +112,11 @@ Page({
 
       createWidget(widget.TEXT, {
         x: bx,
-        y: by + Math.floor(btnHeight / 2) - 15,
+        y: by + Math.floor(btnHeight / 2) - 20,
         w: btnWidth,
         h: 40,
         color: 0x4fc3f7,
-        text_size: 28,
+        text_size: 44,
         align_h: align.CENTER_H,
         align_v: align.CENTER_V,
         text_style: text_style.NONE,
@@ -125,11 +125,11 @@ Page({
 
       createWidget(widget.TEXT, {
         x: bx,
-        y: by + Math.floor(btnHeight / 2) + 15,
+        y: by + Math.floor(btnHeight / 2) + 20,
         w: btnWidth,
         h: 20,
         color: 0x888888,
-        text_size: 14,
+        text_size: 22,
         align_h: align.CENTER_H,
         align_v: align.CENTER_V,
         text_style: text_style.NONE,
