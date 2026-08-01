@@ -2,6 +2,7 @@ import { set as setAlarm, cancel as cancelAlarm, getAllAlarms, REPEAT_WEEK, REPE
 import { log as Logger } from '@zos/utils'
 import { ALARM_MODES } from './constants'
 import { getMedications, getIntakes, getTakeLogs, getTodayDateStr, isIntakeCancelled } from './storage'
+import { getWeekDayBit, getWeekDaysBitmask, getEnabledMedItems } from './intake-logic.js'
 
 const logger = Logger.getLogger('aibolit-schedule')
 
@@ -9,20 +10,6 @@ function getUTCSeconds(hours, minutes) {
   const now = new Date()
   const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0, 0)
   return Math.floor(target.getTime() / 1000)
-}
-
-export function getWeekDayBit(dayOfWeek) {
-  const bits = { 1: 1, 2: 2, 3: 4, 4: 8, 5: 16, 6: 32, 7: 64 }
-  return bits[dayOfWeek] || 0
-}
-
-export function getWeekDaysBitmask(weekDays) {
-  if (!weekDays || weekDays.length === 0) return 127
-  let mask = 0
-  for (const day of weekDays) {
-    mask |= getWeekDayBit(day)
-  }
-  return mask
 }
 
 export function createIntakeAlarm(intake) {
@@ -88,14 +75,6 @@ export function createSnoozeAlarm(intakeId, delayMinutes) {
   return id
 }
 
-function getEnabledItems(intake) {
-  const medications = getMedications()
-  return (intake.items || []).filter(item => {
-    const med = medications.find(m => m.id === item.medicationId)
-    return med && med.enabled
-  })
-}
-
 export function refreshAlarms() {
   const intakes = getIntakes()
   const todayDateStr = getTodayDateStr()
@@ -109,7 +88,7 @@ export function refreshAlarms() {
   }
 
   for (const intake of intakes) {
-    if (getEnabledItems(intake).length === 0) continue
+    if (getEnabledMedItems(intake, getMedications()).length === 0) continue
 
     if (intake.weekDays && intake.weekDays.length > 0 && !intake.weekDays.includes(dayOfWeek)) continue
 
