@@ -28,14 +28,6 @@ export function setMedications(medications) {
   setItem(STORAGE_KEYS.MEDICATIONS, medications)
 }
 
-export function getSchedule() {
-  return getItem(STORAGE_KEYS.SCHEDULE, [])
-}
-
-export function setSchedule(schedule) {
-  setItem(STORAGE_KEYS.SCHEDULE, schedule)
-}
-
 export function getIntakes() {
   return getItem(STORAGE_KEYS.INTAKES, [])
 }
@@ -44,17 +36,25 @@ export function setIntakes(intakes) {
   setItem(STORAGE_KEYS.INTAKES, intakes)
 }
 
-export function addIntake(intake) {
-  const intakes = getIntakes()
-  intakes.push(intake)
-  setIntakes(intakes)
-  return intake
+export function getTakeLogs() {
+  return getItem(STORAGE_KEYS.TAKE_LOGS, [])
 }
 
-export function removeIntake(intakeId) {
-  const intakes = getIntakes()
-  const filtered = intakes.filter(i => i.id !== intakeId)
-  setIntakes(filtered)
+export function setTakeLogs(takeLogs) {
+  setItem(STORAGE_KEYS.TAKE_LOGS, takeLogs)
+}
+
+export function addTakeLog(takeLog) {
+  const takeLogs = getTakeLogs()
+  takeLogs.push(takeLog)
+  setTakeLogs(takeLogs)
+  return takeLog
+}
+
+export function removeTakeLog(takeLogId) {
+  const takeLogs = getTakeLogs()
+  const filtered = takeLogs.filter(i => i.id !== takeLogId)
+  setTakeLogs(filtered)
   return filtered
 }
 
@@ -66,24 +66,24 @@ export function setCancellations(cancellations) {
   setItem(STORAGE_KEYS.CANCELLATIONS, cancellations)
 }
 
-export function addCancellation(scheduleId, date) {
+export function addCancellation(intakeId, date) {
   const cancellations = getCancellations()
-  const existing = cancellations.find(c => c.scheduleId === scheduleId && c.date === date)
+  const existing = cancellations.find(c => c.intakeId === intakeId && c.date === date)
   if (!existing) {
-    cancellations.push({ scheduleId, date })
+    cancellations.push({ intakeId, date })
     setCancellations(cancellations)
   }
 }
 
-export function removeCancellation(scheduleId, date) {
+export function removeCancellation(intakeId, date) {
   const cancellations = getCancellations()
-  const filtered = cancellations.filter(c => !(c.scheduleId === scheduleId && c.date === date))
+  const filtered = cancellations.filter(c => !(c.intakeId === intakeId && c.date === date))
   setCancellations(filtered)
 }
 
-export function isSlotCancelled(scheduleId, date) {
+export function isIntakeCancelled(intakeId, date) {
   const cancellations = getCancellations()
-  return cancellations.some(c => c.scheduleId === scheduleId && c.date === date)
+  return cancellations.some(c => c.intakeId === intakeId && c.date === date)
 }
 
 export function getSettings() {
@@ -132,12 +132,12 @@ export function getYesterdayDateStr() {
   return `${y}-${m}-${day}`
 }
 
-export function pruneOldIntakes() {
+export function pruneOldTakeLogs() {
   const today = getTodayDateStr()
   const yesterday = getYesterdayDateStr()
-  const intakes = getIntakes()
-  const filtered = intakes.filter(i => i.date === today || i.date === yesterday)
-  setIntakes(filtered)
+  const takeLogs = getTakeLogs()
+  const filtered = takeLogs.filter(i => i.date === today || i.date === yesterday)
+  setTakeLogs(filtered)
 }
 
 export function clearAll() {
