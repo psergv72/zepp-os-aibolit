@@ -12,13 +12,13 @@
 ### `src/package.json`
 
 - Добавить `"type": "module"` — проверено эмпирически: сборка `zeus build` не ломается; `node:test` корректно импортирует ESM-исходники (`.js` с `export`). ВАЖНО: писать файл без BOM (PowerShell `Set-Content -Encoding UTF8` добавляет BOM и ломает JSON — использовать инструмент Write или явный UTF8 без BOM).
-- Добавить скрипт: `"test": "node --test test/"`.
+- Добавить скрипт: `"test": "node --test"` (без аргументов — форма `node --test test/` с аргументом-каталогом падает на Node 24/Windows, dir трактуется как модуль; bare-режим сам обнаруживает `test/*.test.js`).
 
 ### Тесты
 
 - Расположение: `src/test/*.test.js` (ESM, `node:test` + `node:assert/strict`).
 - Файлы `src/test/` не входят в бандл zeus (сборка бандлит только точки входа: app.js, страницы, app-service, app-side).
-- Запуск: `node --test test/` из `src` (npm.ps1 заблокирован политикой выполнения; при необходимости `npm.cmd test`).
+- Запуск: `node --test` из `src` (npm.ps1 заблокирован политикой выполнения; при необходимости `npm.cmd test`).
 
 ## Хелпер-модуль `src/utils/intake-logic.js`
 

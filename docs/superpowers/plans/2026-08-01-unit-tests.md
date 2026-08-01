@@ -1,4 +1,4 @@
-﻿# Unit-тесты и хелпер-модуль intake-logic — Implementation Plan
+# Unit-тесты и хелпер-модуль intake-logic — Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -26,7 +26,7 @@
   "description": "Medication reminder for Amazfit Balance 2",
   "main": "app.js",
   "scripts": {
-    "test": "node --test test/"
+    "test": "node --test"
   },
   "author": "",
   "license": "Apache-2.0",
@@ -60,7 +60,7 @@ test('smoke', () => {
 })
 ```
 
-Run (из `src`): `node --test test/`
+Run (из `src`): `node --test`
 Expected: `pass 1` / `fail 0`.
 
 Затем удалить `src/test/_smoke.test.js` (каталог `src/test` оставить).
@@ -373,7 +373,7 @@ export { getWeekDayBit, getWeekDaysBitmask } from './intake-logic.js'
 
 - [ ] **Step 3: Проверить тесты и сборку**
 
-Run (из `src`): `node --test test/`
+Run (из `src`): `node --test`
 Expected: `pass 13` / `fail 0`.
 
 Run (из `src`): `& "C:\Users\pserg\AppData\Roaming\npm\zeus.cmd" build -t "Amazfit Balance 2"`
@@ -413,7 +413,7 @@ import { buildItemsSummary } from '../utils/intake-logic.js'
 
 - [ ] **Step 2: Проверить тесты и сборку**
 
-Run (из `src`): `node --test test/`
+Run (из `src`): `node --test`
 Expected: `pass 13` / `fail 0`.
 
 Run (из `src`): `& "C:\Users\pserg\AppData\Roaming\npm\zeus.cmd" build -t "Amazfit Balance 2"`
@@ -463,7 +463,7 @@ import { getIntakeEntries, isIntakeOnDay, isIntakeTakenToday, isIntakeCancelledT
 
 - [ ] **Step 2: Проверить тесты и сборку**
 
-Run (из `src`): `node --test test/`
+Run (из `src`): `node --test`
 Expected: `pass 13` / `fail 0`.
 
 Run (из `src`): `& "C:\Users\pserg\AppData\Roaming\npm\zeus.cmd" build -t "Amazfit Balance 2"`
@@ -519,7 +519,7 @@ import { getIntakeEntries, isIntakeOnDay, getIntakeStatus, getTakenTime } from '
 
 - [ ] **Step 2: Проверить тесты и сборку**
 
-Run (из `src`): `node --test test/`
+Run (из `src`): `node --test`
 Expected: `pass 13` / `fail 0`.
 
 Run (из `src`): `& "C:\Users\pserg\AppData\Roaming\npm\zeus.cmd" build -t "Amazfit Balance 2"`
@@ -541,7 +541,7 @@ git commit -m "refactor: use intake-logic helpers on plan page"
 
 - [ ] **Step 1: Запустить все тесты**
 
-Run (из `src`): `node --test test/`
+Run (из `src`): `node --test`
 Expected: `pass 13` / `fail 0`.
 
 - [ ] **Step 2: Полная сборка**

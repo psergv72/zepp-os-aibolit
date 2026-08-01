@@ -2,7 +2,7 @@ import { set as setAlarm, cancel as cancelAlarm, getAllAlarms, REPEAT_WEEK, REPE
 import { log as Logger } from '@zos/utils'
 import { ALARM_MODES } from './constants'
 import { getMedications, getIntakes, getTakeLogs, getTodayDateStr, isIntakeCancelled } from './storage'
-import { getWeekDayBit, getWeekDaysBitmask, getEnabledMedItems } from './intake-logic.js'
+import { getWeekDayBit, getWeekDaysBitmask, getEnabledMedItems, isIntakeOnDay } from './intake-logic.js'
 
 const logger = Logger.getLogger('aibolit-schedule')
 
@@ -90,7 +90,7 @@ export function refreshAlarms() {
   for (const intake of intakes) {
     if (getEnabledMedItems(intake, getMedications()).length === 0) continue
 
-    if (intake.weekDays && intake.weekDays.length > 0 && !intake.weekDays.includes(dayOfWeek)) continue
+    if (!isIntakeOnDay(intake, dayOfWeek)) continue
 
     if (isIntakeCancelled(intake.id, todayDateStr)) continue
 
