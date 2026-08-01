@@ -13,6 +13,7 @@ import {
   removeTakeLog,
 } from '../../utils/storage'
 import { sendTakeLogToPhone, sendCancellationToPhone } from '../../utils/sync'
+import { getIntakeEntries, isIntakeOnDay, getIntakeStatus, getTakenTime } from '../../utils/intake-logic.js'
 
 const logger = Logger.getLogger('aibolit-plan')
 
@@ -41,36 +42,19 @@ Page({
     const cancellations = getCancellations()
     const todayDateStr = getTodayDateStr()
 
-    const enabledMedMap = {}
-    for (const med of medications) {
-      if (med.enabled) enabledMedMap[med.id] = med
-    }
-
     const dayOfWeek = new Date().getDay() === 0 ? 7 : new Date().getDay()
 
-    const today = intakes
-      .map(intake => ({
-        intake,
-        items: (intake.items || [])
-          .map(item => ({ med: enabledMedMap[item.medicationId], amount: item.amount }))
-          .filter(({ med }) => med),
-      }))
-      .filter(({ items }) => items.length > 0)
-      .filter(({ intake }) => {
-        if (intake.weekDays && intake.weekDays.length > 0 && !intake.weekDays.includes(dayOfWeek)) return false
-        return true
-      })
+    const today = getIntakeEntries(intakes, medications)
+      .filter(({ intake }) => isIntakeOnDay(intake, dayOfWeek))
       .sort((a, b) => a.intake.time.localeCompare(b.intake.time))
 
     for (const entry of today) {
       const intake = entry.intake
-      const intakeLogs = takeLogs.filter(i => i.intakeId === intake.id && i.date === todayDateStr)
-      const takenLog = intakeLogs.find(i => i.status === 'taken')
-      const isCancelled = cancellations.some(c => c.intakeId === intake.id && c.date === todayDateStr)
+      const status = getIntakeStatus(intake.id, todayDateStr, takeLogs, cancellations)
 
-      entry._taken = !!takenLog
-      entry._takenTime = takenLog ? takenLog.takenTime : null
-      entry._cancelled = isCancelled
+      entry._taken = status === 'taken'
+      entry._takenTime = getTakenTime(intake.id, todayDateStr, takeLogs)
+      entry._cancelled = status === 'cancelled'
     }
 
     this.state.intakes = today
