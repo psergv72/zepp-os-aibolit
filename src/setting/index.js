@@ -1,390 +1,377 @@
-import { log as Logger } from '@zos/utils'
-
-const logger = Logger.getLogger('aibolit-setting')
-
 const STORAGE_KEYS = {
   medications: 'medications',
   schedule: 'schedule',
   settings: 'settings',
 }
 
-function getItem(key, defaultValue) {
-  const val = settings.settingsStorage.getItem(key)
-  return val !== null && val !== undefined ? JSON.parse(val) : defaultValue
-}
+const DEFAULT_SETTINGS = { retryInterval: 60, syncInterval: 60, snoozeOptions: [30, 45, 60, 90] }
 
-function setItem(key, value) {
-  settings.settingsStorage.setItem(key, JSON.stringify(value))
-}
+const DAY_NAMES = [
+  { name: 'Пн', value: '1' },
+  { name: 'Вт', value: '2' },
+  { name: 'Ср', value: '3' },
+  { name: 'Чт', value: '4' },
+  { name: 'Пт', value: '5' },
+  { name: 'Сб', value: '6' },
+  { name: 'Вс', value: '7' },
+]
 
-function getMedications() {
-  return getItem(STORAGE_KEYS.medications, [])
-}
-
-function setMedications(meds) {
-  setItem(STORAGE_KEYS.medications, meds)
-}
-
-function getSchedule() {
-  return getItem(STORAGE_KEYS.schedule, [])
-}
-
-function setSchedule(sched) {
-  setItem(STORAGE_KEYS.schedule, sched)
-}
-
-function getAppSettings() {
-  return getItem(STORAGE_KEYS.settings, { retryInterval: 60, syncInterval: 60, snoozeOptions: [30, 45, 60, 90] })
-}
-
-function setAppSettings(s) {
-  setItem(STORAGE_KEYS.settings, s)
-}
-
-let currentPage = 'list'
-let editingMedication = null
-let editingSlot = null
-let viewHistoryDate = null
-
-function getHistoryForDate(dateStr) {
-  const data = settings.settingsStorage.getItem('history_' + dateStr)
-  return data ? JSON.parse(data) : []
+const S = {
+  page: { padding: '12px 20px' },
+  title: { fontSize: '18px', marginBottom: '8px' },
+  field: { marginBottom: '12px' },
+  row: { padding: '10px 0', borderBottom: '1px solid #eaeaea' },
+  rowTitle: { fontSize: '15px' },
+  rowSub: { fontSize: '12px', color: '#888' },
+  hint: { fontSize: '13px', color: '#888', marginTop: '10px' },
+  btn: { marginTop: '10px' },
 }
 
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
 }
 
-function navigateTo(page, params) {
-  currentPage = page
-  if (params) {
-    if (params.medication !== undefined) editingMedication = params.medication
-    if (params.slot !== undefined) editingSlot = params.slot
-    if (params.date !== undefined) viewHistoryDate = params.date
-  }
-  build()
+function todayDateStr() {
+  const t = new Date()
+  return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0')
 }
 
-function getText(key) {
-  return key
+function dayName(d) {
+  const found = DAY_NAMES.find(x => x.value === String(d))
+  return found ? found.name : String(d)
 }
 
-function createElement(tag, attrs, children) {
-  const el = document.createElement(tag)
-  if (attrs) {
-    for (const [k, v] of Object.entries(attrs)) {
-      if (k === 'className') { el.className = v }
-      else if (k === 'onClick') { el.addEventListener('click', v) }
-      else if (k === 'onInput') { el.addEventListener('input', v) }
-      else if (k === 'onChange') { el.addEventListener('change', v) }
-      else if (k === 'textContent') { el.textContent = v }
-      else { el.setAttribute(k, v) }
+AppSettingsPage({
+  state: {
+    props: null,
+    page: 'list',
+    editDraft: null,
+    slotDraft: null,
+    viewHistoryDate: null,
+    settingsDraft: null,
+  },
+
+  storage() {
+    return this.state.props.settingsStorage
+  },
+
+  getItem(key, defaultValue) {
+    const val = this.storage().getItem(key)
+    return val !== null && val !== undefined ? JSON.parse(val) : defaultValue
+  },
+
+  setItem(key, value) {
+    this.storage().setItem(key, JSON.stringify(value))
+  },
+
+  getMedications() {
+    return this.getItem(STORAGE_KEYS.medications, [])
+  },
+
+  setMedications(meds) {
+    this.setItem(STORAGE_KEYS.medications, meds)
+  },
+
+  getSchedule() {
+    return this.getItem(STORAGE_KEYS.schedule, [])
+  },
+
+  setSchedule(sched) {
+    this.setItem(STORAGE_KEYS.schedule, sched)
+  },
+
+  getAppSettings() {
+    return this.getItem(STORAGE_KEYS.settings, { ...DEFAULT_SETTINGS })
+  },
+
+  setAppSettings(s) {
+    this.setItem(STORAGE_KEYS.settings, s)
+  },
+
+  getHistoryForDate(dateStr) {
+    const data = this.storage().getItem('history_' + dateStr)
+    return data ? JSON.parse(data) : []
+  },
+
+  forceRender() {
+    this.storage().setItem('__ui_render', String(Date.now()))
+  },
+
+  navigateTo(page, params) {
+    this.state.page = page
+    if (page === 'edit') {
+      this.state.editDraft = params && params.medication
+        ? { ...params.medication }
+        : { name: '', dosage: '', comments: '', enabled: true, id: null }
+    } else if (page === 'slotEdit') {
+      this.state.slotDraft = params && params.slot
+        ? { ...params.slot }
+        : {
+            medicationId: this.state.editDraft ? this.state.editDraft.id : null,
+            time: '08:00',
+            weekDays: null,
+            label: '',
+          }
+    } else if (page === 'history') {
+      if (params && params.date !== undefined) this.state.viewHistoryDate = params.date
+    } else if (page === 'settings') {
+      this.state.settingsDraft = this.getAppSettings()
     }
-  }
-  if (children) {
-    for (const child of children) {
-      if (typeof child === 'string') { el.appendChild(document.createTextNode(child)) }
-      else { el.appendChild(child) }
+    this.forceRender()
+  },
+
+  build(props) {
+    this.state.props = props
+    switch (this.state.page) {
+      case 'edit':
+        return this.renderMedicationEdit()
+      case 'schedule':
+        return this.renderScheduleList()
+      case 'slotEdit':
+        return this.renderSlotEdit()
+      case 'history':
+        return this.renderHistory()
+      case 'settings':
+        return this.renderSettingsPage()
+      default:
+        return this.renderMedicationList()
     }
-  }
-  return el
-}
+  },
 
-function clearBody() {
-  document.body.innerHTML = ''
-}
+  // ── Medication List Page ──
 
-// ── Medication List Page ──
+  renderMedicationList() {
+    const medications = this.getMedications()
+    const schedule = this.getSchedule()
 
-function renderMedicationList() {
-  clearBody()
-  const medications = getMedications()
-  const schedule = getSchedule()
+    const rows = []
+    for (const med of medications) {
+      const slotCount = schedule.filter(s => s.medicationId === med.id).length
+      rows.push(
+        View(
+          { style: S.row, onClick: () => this.navigateTo('edit', { medication: med }) },
+          [
+            Text({ style: S.rowTitle }, [med.name + ' (' + med.dosage + ')' + (!med.enabled ? ' [OFF]' : '')]),
+            Text({ style: S.rowSub }, [slotCount + ' приемов']),
+          ],
+        ),
+      )
+    }
+    if (rows.length === 0) {
+      rows.push(Text({ style: S.hint }, ['Нет лекарств. Добавьте первое.']))
+    }
 
-  const container = createElement('div', { className: 'page' })
-  container.appendChild(createElement('h1', { textContent: 'Лекарства' }))
+    return View({ style: S.page }, [
+      Text({ style: S.title, bold: true }, ['Лекарства']),
+      ...rows,
+      Button({ label: '+ Добавить', color: 'primary', style: S.btn, onClick: () => this.navigateTo('edit', { medication: null }) }),
+      Button({ label: 'История', color: 'default', style: S.btn, onClick: () => this.navigateTo('history') }),
+      Button({ label: 'Настройки', color: 'default', style: S.btn, onClick: () => this.navigateTo('settings') }),
+    ])
+  },
 
-  for (const med of medications) {
-    const slotCount = schedule.filter(s => s.medicationId === med.id).length
-    const row = createElement('div', {
-      className: 'list-item',
-      onClick: () => navigateTo('edit', { medication: med }),
-    })
-    const nameEl = createElement('span', { textContent: med.name + ' (' + med.dosage + ')' + (!med.enabled ? ' [OFF]' : '') })
-    const subEl = createElement('small', { textContent: slotCount + ' приемов' })
-    row.appendChild(nameEl)
-    row.appendChild(createElement('br'))
-    row.appendChild(subEl)
-    container.appendChild(row)
-  }
+  // ── Medication Edit Page ──
 
-  const addBtn = createElement('button', { textContent: '+ Добавить', onClick: () => navigateTo('edit', { medication: null }) })
-  container.appendChild(addBtn)
+  renderMedicationEdit() {
+    const draft = this.state.editDraft
+    const isNew = !draft.id
 
-  const histBtn = createElement('button', { textContent: 'История', onClick: () => navigateTo('history') })
-  container.appendChild(histBtn)
+    return View({ style: S.page }, [
+      Text({ style: S.title, bold: true }, [isNew ? 'Добавить лекарство' : 'Редактировать лекарство']),
+      View({ style: S.field }, [TextInput({ label: 'Название', placeholder: 'Название', value: draft.name, onChange: v => { draft.name = v } })]),
+      View({ style: S.field }, [TextInput({ label: 'Дозировка', placeholder: 'Дозировка', value: draft.dosage, onChange: v => { draft.dosage = v } })]),
+      View({ style: S.field }, [TextInput({ label: 'Комментарии', placeholder: 'Комментарии', value: draft.comments, onChange: v => { draft.comments = v } })]),
+      View({ style: S.field }, [Toggle({ label: 'Активно', value: draft.enabled, onChange: v => { draft.enabled = v } })]),
+      Button({
+        label: 'Сохранить',
+        color: 'primary',
+        style: S.btn,
+        onClick: () => {
+          if (!draft.name.trim()) return
+          const medications = this.getMedications()
+          if (isNew) {
+            draft.id = generateId()
+            medications.push(draft)
+          } else {
+            const idx = medications.findIndex(m => m.id === draft.id)
+            if (idx >= 0) medications[idx] = draft
+          }
+          this.setMedications(medications)
+          this.navigateTo('list')
+        },
+      }),
+      Button({ label: 'Расписание', color: 'default', style: S.btn, onClick: () => this.navigateTo('schedule') }),
+      Button({ label: 'Назад', color: 'default', style: S.btn, onClick: () => this.navigateTo('list') }),
+    ])
+  },
 
-  const settBtn = createElement('button', { textContent: 'Настройки', onClick: () => navigateTo('settings') })
-  container.appendChild(settBtn)
+  // ── Schedule List Page ──
 
-  document.body.appendChild(container)
-}
+  renderScheduleList() {
+    const medication = this.state.editDraft || { id: null }
+    const medicationId = medication.id
+    const slots = this.getSchedule().filter(s => s.medicationId === medicationId)
 
-// ── Medication Edit Page ──
+    const rows = []
+    for (const slot of slots) {
+      const daysText = slot.weekDays && slot.weekDays.length
+        ? slot.weekDays.map(d => dayName(d)).join(', ')
+        : 'Каждый день'
+      rows.push(
+        View(
+          { style: S.row, onClick: () => this.navigateTo('slotEdit', { slot }) },
+          [
+            Text({ style: S.rowTitle }, [(slot.label || slot.time) + ' — ' + slot.time]),
+            Text({ style: S.rowSub }, [daysText]),
+          ],
+        ),
+      )
+    }
+    if (rows.length === 0) {
+      rows.push(Text({ style: S.hint }, ['Нет времени приема']))
+    }
 
-function renderMedicationEdit() {
-  clearBody()
-  const isNew = !editingMedication
-  const med = isNew ? { name: '', dosage: '', comments: '', enabled: true } : { ...editingMedication }
+    return View({ style: S.page }, [
+      Text({ style: S.title, bold: true }, ['Расписание']),
+      ...rows,
+      Button({ label: '+ Добавить время', color: 'primary', style: S.btn, onClick: () => this.navigateTo('slotEdit', { slot: null }) }),
+      Button({ label: 'Назад', color: 'default', style: S.btn, onClick: () => this.navigateTo('edit', { medication }) }),
+    ])
+  },
 
-  const container = createElement('div', { className: 'page' })
-  container.appendChild(createElement('h1', { textContent: isNew ? 'Добавить лекарство' : 'Редактировать лекарство' }))
+  // ── Slot Edit Page ──
 
-  const nameInput = createElement('input', { type: 'text', placeholder: 'Название', value: med.name, onInput: (e) => { med.name = e.target.value } })
-  container.appendChild(createElement('label', { textContent: 'Название' }))
-  container.appendChild(nameInput)
+  renderSlotEdit() {
+    const draft = this.state.slotDraft
+    const isNew = !draft.id
+    const everyDay = !draft.weekDays || draft.weekDays.length === 0
+    const weekDaysValue = everyDay ? [] : draft.weekDays.map(d => String(d))
 
-  const dosageInput = createElement('input', { type: 'text', placeholder: 'Дозировка', value: med.dosage, onInput: (e) => { med.dosage = e.target.value } })
-  container.appendChild(createElement('label', { textContent: 'Дозировка' }))
-  container.appendChild(dosageInput)
+    return View({ style: S.page }, [
+      Text({ style: S.title, bold: true }, [isNew ? 'Добавить время' : 'Редактировать время']),
+      View({ style: S.field }, [TextInput({ label: 'Время', placeholder: 'ЧЧ:ММ', value: draft.time, onChange: v => { draft.time = v } })]),
+      View({ style: S.field }, [TextInput({ label: 'Метка (утро/день/вечер)', placeholder: 'Метка', value: draft.label, onChange: v => { draft.label = v } })]),
+      View({ style: S.field }, [Toggle({ label: 'Каждый день', value: everyDay, onChange: v => { draft.weekDays = v ? null : [] } })]),
+      View({ style: S.field }, [
+        Select({
+          label: 'Дни недели',
+          title: 'Дни недели',
+          options: DAY_NAMES,
+          multiple: true,
+          value: weekDaysValue,
+          onChange: v => {
+            const arr = Array.isArray(v) ? v : [v]
+            draft.weekDays = arr.map(x => Number(x))
+          },
+        }),
+      ]),
+      Button({
+        label: 'Сохранить',
+        color: 'primary',
+        style: S.btn,
+        onClick: () => {
+          if (!draft.time || !draft.medicationId) return
+          const schedule = this.getSchedule()
+          if (isNew) {
+            draft.id = generateId()
+            schedule.push(draft)
+          } else {
+            const idx = schedule.findIndex(s => s.id === draft.id)
+            if (idx >= 0) schedule[idx] = draft
+          }
+          this.setSchedule(schedule)
+          this.navigateTo('schedule')
+        },
+      }),
+      !isNew && Button({
+        label: 'Удалить',
+        color: 'default',
+        style: S.btn,
+        onClick: () => {
+          const schedule = this.getSchedule().filter(s => s.id !== draft.id)
+          this.setSchedule(schedule)
+          this.navigateTo('schedule')
+        },
+      }),
+      Button({ label: 'Назад', color: 'default', style: S.btn, onClick: () => this.navigateTo('schedule') }),
+    ])
+  },
 
-  const commentsInput = createElement('input', { type: 'text', placeholder: 'Комментарии', value: med.comments, onInput: (e) => { med.comments = e.target.value } })
-  container.appendChild(createElement('label', { textContent: 'Комментарии' }))
-  container.appendChild(commentsInput)
+  // ── History Page ──
 
-  const enabledCheck = createElement('input', { type: 'checkbox', checked: med.enabled, onChange: (e) => { med.enabled = e.target.checked } })
-  container.appendChild(createElement('label', { textContent: 'Активно' }))
-  container.appendChild(enabledCheck)
-  container.appendChild(createElement('br'))
+  renderHistory() {
+    const dateStr = this.state.viewHistoryDate || todayDateStr()
+    const records = this.getHistoryForDate(dateStr)
+    const medications = this.getMedications()
 
-  const saveBtn = createElement('button', {
-    textContent: 'Сохранить',
-    onClick: () => {
-      if (!med.name.trim()) return
-      const medications = getMedications()
-      if (isNew) {
-        med.id = generateId()
-        medications.push(med)
-      } else {
-        const idx = medications.findIndex(m => m.id === med.id)
-        if (idx >= 0) medications[idx] = med
-      }
-      setMedications(medications)
-      navigateTo('list')
-    },
-  })
-  container.appendChild(saveBtn)
-
-  const scheduleBtn = createElement('button', {
-    textContent: 'Расписание',
-    onClick: () => navigateTo('schedule', { medication: editingMedication || med }),
-  })
-  container.appendChild(scheduleBtn)
-
-  const backBtn = createElement('button', { textContent: 'Назад', onClick: () => navigateTo('list') })
-  container.appendChild(backBtn)
-
-  document.body.appendChild(container)
-}
-
-// ── Schedule List Page ──
-
-const DAY_SHORT = { 1: 'Пн', 2: 'Вт', 3: 'Ср', 4: 'Чт', 5: 'Пт', 6: 'Сб', 7: 'Вс' }
-
-function renderScheduleList() {
-  clearBody()
-  const schedule = getSchedule()
-  const medicationId = editingMedication ? editingMedication.id : null
-  const slots = schedule.filter(s => s.medicationId === medicationId)
-
-  const container = createElement('div', { className: 'page' })
-  container.appendChild(createElement('h1', { textContent: 'Расписание' }))
-
-  for (const slot of slots) {
-    const daysText = slot.weekDays && slot.weekDays.length ? slot.weekDays.map(d => DAY_SHORT[d] || d).join(', ') : 'Каждый день'
-    const row = createElement('div', {
-      className: 'list-item',
-      onClick: () => navigateTo('slotEdit', { slot: slot }),
-    })
-    row.appendChild(createElement('span', { textContent: (slot.label || slot.time) + ' — ' + slot.time }))
-    row.appendChild(createElement('br'))
-    row.appendChild(createElement('small', { textContent: daysText }))
-    container.appendChild(row)
-  }
-
-  const addBtn = createElement('button', { textContent: '+ Добавить время', onClick: () => navigateTo('slotEdit', { slot: null }) })
-  container.appendChild(addBtn)
-
-  const backBtn = createElement('button', { textContent: 'Назад', onClick: () => navigateTo('edit', { medication: editingMedication }) })
-  container.appendChild(backBtn)
-
-  document.body.appendChild(container)
-}
-
-// ── Slot Edit Page ──
-
-function renderSlotEdit() {
-  clearBody()
-  const isNew = !editingSlot
-  const slot = isNew ? { medicationId: editingMedication ? editingMedication.id : null, time: '08:00', weekDays: null, label: '' } : { ...editingSlot }
-
-  const container = createElement('div', { className: 'page' })
-  container.appendChild(createElement('h1', { textContent: isNew ? 'Добавить время' : 'Редактировать время' }))
-
-  const timeInput = createElement('input', { type: 'text', placeholder: 'ЧЧ:ММ', value: slot.time, onInput: (e) => { slot.time = e.target.value } })
-  container.appendChild(createElement('label', { textContent: 'Время' }))
-  container.appendChild(timeInput)
-
-  const labelInput = createElement('input', { type: 'text', placeholder: 'Метка (утро/день/вечер)', value: slot.label, onInput: (e) => { slot.label = e.target.value } })
-  container.appendChild(createElement('label', { textContent: 'Метка' }))
-  container.appendChild(labelInput)
-
-  container.appendChild(createElement('br'))
-  const allDaysCheck = createElement('input', {
-    type: 'checkbox',
-    checked: !slot.weekDays || slot.weekDays.length === 0,
-    onChange: (e) => { slot.weekDays = e.target.checked ? null : [] }
-  })
-  container.appendChild(createElement('label', { textContent: 'Каждый день' }))
-  container.appendChild(allDaysCheck)
-  container.appendChild(createElement('br'))
-
-  const saveBtn = createElement('button', {
-    textContent: 'Сохранить',
-    onClick: () => {
-      if (!slot.time || !slot.medicationId) return
-      const schedule = getSchedule()
-      if (isNew) {
-        slot.id = generateId()
-        schedule.push(slot)
-      } else {
-        const idx = schedule.findIndex(s => s.id === slot.id)
-        if (idx >= 0) schedule[idx] = slot
-      }
-      setSchedule(schedule)
-      editingSlot = null
-      navigateTo('schedule', { medication: editingMedication })
-    },
-  })
-  container.appendChild(saveBtn)
-
-  if (!isNew) {
-    const deleteBtn = createElement('button', {
-      textContent: 'Удалить',
-      onClick: () => {
-        const schedule = getSchedule()
-        const filtered = schedule.filter(s => s.id !== slot.id)
-        setSchedule(filtered)
-        editingSlot = null
-        navigateTo('schedule', { medication: editingMedication })
-      },
-    })
-    container.appendChild(deleteBtn)
-  }
-
-  const backBtn = createElement('button', { textContent: 'Назад', onClick: () => { editingSlot = null; navigateTo('schedule', { medication: editingMedication }) } })
-  container.appendChild(backBtn)
-
-  document.body.appendChild(container)
-}
-
-// ── History Page ──
-
-function renderHistory() {
-  clearBody()
-  const today = new Date()
-  const dateStr = viewHistoryDate || today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0')
-
-  const records = getHistoryForDate(dateStr)
-  const medications = getMedications()
-
-  const container = createElement('div', { className: 'page' })
-  container.appendChild(createElement('h1', { textContent: 'История' }))
-
-  const dateInput = createElement('input', {
-    type: 'text',
-    value: dateStr,
-    onInput: (e) => { viewHistoryDate = e.target.value; renderHistory() }
-  })
-  container.appendChild(createElement('label', { textContent: 'Дата (ГГГГ-ММ-ДД)' }))
-  container.appendChild(dateInput)
-
-  if (records.length === 0) {
-    container.appendChild(createElement('p', { textContent: 'Нет данных за эту дату' }))
-  } else {
+    const rows = []
     for (const rec of records) {
       const med = medications.find(m => m.id === rec.medicationId)
       const medName = med ? med.name : (rec.medicationId || '')
-      const statusText = rec.status === 'taken' ? 'Принято в ' + (rec.takenTime || rec.scheduledTime) : (rec.status === 'cancelled' ? 'Отменено' : rec.status)
-      const row = createElement('div', { className: 'list-item' })
-      row.appendChild(createElement('span', { textContent: medName + ' — ' + statusText }))
-      container.appendChild(row)
+      const statusText = rec.status === 'taken'
+        ? 'Принято в ' + (rec.takenTime || rec.scheduledTime)
+        : (rec.status === 'cancelled' ? 'Отменено' : rec.status)
+      rows.push(View({ style: S.row }, [Text({ style: S.rowTitle }, [medName + ' — ' + statusText])]))
     }
-  }
+    if (rows.length === 0) {
+      rows.push(Text({ style: S.hint }, ['Нет данных за эту дату']))
+    }
 
-  const backBtn = createElement('button', { textContent: 'Назад', onClick: () => { viewHistoryDate = null; navigateTo('list') } })
-  container.appendChild(backBtn)
+    return View({ style: S.page }, [
+      Text({ style: S.title, bold: true }, ['История']),
+      View({ style: S.field }, [
+        TextInput({
+          label: 'Дата (ГГГГ-ММ-ДД)',
+          value: dateStr,
+          onChange: v => {
+            this.state.viewHistoryDate = v
+            this.forceRender()
+          },
+        }),
+      ]),
+      ...rows,
+      Button({
+        label: 'Назад',
+        color: 'default',
+        style: S.btn,
+        onClick: () => {
+          this.state.viewHistoryDate = null
+          this.navigateTo('list')
+        },
+      }),
+    ])
+  },
 
-  document.body.appendChild(container)
-}
+  // ── Settings Page ──
 
-// ── Settings Page ──
+  renderSettingsPage() {
+    const draft = this.state.settingsDraft
 
-function renderSettingsPage() {
-  clearBody()
-  const appSettings = getAppSettings()
-
-  const container = createElement('div', { className: 'page' })
-  container.appendChild(createElement('h1', { textContent: 'Настройки' }))
-
-  const retryInput = createElement('input', {
-    type: 'number',
-    value: String(appSettings.retryInterval),
-    onInput: (e) => { appSettings.retryInterval = parseInt(e.target.value, 10) || 60 }
-  })
-  container.appendChild(createElement('label', { textContent: 'Интервал повтора (мин)' }))
-  container.appendChild(retryInput)
-
-  const syncInput = createElement('input', {
-    type: 'number',
-    value: String(appSettings.syncInterval),
-    onInput: (e) => { appSettings.syncInterval = parseInt(e.target.value, 10) || 60 }
-  })
-  container.appendChild(createElement('label', { textContent: 'Интервал синхронизации (мин)' }))
-  container.appendChild(syncInput)
-
-  const snoozeInput = createElement('input', {
-    type: 'text',
-    value: appSettings.snoozeOptions.join(', '),
-    onInput: (e) => { appSettings.snoozeOptions = e.target.value.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n)) }
-  })
-  container.appendChild(createElement('label', { textContent: 'Варианты отложки (мин, через запятую)' }))
-  container.appendChild(snoozeInput)
-
-  const saveBtn = createElement('button', {
-    textContent: 'Сохранить',
-    onClick: () => {
-      setAppSettings(appSettings)
-      navigateTo('list')
-    },
-  })
-  container.appendChild(saveBtn)
-
-  const backBtn = createElement('button', { textContent: 'Назад', onClick: () => navigateTo('list') })
-  container.appendChild(backBtn)
-
-  document.body.appendChild(container)
-}
-
-function build() {
-  switch (currentPage) {
-    case 'list': renderMedicationList(); break
-    case 'edit': renderMedicationEdit(); break
-    case 'schedule': renderScheduleList(); break
-    case 'slotEdit': renderSlotEdit(); break
-    case 'history': renderHistory(); break
-    case 'settings': renderSettingsPage(); break
-  }
-}
-
-Page({ build })
+    return View({ style: S.page }, [
+      Text({ style: S.title, bold: true }, ['Настройки']),
+      View({ style: S.field }, [
+        TextInput({ label: 'Интервал повтора (мин)', value: String(draft.retryInterval), onChange: v => { draft.retryInterval = parseInt(v, 10) || 60 } }),
+      ]),
+      View({ style: S.field }, [
+        TextInput({ label: 'Интервал синхронизации (мин)', value: String(draft.syncInterval), onChange: v => { draft.syncInterval = parseInt(v, 10) || 60 } }),
+      ]),
+      View({ style: S.field }, [
+        TextInput({
+          label: 'Варианты отложки (мин, через запятую)',
+          value: draft.snoozeOptions.join(', '),
+          onChange: v => { draft.snoozeOptions = v.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n)) },
+        }),
+      ]),
+      Button({
+        label: 'Сохранить',
+        color: 'primary',
+        style: S.btn,
+        onClick: () => {
+          this.setAppSettings(draft)
+          this.navigateTo('list')
+        },
+      }),
+      Button({ label: 'Назад', color: 'default', style: S.btn, onClick: () => this.navigateTo('list') }),
+    ])
+  },
+})

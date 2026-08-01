@@ -58,10 +58,15 @@
     "device:os.bg_service"
   ],
   "i18n": {
+    "en-US": {
+      "name": "Aibolit",
+      "appName": "Aibolit"
+    },
     "ru-RU": {
-      "name": "Aibolit"
+      "name": "Айболит",
+      "appName": "Айболит"
     }
   },
-  "defaultLanguage": "ru-RU",
+  "defaultLanguage": "en-US",
   "debug": false
 }

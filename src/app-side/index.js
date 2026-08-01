@@ -1,25 +1,22 @@
-import { BaseSideService } from '@zeppos/zml/base-side'
-import { log as Logger } from '@zos/utils'
+﻿import { BaseSideService } from '@zeppos/zml/base-side'
 import { ZML_METHODS } from '../utils/constants'
-
-const logger = Logger.getLogger('aibolit-side')
 
 AppSideService(
   BaseSideService({
     onInit() {
-      logger.log('Side Service onInit')
+      console.log('Side Service onInit')
     },
 
     onRun() {
-      logger.log('Side Service onRun')
+      console.log('Side Service onRun')
     },
 
     onDestroy() {
-      logger.log('Side Service onDestroy')
+      console.log('Side Service onDestroy')
     },
 
     onRequest(req, res) {
-      logger.log(`onRequest method: ${req.method}`)
+      console.log(`onRequest method: ${req.method}`)
 
       if (req.method === ZML_METHODS.SYNC_INTAKE) {
         const { records } = req.params
@@ -58,7 +55,7 @@ AppSideService(
     },
 
     onCall(data) {
-      logger.log(`onCall method: ${data.method}`)
+      console.log(`onCall method: ${data.method}`)
     },
   })
 )
