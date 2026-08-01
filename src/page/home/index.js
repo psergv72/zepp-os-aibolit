@@ -61,7 +61,7 @@ Page({
 
   renderUpcoming(entries) {
     const screenWidth = 480
-    const btnHeight = 48
+    const btnHeight = 36
     const btnY = 380
     let y = 20
 
