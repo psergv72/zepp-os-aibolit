@@ -6,6 +6,7 @@ import { sendTakeLogToPhone } from '../../utils/sync'
 import { getIntakeEntries, isIntakeOnDay, isIntakeTakenToday, isIntakeCancelledToday } from '../../utils/intake-logic.js'
 import { fetchConfigFromSide } from '../../utils/watch-config'
 import { sysText, getUiScale } from '../../utils/ui-scale'
+import { getContentBounds, renderTimeHeader, renderNavButton, enableScroll } from '../../utils/screen-layout'
 import { createViewManager } from '../../utils/view-manager'
 
 const logger = Logger.getLogger('aibolit-home')
@@ -64,31 +65,47 @@ Page({
 
   renderUpcoming(entries) {
     this.ui.clear()
-    const screenWidth = 480
     const S = getUiScale()
-    const btnHeight = 48 * S
-    const btnY = 380 * S
-    let y = 20 * S
+    const bounds = getContentBounds()
+    const headerH = 40 * S
+    const headerGap = 10 * S
+    const btnGap = 24 * S
+    const btnH = 48 * S
+    const bottomPad = 48 * S
+    const checkColW = 40 * S
+    const checkGap = 16 * S
+    const itemsOf = (entry) => entry.items || []
+    const blockHOf = (entry) => (44 + itemsOf(entry).length * 40 + 10) * S
+
+    let totalH = bounds.top + headerH + headerGap + btnGap + btnH + bottomPad
+    if (entries.length === 0) {
+      totalH += (36 + 10) * S
+    } else {
+      for (const entry of entries) totalH += blockHOf(entry)
+    }
+    enableScroll(totalH)
+
+    let y = bounds.top
 
     this.ui.create(widget.TEXT, {
-      x: 0,
+      x: bounds.left,
       y: y,
-      w: screenWidth,
-      h: 48 * S,
+      w: bounds.width,
+      h: headerH,
       color: 0xffffff,
       text_size: sysText(32),
       align_h: align.CENTER_H,
       align_v: align.CENTER_V,
       text_style: text_style.NONE,
-      text: 'Ближайшие приёмы',
+      text: 'Сегодня',
     })
-    y += 60 * S
+    y += headerH + headerGap
 
     if (entries.length === 0) {
       this.ui.create(widget.TEXT, {
-        x: 0,
+        x: bounds.left,
         y: y,
-        w: screenWidth,
+        w: bounds.width,
         h: 36 * S,
         color: 0x888888,
         text_size: sysText(26),
@@ -97,33 +114,33 @@ Page({
         text_style: text_style.NONE,
         text: 'Нет предстоящих приёмов',
       })
+      y += (36 + 10) * S
     }
 
     for (const entry of entries) {
-      const blockH = (48 + entry.items.length * 40 + 12) * S
-      if (y + blockH > btnY - 5) break
-
+      const items = itemsOf(entry)
       const intake = entry.intake
 
-      this.ui.create(widget.TEXT, {
-        x: 20,
+      renderTimeHeader(this.ui, {
+        text: intake.time,
+        x: bounds.left,
         y: y,
-        w: screenWidth - 60,
-        h: 44 * S,
+        right: bounds.right,
         color: 0x4fc3f7,
-        text_size: sysText(26),
-        align_h: align.LEFT,
-        align_v: align.CENTER_V,
-        text_style: text_style.NONE,
-        text: '───── ' + intake.time + ' ────',
+        sizeSp: 26,
+        rowH: 44 * S,
       })
       y += 44 * S
 
-      for (const item of entry.items) {
+      const medX = bounds.left + checkColW + checkGap
+      const medW = bounds.right - medX
+      const firstMedY = y
+
+      for (const item of items) {
         this.ui.create(widget.TEXT, {
-          x: 40,
+          x: medX,
           y: y,
-          w: screenWidth - 90,
+          w: medW,
           h: 40 * S,
           color: 0xffffff,
           text_size: sysText(24),
@@ -135,15 +152,11 @@ Page({
         y += 40 * S
       }
 
-      const checkboxX = screenWidth - 50
-      const checkboxY = y - (entry.items.length * 40 + 5) * S
-      const checkboxH = (entry.items.length * 40 + 12) * S
-
-      const takeAllBtn = this.ui.create(widget.TEXT, {
-        x: checkboxX,
-        y: checkboxY,
-        w: 40,
-        h: checkboxH,
+      const takeBtn = this.ui.create(widget.TEXT, {
+        x: bounds.left,
+        y: firstMedY,
+        w: checkColW,
+        h: 40 * S,
         color: 0x4fc3f7,
         text_size: sysText(36),
         align_h: align.CENTER_H,
@@ -151,27 +164,32 @@ Page({
         text_style: text_style.NONE,
         text: '\u2610',
       })
-      takeAllBtn.addEventListener(event.CLICK_UP, () => {
+      takeBtn.addEventListener(event.CLICK_UP, () => {
         this.takeIntake(intake)
       })
 
       y += 10 * S
     }
 
-    const planBtn = this.ui.create(widget.TEXT, {
-      x: 0,
-      y: btnY,
-      w: screenWidth,
-      h: btnHeight,
-      color: 0x888888,
-      text_size: sysText(26),
-      align_h: align.CENTER_H,
-      align_v: align.CENTER_V,
-      text_style: text_style.NONE,
-      text: '[Полный план \u2192]',
+    y += btnGap
+
+    const planBtn = renderNavButton(this.ui, {
+      x: bounds.left,
+      y: y,
+      w: bounds.width,
+      h: btnH,
+      text: 'Полный план',
     })
     planBtn.addEventListener(event.CLICK_UP, () => {
       routerReplace({ url: 'page/plan/index' })
+    })
+
+    this.ui.create(widget.FILL_RECT, {
+      x: bounds.left,
+      y: y + btnH,
+      w: bounds.width,
+      h: bottomPad,
+      color: 0x000000,
     })
   },
 

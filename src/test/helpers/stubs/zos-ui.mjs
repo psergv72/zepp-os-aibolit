@@ -2,6 +2,7 @@ export const widget = {
   TEXT: 1,
   GROUP: 2,
   BUTTON: 3,
+  FILL_RECT: 4,
 }
 
 export const align = {
@@ -46,6 +47,11 @@ export function deleteWidget(w) {
 
 export function getSysFontSize(size) {
   return size
+}
+
+export function getTextLayout(text, options) {
+  const size = options && options.text_size ? options.text_size : 16
+  return { width: Math.ceil(text.length * size * 0.6), height: size, rows: 1, result: 0, text }
 }
 
 export function __getRegistry() {
