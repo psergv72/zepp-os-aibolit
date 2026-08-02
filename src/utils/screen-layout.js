@@ -69,3 +69,26 @@ export function renderTimeHeader(ui, { text, x, y, right, color = 0xffffff, size
     })
   }
 }
+
+export function renderNavButton(ui, { x, y, w, h, text, color = 0xffffff, bgColor = 0x2a2a2a }) {
+  ui.create(widget.FILL_RECT, {
+    x: x,
+    y: y,
+    w: w,
+    h: h,
+    radius: h / 2,
+    color: bgColor,
+  })
+  return ui.create(widget.TEXT, {
+    x: x,
+    y: y,
+    w: w,
+    h: h,
+    color: color,
+    text_size: sysText(26),
+    align_h: align.CENTER_H,
+    align_v: align.CENTER_V,
+    text_style: text_style.NONE,
+    text: text,
+  })
+}

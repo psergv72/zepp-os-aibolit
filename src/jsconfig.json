@@ -1,15 +1,13 @@
 {
   "compilerOptions": {
     "module": "commonjs",
-    "target": "es2015",
-    "baseUrl": "./",
-    "checkJs": false
+    "target": "es6",
+    "checkJs": true
   },
   "include": [
     "**/*.js",
     "global.d.ts"
   ],
-  "exclude": [
-    "node_modules"
-  ]
+  "exclude": ["node_modules", "**/node_modules/*"],
+  "files": ["node_modules/@zeppos/device-types/dist/index.d.ts"]
 }

@@ -140,3 +140,25 @@ test('приём отображается при крупном шрифте и 
     delete globalThis.hmUI
   }
 })
+
+test('кнопка перехода — со скруглённым фоном', () => {
+  const page = instance()
+  page.refreshView()
+
+  const bg = __getRegistry().find(w => w.type === widget.FILL_RECT && w.props.x === 70 && w.props.w === 340)
+  assert.ok(bg, 'фон кнопки FILL_RECT должен существовать')
+  assert.ok(bg.props.radius > 0, 'у фона кнопки должны быть скругления')
+
+  const btn = __getRegistry().find(w => w.type === widget.TEXT && w.props.text === '[Полный план \u2192]')
+  assert.ok(btn, 'текст кнопки должен существовать')
+  assert.equal(btn.props.x, 70, 'текст кнопки в границах контента')
+})
+
+test('отступ между заголовком и первым приёмом компактный', () => {
+  const page = instance()
+  page.refreshView()
+
+  const time = __getRegistry().find(w => w.type === widget.TEXT && w.props.text === '23:59')
+  assert.ok(time, 'время первого приёма должно существовать')
+  assert.ok(time.props.y < 160, 'первый приём начинается близко к заголовку (было ~178)')
+})

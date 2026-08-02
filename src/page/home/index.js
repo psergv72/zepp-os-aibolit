@@ -6,7 +6,7 @@ import { sendTakeLogToPhone } from '../../utils/sync'
 import { getIntakeEntries, isIntakeOnDay, isIntakeTakenToday, isIntakeCancelledToday } from '../../utils/intake-logic.js'
 import { fetchConfigFromSide } from '../../utils/watch-config'
 import { sysText, getUiScale } from '../../utils/ui-scale'
-import { getContentBounds, renderTimeHeader, enableScroll } from '../../utils/screen-layout'
+import { getContentBounds, renderTimeHeader, renderNavButton, enableScroll } from '../../utils/screen-layout'
 import { createViewManager } from '../../utils/view-manager'
 
 const logger = Logger.getLogger('aibolit-home')
@@ -68,14 +68,15 @@ Page({
     const S = getUiScale()
     const bounds = getContentBounds()
     const headerH = 48 * S
-    const headerGap = 60 * S
+    const headerGap = 28 * S
     const btnH = 48 * S
+    const bottomPad = 80 * S
     const checkColW = 40 * S
     const checkGap = 16 * S
     const itemsOf = (entry) => entry.items || []
     const blockHOf = (entry) => (44 + itemsOf(entry).length * 40 + 10) * S
 
-    let totalH = headerH + headerGap + btnH
+    let totalH = bounds.top + headerH + headerGap + btnH + bottomPad
     if (entries.length === 0) {
       totalH += (36 + 10) * S
     } else {
@@ -169,16 +170,11 @@ Page({
       y += 10 * S
     }
 
-    const planBtn = this.ui.create(widget.TEXT, {
+    const planBtn = renderNavButton(this.ui, {
       x: bounds.left,
       y: y,
       w: bounds.width,
       h: btnH,
-      color: 0x888888,
-      text_size: sysText(26),
-      align_h: align.CENTER_H,
-      align_v: align.CENTER_V,
-      text_style: text_style.NONE,
       text: '[Полный план \u2192]',
     })
     planBtn.addEventListener(event.CLICK_UP, () => {
