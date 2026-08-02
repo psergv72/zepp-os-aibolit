@@ -47,7 +47,7 @@ beforeEach(() => {
 test('кнопка «На главную» использует replace вместо push', () => {
   const page = instance()
   page.refreshView()
-  const btn = __getRegistry().find(w => w.props.text === '[На главную]')
+  const btn = __getRegistry().find(w => w.props.text === 'На главную')
   assert.ok(btn, 'кнопка «На главную» должна существовать')
   btn.listeners[event.CLICK_UP]()
 

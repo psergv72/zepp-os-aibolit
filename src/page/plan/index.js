@@ -77,10 +77,10 @@ Page({
     this.ui.clear()
     const S = getUiScale()
     const bounds = getContentBounds()
-    const headerH = 48 * S
-    const headerGap = 28 * S
+    const headerH = 40 * S
+    const headerGap = 10 * S
     const btnH = 48 * S
-    const bottomPad = 80 * S
+    const bottomPad = 120 * S
     const checkColW = 40 * S
     const checkGap = 16 * S
     const itemsOf = (entry) => entry.items || []
@@ -242,7 +242,7 @@ Page({
       y: y,
       w: bounds.width,
       h: btnH,
-      text: '[На главную]',
+      text: 'На главную',
     })
     backBtn.addEventListener(event.CLICK_UP, () => {
       routerReplace({ url: 'page/home/index' })

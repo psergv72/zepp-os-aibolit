@@ -47,7 +47,7 @@ beforeEach(() => {
 test('кнопка «Полный план» использует replace вместо push', () => {
   const page = instance()
   page.refreshView()
-  const btn = __getRegistry().find(w => w.props.text === '[Полный план \u2192]')
+  const btn = __getRegistry().find(w => w.props.text === 'Полный план')
   assert.ok(btn, 'кнопка «Полный план» должна существовать')
   btn.listeners[event.CLICK_UP]()
 
@@ -149,7 +149,7 @@ test('кнопка перехода — со скруглённым фоном',
   assert.ok(bg, 'фон кнопки FILL_RECT должен существовать')
   assert.ok(bg.props.radius > 0, 'у фона кнопки должны быть скругления')
 
-  const btn = __getRegistry().find(w => w.type === widget.TEXT && w.props.text === '[Полный план \u2192]')
+  const btn = __getRegistry().find(w => w.type === widget.TEXT && w.props.text === 'Полный план')
   assert.ok(btn, 'текст кнопки должен существовать')
   assert.equal(btn.props.x, 70, 'текст кнопки в границах контента')
 })
