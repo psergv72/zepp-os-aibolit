@@ -2,6 +2,7 @@ import { log as Logger } from '@zos/utils'
 import { createWidget, widget, event, align, text_style } from '@zos/ui'
 import { push as routerPush } from '@zos/router'
 import { getSettings, getIntakes, getMedications } from '../../utils/storage'
+import { getSysFontScale } from '../../utils/ui-scale'
 
 const logger = Logger.getLogger('aibolit-snooze-page')
 
@@ -41,7 +42,8 @@ Page({
     const settings = getSettings()
     const options = settings.snoozeOptions || [30, 45, 60, 90]
     const intake = this.state.intake
-    let y = 48
+    const S = getSysFontScale()
+    let y = 48 * S
 
     const medications = getMedications()
     const medMap = {}
@@ -59,48 +61,48 @@ Page({
       x: 0,
       y: y,
       w: screenWidth,
-      h: 44,
+      h: 44 * S,
       color: 0xffffff,
-      text_size: 28,
+      text_size: 28 * S,
       align_h: align.CENTER_H,
       align_v: align.CENTER_V,
       text_style: text_style.NONE,
       text: intake ? (intake.label || intake.time) : '',
     })
-    y += 52
+    y += 52 * S
 
     if (itemsText) {
       createWidget(widget.TEXT, {
         x: 0,
         y: y,
         w: screenWidth,
-        h: 32,
+        h: 32 * S,
         color: 0x888888,
-        text_size: 22,
+        text_size: 22 * S,
         align_h: align.CENTER_H,
         align_v: align.CENTER_V,
         text_style: text_style.NONE,
         text: itemsText,
       })
-      y += 34
+      y += 34 * S
     }
 
     createWidget(widget.TEXT, {
       x: 0,
       y: y,
       w: screenWidth,
-      h: 32,
+      h: 32 * S,
       color: 0x888888,
-      text_size: 22,
+      text_size: 22 * S,
       align_h: align.CENTER_H,
       align_v: align.CENTER_V,
       text_style: text_style.NONE,
       text: 'Отложить на:',
     })
-    y += 48
+    y += 48 * S
 
     const btnWidth = 150
-    const btnHeight = 96
+    const btnHeight = 96 * S
     const gap = 20
     const startX = Math.floor((screenWidth - btnWidth * 2 - gap) / 2)
     let col = 0
@@ -112,11 +114,11 @@ Page({
 
       createWidget(widget.TEXT, {
         x: bx,
-        y: by + Math.floor(btnHeight / 2) - 20,
+        y: by + Math.floor(btnHeight / 2) - 20 * S,
         w: btnWidth,
-        h: 48,
+        h: 48 * S,
         color: 0x4fc3f7,
-        text_size: 44,
+        text_size: 44 * S,
         align_h: align.CENTER_H,
         align_v: align.CENTER_V,
         text_style: text_style.NONE,
@@ -125,11 +127,11 @@ Page({
 
       createWidget(widget.TEXT, {
         x: bx,
-        y: by + Math.floor(btnHeight / 2) + 20,
+        y: by + Math.floor(btnHeight / 2) + 20 * S,
         w: btnWidth,
-        h: 28,
+        h: 28 * S,
         color: 0x888888,
-        text_size: 22,
+        text_size: 22 * S,
         align_h: align.CENTER_H,
         align_v: align.CENTER_V,
         text_style: text_style.NONE,
