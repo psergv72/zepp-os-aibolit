@@ -176,3 +176,11 @@ test('под кнопкой есть прокладка для отступа', 
   assert.ok(spacer, 'под кнопкой должна быть прокладка')
   assert.ok(spacer.props.h >= 40, 'высота прокладки заметная')
 })
+
+test('заголовок страницы — «Сегодня»', () => {
+  const page = instance()
+  page.refreshView()
+
+  const header = __getRegistry().find(w => w.type === widget.TEXT && w.props.text === 'Сегодня')
+  assert.ok(header, 'заголовок «Сегодня» должен существовать')
+})

@@ -79,6 +79,7 @@ Page({
     const bounds = getContentBounds()
     const headerH = 40 * S
     const headerGap = 10 * S
+    const btnGap = 24 * S
     const btnH = 48 * S
     const bottomPad = 48 * S
     const checkColW = 40 * S
@@ -87,7 +88,7 @@ Page({
     const statusHOf = (entry) => (entry._takenTime ? 32 : 0) + (entry._cancelled ? 32 : 0)
     const blockHOf = (entry) => (44 + itemsOf(entry).length * 40 + statusHOf(entry) + 15) * S
 
-    let totalH = bounds.top + headerH + headerGap + btnH + bottomPad
+    let totalH = bounds.top + headerH + headerGap + btnGap + btnH + bottomPad
     if (entries.length === 0) {
       totalH += (36 + 10) * S
     } else {
@@ -236,6 +237,8 @@ Page({
 
       y += 15 * S
     }
+
+    y += btnGap
 
     const backBtn = renderNavButton(this.ui, {
       x: bounds.left,

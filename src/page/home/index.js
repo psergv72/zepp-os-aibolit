@@ -69,6 +69,7 @@ Page({
     const bounds = getContentBounds()
     const headerH = 40 * S
     const headerGap = 10 * S
+    const btnGap = 24 * S
     const btnH = 48 * S
     const bottomPad = 48 * S
     const checkColW = 40 * S
@@ -76,7 +77,7 @@ Page({
     const itemsOf = (entry) => entry.items || []
     const blockHOf = (entry) => (44 + itemsOf(entry).length * 40 + 10) * S
 
-    let totalH = bounds.top + headerH + headerGap + btnH + bottomPad
+    let totalH = bounds.top + headerH + headerGap + btnGap + btnH + bottomPad
     if (entries.length === 0) {
       totalH += (36 + 10) * S
     } else {
@@ -96,7 +97,7 @@ Page({
       align_h: align.CENTER_H,
       align_v: align.CENTER_V,
       text_style: text_style.NONE,
-      text: 'Ближайшие приёмы',
+      text: 'Сегодня',
     })
     y += headerH + headerGap
 
@@ -169,6 +170,8 @@ Page({
 
       y += 10 * S
     }
+
+    y += btnGap
 
     const planBtn = renderNavButton(this.ui, {
       x: bounds.left,
