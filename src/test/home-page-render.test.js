@@ -7,11 +7,13 @@ register(new URL('./helpers/zos-loader.mjs', import.meta.url))
 let pageOpts = null
 globalThis.Page = (opts) => { pageOpts = opts }
 
-const { __getRegistry, __reset, deleteWidget, event } = await import('./helpers/stubs/zos-ui.mjs')
+const { __getRegistry, __reset, deleteWidget, event, widget } = await import('./helpers/stubs/zos-ui.mjs')
 
 const storage = await import('./helpers/stubs/zos-storage.mjs')
 
 const router = await import('./helpers/stubs/zos-router.mjs')
+
+const device = await import('./helpers/stubs/zos-device.mjs')
 
 await import('../page/home/index.js')
 
@@ -38,6 +40,7 @@ function instance() {
 beforeEach(() => {
   __reset()
   router.__reset()
+  device.__setShape('round')
   seed()
 })
 
@@ -80,4 +83,41 @@ test('refreshView после takeIntake не накапливает виджет
   assert.equal(firstStillAlive.length, 0, 'все виджеты первой отрисовки должны быть удалены')
   const alive = __getRegistry().filter(w => !w.deleted)
   assert.ok(alive.length > 0, 'после takeIntake должен отобразиться обновлённый список')
+})
+
+test('заголовок времени блока рисуется как текст + линия FILL_RECT', () => {
+  const page = instance()
+  page.refreshView()
+
+  const time = __getRegistry().find(w => w.type === widget.TEXT && w.props.text === '23:59')
+  assert.ok(time, 'время должно быть текстом')
+
+  const line = __getRegistry().find(w => w.type === widget.FILL_RECT)
+  assert.ok(line, 'должна быть линия-разделитель FILL_RECT')
+  assert.ok(line.props.x >= time.props.x + time.props.w, 'линия начинается после времени')
+})
+
+test('чекбокс слева от лекарств и по верхнему краю первой строки', () => {
+  const page = instance()
+  page.refreshView()
+
+  const check = __getRegistry().find(w => w.type === widget.TEXT && w.props.text === '\u2610')
+  assert.ok(check, 'чекбокс должен существовать')
+  assert.equal(check.props.x, 70, 'чекбокс на левом краю контента (круглая форма)')
+
+  const med = __getRegistry().find(w => w.type === widget.TEXT && w.props.text.startsWith('Аспирин'))
+  assert.ok(med, 'строка лекарства должна существовать')
+  assert.equal(check.props.y, med.props.y, 'чекбокс по верхнему краю первой строки лекарств')
+})
+
+test('круглая форма: все виджеты в пределах безопасной зоны', () => {
+  const page = instance()
+  page.refreshView()
+
+  const alive = __getRegistry().filter(w => !w.deleted)
+  assert.ok(alive.length > 0)
+  for (const w of alive) {
+    assert.ok(w.props.x >= 70, 'x >= 70: ' + (w.props.text || w.props.x))
+    assert.ok(w.props.x + w.props.w <= 410, 'x + w <= 410: ' + (w.props.text || w.props.x))
+  }
 })

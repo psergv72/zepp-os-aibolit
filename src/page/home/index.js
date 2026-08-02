@@ -6,6 +6,7 @@ import { sendTakeLogToPhone } from '../../utils/sync'
 import { getIntakeEntries, isIntakeOnDay, isIntakeTakenToday, isIntakeCancelledToday } from '../../utils/intake-logic.js'
 import { fetchConfigFromSide } from '../../utils/watch-config'
 import { sysText, getUiScale } from '../../utils/ui-scale'
+import { isRoundScreen, getContentBounds, renderTimeHeader } from '../../utils/screen-layout'
 import { createViewManager } from '../../utils/view-manager'
 
 const logger = Logger.getLogger('aibolit-home')
@@ -64,16 +65,16 @@ Page({
 
   renderUpcoming(entries) {
     this.ui.clear()
-    const screenWidth = 480
     const S = getUiScale()
-    const btnHeight = 48 * S
-    const btnY = 380 * S
-    let y = 20 * S
+    const bounds = getContentBounds()
+    const btnH = 48 * S
+    const btnY = isRoundScreen() ? bounds.bottom - btnH : 380 * S
+    let y = bounds.top
 
     this.ui.create(widget.TEXT, {
-      x: 0,
+      x: bounds.left,
       y: y,
-      w: screenWidth,
+      w: bounds.width,
       h: 48 * S,
       color: 0xffffff,
       text_size: sysText(32),
@@ -86,9 +87,9 @@ Page({
 
     if (entries.length === 0) {
       this.ui.create(widget.TEXT, {
-        x: 0,
+        x: bounds.left,
         y: y,
-        w: screenWidth,
+        w: bounds.width,
         h: 36 * S,
         color: 0x888888,
         text_size: sysText(26),
@@ -99,31 +100,36 @@ Page({
       })
     }
 
+    const checkColW = 40 * S
+    const checkGap = 16 * S
+
     for (const entry of entries) {
-      const blockH = (48 + entry.items.length * 40 + 12) * S
+      const items = entry.items || []
+      const blockH = (44 + items.length * 40 + 10) * S
       if (y + blockH > btnY - 5) break
 
       const intake = entry.intake
 
-      this.ui.create(widget.TEXT, {
-        x: 20,
+      renderTimeHeader(this.ui, {
+        text: intake.time,
+        x: bounds.left,
         y: y,
-        w: screenWidth - 60,
-        h: 44 * S,
+        right: bounds.right,
         color: 0x4fc3f7,
-        text_size: sysText(26),
-        align_h: align.LEFT,
-        align_v: align.CENTER_V,
-        text_style: text_style.NONE,
-        text: '───── ' + intake.time + ' ────',
+        sizeSp: 26,
+        rowH: 44 * S,
       })
       y += 44 * S
 
-      for (const item of entry.items) {
+      const medX = bounds.left + checkColW + checkGap
+      const medW = bounds.right - medX
+      const firstMedY = y
+
+      for (const item of items) {
         this.ui.create(widget.TEXT, {
-          x: 40,
+          x: medX,
           y: y,
-          w: screenWidth - 90,
+          w: medW,
           h: 40 * S,
           color: 0xffffff,
           text_size: sysText(24),
@@ -135,15 +141,11 @@ Page({
         y += 40 * S
       }
 
-      const checkboxX = screenWidth - 50
-      const checkboxY = y - (entry.items.length * 40 + 5) * S
-      const checkboxH = (entry.items.length * 40 + 12) * S
-
-      const takeAllBtn = this.ui.create(widget.TEXT, {
-        x: checkboxX,
-        y: checkboxY,
-        w: 40,
-        h: checkboxH,
+      const takeBtn = this.ui.create(widget.TEXT, {
+        x: bounds.left,
+        y: firstMedY,
+        w: checkColW,
+        h: 40 * S,
         color: 0x4fc3f7,
         text_size: sysText(36),
         align_h: align.CENTER_H,
@@ -151,7 +153,7 @@ Page({
         text_style: text_style.NONE,
         text: '\u2610',
       })
-      takeAllBtn.addEventListener(event.CLICK_UP, () => {
+      takeBtn.addEventListener(event.CLICK_UP, () => {
         this.takeIntake(intake)
       })
 
@@ -159,10 +161,10 @@ Page({
     }
 
     const planBtn = this.ui.create(widget.TEXT, {
-      x: 0,
+      x: bounds.left,
       y: btnY,
-      w: screenWidth,
-      h: btnHeight,
+      w: bounds.width,
+      h: btnH,
       color: 0x888888,
       text_size: sysText(26),
       align_h: align.CENTER_H,
