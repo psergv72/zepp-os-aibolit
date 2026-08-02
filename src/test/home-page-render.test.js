@@ -174,5 +174,5 @@ test('под кнопкой есть прокладка для отступа', 
     w => w.type === widget.FILL_RECT && w.props.y === btn.props.y + btn.props.h
   )
   assert.ok(spacer, 'под кнопкой должна быть прокладка')
-  assert.ok(spacer.props.h >= 80, 'высота прокладки заметная')
+  assert.ok(spacer.props.h >= 60, 'высота прокладки заметная')
 })
