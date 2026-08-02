@@ -433,7 +433,7 @@ Expected: FAIL — новых тестов (время-как-текст с ти
     const S = getUiScale()
     const bounds = getContentBounds()
     const btnH = 48 * S
-    const btnY = isRoundScreen() ? bounds.bottom - btnH : 380 * S
+    const btnY = bounds.bottom - btnH
     let y = bounds.top
 
     this.ui.create(widget.TEXT, {
@@ -628,7 +628,7 @@ Expected: FAIL — тире в тексте, контрол справа/по ц
     const S = getUiScale()
     const bounds = getContentBounds()
     const btnH = 48 * S
-    const btnY = isRoundScreen() ? bounds.bottom - btnH : 380 * S
+    const btnY = bounds.bottom - btnH
     let y = bounds.top
 
     this.ui.create(widget.TEXT, {
