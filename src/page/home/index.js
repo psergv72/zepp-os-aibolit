@@ -5,6 +5,7 @@ import { getMedications, getIntakes, getTakeLogs, getCancellations, addTakeLog, 
 import { sendTakeLogToPhone } from '../../utils/sync'
 import { getIntakeEntries, isIntakeOnDay, isIntakeTakenToday, isIntakeCancelledToday } from '../../utils/intake-logic.js'
 import { fetchConfigFromSide } from '../../utils/watch-config'
+import { getSysFontScale } from '../../utils/ui-scale'
 
 const logger = Logger.getLogger('aibolit-home')
 
@@ -61,32 +62,33 @@ Page({
 
   renderUpcoming(entries) {
     const screenWidth = 480
-    const btnHeight = 48
-    const btnY = 380
-    let y = 20
+    const S = getSysFontScale()
+    const btnHeight = 48 * S
+    const btnY = 380 * S
+    let y = 20 * S
 
     createWidget(widget.TEXT, {
       x: 0,
       y: y,
       w: screenWidth,
-      h: 48,
+      h: 48 * S,
       color: 0xffffff,
-      text_size: 32,
+      text_size: 32 * S,
       align_h: align.CENTER_H,
       align_v: align.CENTER_V,
       text_style: text_style.NONE,
       text: 'Ближайшие приёмы',
     })
-    y += 60
+    y += 60 * S
 
     if (entries.length === 0) {
       createWidget(widget.TEXT, {
         x: 0,
         y: y,
         w: screenWidth,
-        h: 36,
+        h: 36 * S,
         color: 0x888888,
-        text_size: 26,
+        text_size: 26 * S,
         align_h: align.CENTER_H,
         align_v: align.CENTER_V,
         text_style: text_style.NONE,
@@ -95,7 +97,7 @@ Page({
     }
 
     for (const entry of entries) {
-      const blockH = 48 + entry.items.length * 40 + 12
+      const blockH = (48 + entry.items.length * 40 + 12) * S
       if (y + blockH > btnY - 5) break
 
       const intake = entry.intake
@@ -104,35 +106,35 @@ Page({
         x: 20,
         y: y,
         w: screenWidth - 60,
-        h: 44,
+        h: 44 * S,
         color: 0x4fc3f7,
-        text_size: 26,
+        text_size: 26 * S,
         align_h: align.LEFT,
         align_v: align.CENTER_V,
         text_style: text_style.NONE,
         text: '───── ' + intake.time + ' ────',
       })
-      y += 44
+      y += 44 * S
 
       for (const item of entry.items) {
         createWidget(widget.TEXT, {
           x: 40,
           y: y,
           w: screenWidth - 90,
-          h: 40,
+          h: 40 * S,
           color: 0xffffff,
-          text_size: 24,
+          text_size: 24 * S,
           align_h: align.LEFT,
           align_v: align.CENTER_V,
           text_style: text_style.NONE,
           text: item.med.name + ' \u00d7 ' + (item.amount || ''),
         })
-        y += 40
+        y += 40 * S
       }
 
       const checkboxX = screenWidth - 50
-      const checkboxY = y - (entry.items.length * 40) - 5
-      const checkboxH = entry.items.length * 40 + 12
+      const checkboxY = y - (entry.items.length * 40 + 5) * S
+      const checkboxH = (entry.items.length * 40 + 12) * S
 
       const takeAllBtn = createWidget(widget.TEXT, {
         x: checkboxX,
@@ -140,7 +142,7 @@ Page({
         w: 40,
         h: checkboxH,
         color: 0x4fc3f7,
-        text_size: 36,
+        text_size: 36 * S,
         align_h: align.CENTER_H,
         align_v: align.CENTER_V,
         text_style: text_style.NONE,
@@ -150,7 +152,7 @@ Page({
         this.takeIntake(intake)
       })
 
-      y += 10
+      y += 10 * S
     }
 
     const planBtn = createWidget(widget.TEXT, {
@@ -159,7 +161,7 @@ Page({
       w: screenWidth,
       h: btnHeight,
       color: 0x888888,
-      text_size: 26,
+      text_size: 26 * S,
       align_h: align.CENTER_H,
       align_v: align.CENTER_V,
       text_style: text_style.NONE,
