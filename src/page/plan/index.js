@@ -15,6 +15,7 @@ import {
 import { sendTakeLogToPhone, sendCancellationToPhone } from '../../utils/sync'
 import { getIntakeEntries, isIntakeOnDay, getIntakeStatus, getTakenTime } from '../../utils/intake-logic.js'
 import { fetchConfigFromSide } from '../../utils/watch-config'
+import { getSysFontScale } from '../../utils/ui-scale'
 
 const logger = Logger.getLogger('aibolit-plan')
 
@@ -71,32 +72,33 @@ Page({
 
   renderPlan(entries) {
     const screenWidth = 480
-    const btnHeight = 48
-    const btnY = 380
-    let y = 20
+    const S = getSysFontScale()
+    const btnHeight = 48 * S
+    const btnY = 380 * S
+    let y = 20 * S
 
     createWidget(widget.TEXT, {
       x: 0,
       y: y,
       w: screenWidth,
-      h: 48,
+      h: 48 * S,
       color: 0xffffff,
-      text_size: 32,
+      text_size: 32 * S,
       align_h: align.CENTER_H,
       align_v: align.CENTER_V,
       text_style: text_style.NONE,
       text: 'План на сегодня',
     })
-    y += 60
+    y += 60 * S
 
     if (entries.length === 0) {
       createWidget(widget.TEXT, {
         x: 0,
         y: y,
         w: screenWidth,
-        h: 36,
+        h: 36 * S,
         color: 0x888888,
-        text_size: 26,
+        text_size: 26 * S,
         align_h: align.CENTER_H,
         align_v: align.CENTER_V,
         text_style: text_style.NONE,
@@ -105,7 +107,7 @@ Page({
     }
 
     for (const entry of entries) {
-      const blockH = 48 + entry.items.length * 40 + (entry._takenTime ? 32 : 0) + (entry._cancelled ? 32 : 0) + 15
+      const blockH = (48 + entry.items.length * 40 + (entry._takenTime ? 32 : 0) + (entry._cancelled ? 32 : 0) + 15) * S
       if (y + blockH > btnY - 5) break
 
       const intake = entry.intake
@@ -118,15 +120,15 @@ Page({
         x: 20,
         y: y,
         w: screenWidth - 40,
-        h: 44,
+        h: 44 * S,
         color: textColor,
-        text_size: 26,
+        text_size: 26 * S,
         align_h: align.LEFT,
         align_v: align.CENTER_V,
         text_style: headerDecor,
         text: headerText,
       })
-      y += 44
+      y += 44 * S
 
       for (const item of entry.items) {
         const medColor = entry._cancelled ? 0x555555 : (entry._taken ? 0x888888 : 0xffffff)
@@ -136,15 +138,15 @@ Page({
           x: 40,
           y: y,
           w: screenWidth - 80,
-          h: 40,
+          h: 40 * S,
           color: medColor,
-          text_size: 24,
+          text_size: 24 * S,
           align_h: align.LEFT,
           align_v: align.CENTER_V,
           text_style: medDecor,
           text: checkMark + item.med.name + ' \u00d7 ' + (item.amount || ''),
         })
-        y += 40
+        y += 40 * S
       }
 
       if (entry._taken && entry._takenTime) {
@@ -152,15 +154,15 @@ Page({
           x: 40,
           y: y,
           w: screenWidth - 80,
-          h: 32,
+          h: 32 * S,
           color: 0x666666,
-          text_size: 20,
+          text_size: 20 * S,
           align_h: align.LEFT,
           align_v: align.CENTER_V,
           text_style: text_style.NONE,
           text: 'приняты в ' + entry._takenTime,
         })
-        y += 32
+        y += 32 * S
       }
 
       if (entry._cancelled) {
@@ -168,9 +170,9 @@ Page({
           x: 40,
           y: y,
           w: screenWidth - 80,
-          h: 32,
+          h: 32 * S,
           color: 0x4fc3f7,
-          text_size: 20,
+          text_size: 20 * S,
           align_h: align.LEFT,
           align_v: align.CENTER_V,
           text_style: text_style.NONE,
@@ -179,13 +181,13 @@ Page({
         restoreBtn.addEventListener(event.CLICK_UP, () => {
           this.restoreIntake(intake)
         })
-        y += 32
+        y += 32 * S
       }
 
       const indicatorX = screenWidth - 50
-      const medAreaH = entry.items.length * 40 + (entry._takenTime ? 32 : 0)
-      const indicatorY = y - medAreaH - 5
-      const indicatorH = medAreaH + 10
+      const medAreaH = (entry.items.length * 40 + (entry._takenTime ? 32 : 0)) * S
+      const indicatorY = y - medAreaH - 5 * S
+      const indicatorH = medAreaH + 10 * S
 
       if (!entry._cancelled && !entry._taken) {
         const checkBtn = createWidget(widget.TEXT, {
@@ -194,7 +196,7 @@ Page({
           w: 40,
           h: indicatorH,
           color: 0xffffff,
-          text_size: 36,
+          text_size: 36 * S,
           align_h: align.CENTER_H,
           align_v: align.CENTER_V,
           text_style: text_style.NONE,
@@ -217,7 +219,7 @@ Page({
           w: 40,
           h: indicatorH,
           color: 0x4caf50,
-          text_size: 36,
+          text_size: 36 * S,
           align_h: align.CENTER_H,
           align_v: align.CENTER_V,
           text_style: text_style.NONE,
@@ -228,7 +230,7 @@ Page({
         })
       }
 
-      y += 15
+      y += 15 * S
     }
 
     const backBtn = createWidget(widget.TEXT, {
@@ -237,7 +239,7 @@ Page({
       w: screenWidth,
       h: btnHeight,
       color: 0x888888,
-      text_size: 26,
+      text_size: 26 * S,
       align_h: align.CENTER_H,
       align_v: align.CENTER_V,
       text_style: text_style.NONE,
