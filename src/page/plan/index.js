@@ -15,7 +15,7 @@ import {
 import { sendTakeLogToPhone, sendCancellationToPhone } from '../../utils/sync'
 import { getIntakeEntries, isIntakeOnDay, getIntakeStatus, getTakenTime } from '../../utils/intake-logic.js'
 import { fetchConfigFromSide } from '../../utils/watch-config'
-import { getSysFontScale } from '../../utils/ui-scale'
+import { getSysFontScale, sysText } from '../../utils/ui-scale'
 
 const logger = Logger.getLogger('aibolit-plan')
 
@@ -83,7 +83,7 @@ Page({
       w: screenWidth,
       h: 48 * S,
       color: 0xffffff,
-      text_size: 32 * S,
+      text_size: sysText(32),
       align_h: align.CENTER_H,
       align_v: align.CENTER_V,
       text_style: text_style.NONE,
@@ -98,7 +98,7 @@ Page({
         w: screenWidth,
         h: 36 * S,
         color: 0x888888,
-        text_size: 26 * S,
+        text_size: sysText(26),
         align_h: align.CENTER_H,
         align_v: align.CENTER_V,
         text_style: text_style.NONE,
@@ -122,7 +122,7 @@ Page({
         w: screenWidth - 40,
         h: 44 * S,
         color: textColor,
-        text_size: 26 * S,
+        text_size: sysText(26),
         align_h: align.LEFT,
         align_v: align.CENTER_V,
         text_style: headerDecor,
@@ -140,7 +140,7 @@ Page({
           w: screenWidth - 80,
           h: 40 * S,
           color: medColor,
-          text_size: 24 * S,
+          text_size: sysText(24),
           align_h: align.LEFT,
           align_v: align.CENTER_V,
           text_style: medDecor,
@@ -156,7 +156,7 @@ Page({
           w: screenWidth - 80,
           h: 32 * S,
           color: 0x666666,
-          text_size: 20 * S,
+          text_size: sysText(20),
           align_h: align.LEFT,
           align_v: align.CENTER_V,
           text_style: text_style.NONE,
@@ -172,7 +172,7 @@ Page({
           w: screenWidth - 80,
           h: 32 * S,
           color: 0x4fc3f7,
-          text_size: 20 * S,
+          text_size: sysText(20),
           align_h: align.LEFT,
           align_v: align.CENTER_V,
           text_style: text_style.NONE,
@@ -196,7 +196,7 @@ Page({
           w: 40,
           h: indicatorH,
           color: 0xffffff,
-          text_size: 36 * S,
+          text_size: sysText(36),
           align_h: align.CENTER_H,
           align_v: align.CENTER_V,
           text_style: text_style.NONE,
@@ -219,7 +219,7 @@ Page({
           w: 40,
           h: indicatorH,
           color: 0x4caf50,
-          text_size: 36 * S,
+          text_size: sysText(36),
           align_h: align.CENTER_H,
           align_v: align.CENTER_V,
           text_style: text_style.NONE,
@@ -239,7 +239,7 @@ Page({
       w: screenWidth,
       h: btnHeight,
       color: 0x888888,
-      text_size: 26 * S,
+      text_size: sysText(26),
       align_h: align.CENTER_H,
       align_v: align.CENTER_V,
       text_style: text_style.NONE,
