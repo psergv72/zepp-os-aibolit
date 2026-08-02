@@ -6,7 +6,7 @@ import { sendTakeLogToPhone } from '../../utils/sync'
 import { getIntakeEntries, isIntakeOnDay, isIntakeTakenToday, isIntakeCancelledToday } from '../../utils/intake-logic.js'
 import { fetchConfigFromSide } from '../../utils/watch-config'
 import { sysText, getUiScale } from '../../utils/ui-scale'
-import { isRoundScreen, getContentBounds, renderTimeHeader } from '../../utils/screen-layout'
+import { getContentBounds, renderTimeHeader } from '../../utils/screen-layout'
 import { createViewManager } from '../../utils/view-manager'
 
 const logger = Logger.getLogger('aibolit-home')
@@ -68,7 +68,7 @@ Page({
     const S = getUiScale()
     const bounds = getContentBounds()
     const btnH = 48 * S
-    const btnY = isRoundScreen() ? bounds.bottom - btnH : 380 * S
+    const btnY = bounds.bottom - btnH
     let y = bounds.top
 
     this.ui.create(widget.TEXT, {
