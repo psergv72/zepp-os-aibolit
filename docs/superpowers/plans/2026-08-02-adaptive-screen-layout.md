@@ -890,6 +890,8 @@ test('круглая форма: кнопки в пределах безопас
   for (const b of buttonAreas()) {
     assert.ok(b.props.x >= 70, 'x >= 70')
     assert.ok(b.props.x + b.props.w <= 410, 'x + w <= 410')
+    assert.ok(b.props.y >= 70, 'y >= 70')
+    assert.ok(b.props.y + b.props.h <= 410, 'y + h <= 410')
   }
 })
 
@@ -904,6 +906,8 @@ test('прямоугольная форма: кнопки от левого кр
   for (const b of btns) {
     assert.ok(b.props.x >= 20, 'x >= 20')
     assert.ok(b.props.x + b.props.w <= 460, 'x + w <= 460')
+    assert.ok(b.props.y >= 20, 'y >= 20')
+    assert.ok(b.props.y + b.props.h <= 460, 'y + h <= 460')
   }
 })
 ```
@@ -985,7 +989,7 @@ Expected: FAIL — старый макет: разный зазор (col gap ≠
 
     const gap = 20 * S
     const rows = Math.ceil(options.length / 2)
-    const btnH = Math.min(72 * S, (bounds.bottom - y - (rows - 1) * gap) / rows)
+    const btnH = Math.max(0, Math.min(72 * S, (bounds.bottom - y - (rows - 1) * gap) / rows))
     const btnW = (bounds.width - gap) / 2
     const gridX = centerX - (btnW * 2 + gap) / 2
     let col = 0
