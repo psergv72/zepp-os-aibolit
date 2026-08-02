@@ -52,6 +52,7 @@ test('сетка 2x2: зазор между столбцами равен заз
   const rowGap = b10.props.y - (b00.props.y + b00.props.h)
   assert.ok(colGap > 0, 'горизонтальный зазор положительный')
   assert.equal(colGap, rowGap, 'горизонтальный зазор равен вертикальному')
+  assert.equal(b00.props.x, 70, 'сетка начинается на левом краю контента (круглая форма)')
 })
 
 test('круглая форма: кнопки в пределах безопасной зоны', () => {
@@ -61,5 +62,19 @@ test('круглая форма: кнопки в пределах безопас
   for (const b of buttonAreas()) {
     assert.ok(b.props.x >= 70, 'x >= 70')
     assert.ok(b.props.x + b.props.w <= 410, 'x + w <= 410')
+  }
+})
+
+test('прямоугольная форма: кнопки от левого края контента и в пределах зоны', () => {
+  device.__setShape('square')
+  const page = instance()
+  page.renderSnoozeOptions()
+
+  const btns = buttonAreas()
+  assert.equal(btns.length, 4, 'должно быть 4 кнопки')
+  assert.equal(btns[0].props.x, 20, 'сетка начинается на левом краю контента (прямоугольная форма)')
+  for (const b of btns) {
+    assert.ok(b.props.x >= 20, 'x >= 20')
+    assert.ok(b.props.x + b.props.w <= 460, 'x + w <= 460')
   }
 })
