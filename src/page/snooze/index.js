@@ -2,7 +2,7 @@ import { log as Logger } from '@zos/utils'
 import { createWidget, widget, event, align, text_style } from '@zos/ui'
 import { push as routerPush } from '@zos/router'
 import { getSettings, getIntakes, getMedications } from '../../utils/storage'
-import { getSysFontScale } from '../../utils/ui-scale'
+import { getSysFontScale, sysText } from '../../utils/ui-scale'
 
 const logger = Logger.getLogger('aibolit-snooze-page')
 
@@ -63,7 +63,7 @@ Page({
       w: screenWidth,
       h: 44 * S,
       color: 0xffffff,
-      text_size: 28 * S,
+      text_size: sysText(28),
       align_h: align.CENTER_H,
       align_v: align.CENTER_V,
       text_style: text_style.NONE,
@@ -78,7 +78,7 @@ Page({
         w: screenWidth,
         h: 32 * S,
         color: 0x888888,
-        text_size: 22 * S,
+        text_size: sysText(22),
         align_h: align.CENTER_H,
         align_v: align.CENTER_V,
         text_style: text_style.NONE,
@@ -93,7 +93,7 @@ Page({
       w: screenWidth,
       h: 32 * S,
       color: 0x888888,
-      text_size: 22 * S,
+      text_size: sysText(22),
       align_h: align.CENTER_H,
       align_v: align.CENTER_V,
       text_style: text_style.NONE,
@@ -118,7 +118,7 @@ Page({
         w: btnWidth,
         h: 48 * S,
         color: 0x4fc3f7,
-        text_size: 44 * S,
+        text_size: sysText(44),
         align_h: align.CENTER_H,
         align_v: align.CENTER_V,
         text_style: text_style.NONE,
@@ -131,7 +131,7 @@ Page({
         w: btnWidth,
         h: 28 * S,
         color: 0x888888,
-        text_size: 22 * S,
+        text_size: sysText(22),
         align_h: align.CENTER_H,
         align_v: align.CENTER_V,
         text_style: text_style.NONE,
