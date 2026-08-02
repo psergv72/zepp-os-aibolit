@@ -5,7 +5,7 @@ import { getMedications, getIntakes, getTakeLogs, getCancellations, addTakeLog, 
 import { sendTakeLogToPhone } from '../../utils/sync'
 import { getIntakeEntries, isIntakeOnDay, isIntakeTakenToday, isIntakeCancelledToday } from '../../utils/intake-logic.js'
 import { fetchConfigFromSide } from '../../utils/watch-config'
-import { getSysFontScale } from '../../utils/ui-scale'
+import { getSysFontScale, sysText } from '../../utils/ui-scale'
 
 const logger = Logger.getLogger('aibolit-home')
 
@@ -73,7 +73,7 @@ Page({
       w: screenWidth,
       h: 48 * S,
       color: 0xffffff,
-      text_size: 32 * S,
+      text_size: sysText(32),
       align_h: align.CENTER_H,
       align_v: align.CENTER_V,
       text_style: text_style.NONE,
@@ -88,7 +88,7 @@ Page({
         w: screenWidth,
         h: 36 * S,
         color: 0x888888,
-        text_size: 26 * S,
+        text_size: sysText(26),
         align_h: align.CENTER_H,
         align_v: align.CENTER_V,
         text_style: text_style.NONE,
@@ -108,7 +108,7 @@ Page({
         w: screenWidth - 60,
         h: 44 * S,
         color: 0x4fc3f7,
-        text_size: 26 * S,
+        text_size: sysText(26),
         align_h: align.LEFT,
         align_v: align.CENTER_V,
         text_style: text_style.NONE,
@@ -123,7 +123,7 @@ Page({
           w: screenWidth - 90,
           h: 40 * S,
           color: 0xffffff,
-          text_size: 24 * S,
+          text_size: sysText(24),
           align_h: align.LEFT,
           align_v: align.CENTER_V,
           text_style: text_style.NONE,
@@ -142,7 +142,7 @@ Page({
         w: 40,
         h: checkboxH,
         color: 0x4fc3f7,
-        text_size: 36 * S,
+        text_size: sysText(36),
         align_h: align.CENTER_H,
         align_v: align.CENTER_V,
         text_style: text_style.NONE,
@@ -161,7 +161,7 @@ Page({
       w: screenWidth,
       h: btnHeight,
       color: 0x888888,
-      text_size: 26 * S,
+      text_size: sysText(26),
       align_h: align.CENTER_H,
       align_v: align.CENTER_V,
       text_style: text_style.NONE,
