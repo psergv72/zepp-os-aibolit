@@ -7,11 +7,13 @@ register(new URL('./helpers/zos-loader.mjs', import.meta.url))
 let pageOpts = null
 globalThis.Page = (opts) => { pageOpts = opts }
 
-const { __getRegistry, __reset, event } = await import('./helpers/stubs/zos-ui.mjs')
+const { __getRegistry, __reset, event, widget } = await import('./helpers/stubs/zos-ui.mjs')
 
 const storage = await import('./helpers/stubs/zos-storage.mjs')
 
 const router = await import('./helpers/stubs/zos-router.mjs')
+
+const device = await import('./helpers/stubs/zos-device.mjs')
 
 await import('../page/plan/index.js')
 
@@ -38,6 +40,7 @@ function instance() {
 beforeEach(() => {
   __reset()
   router.__reset()
+  device.__setShape('round')
   seed()
 })
 
@@ -85,4 +88,27 @@ test('refreshView после takeIntake/undo/cancel не накапливает 
   page.cancelIntake({ id: 'i1', time: '23:59' })
   const thirdStillAlive = __getRegistry().filter(w => !w.deleted)
   assert.ok(thirdStillAlive.length > 0, 'после cancelIntake должен отобразиться обновлённый список')
+})
+
+test('время блока — без текстовых тире', () => {
+  const page = instance()
+  page.refreshView()
+
+  const dashTexts = __getRegistry().filter(
+    w => w.type === widget.TEXT && typeof w.props.text === 'string' && w.props.text.includes('\u2500')
+  )
+  assert.equal(dashTexts.length, 0, 'не должно быть текстовых тире в заголовках времени')
+})
+
+test('контрол приёма слева и по верхнему краю первой строки', () => {
+  const page = instance()
+  page.refreshView()
+
+  const ctrl = __getRegistry().find(w => w.type === widget.TEXT && w.props.text === '\u2610')
+  assert.ok(ctrl, 'контрол ☐ должен существовать')
+  assert.equal(ctrl.props.x, 70, 'контрол на левом краю контента (круглая форма)')
+
+  const med = __getRegistry().find(w => w.type === widget.TEXT && w.props.text.startsWith('Аспирин'))
+  assert.ok(med, 'строка лекарства должна существовать')
+  assert.equal(ctrl.props.y, med.props.y, 'контрол по верхнему краю первой строки')
 })

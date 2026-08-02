@@ -16,6 +16,7 @@ import { sendTakeLogToPhone, sendCancellationToPhone } from '../../utils/sync'
 import { getIntakeEntries, isIntakeOnDay, getIntakeStatus, getTakenTime } from '../../utils/intake-logic.js'
 import { fetchConfigFromSide } from '../../utils/watch-config'
 import { sysText, getUiScale } from '../../utils/ui-scale'
+import { getContentBounds, renderTimeHeader } from '../../utils/screen-layout'
 import { createViewManager } from '../../utils/view-manager'
 
 const logger = Logger.getLogger('aibolit-plan')
@@ -74,16 +75,16 @@ Page({
 
   renderPlan(entries) {
     this.ui.clear()
-    const screenWidth = 480
     const S = getUiScale()
-    const btnHeight = 48 * S
-    const btnY = 380 * S
-    let y = 20 * S
+    const bounds = getContentBounds()
+    const btnH = 48 * S
+    const btnY = bounds.bottom - btnH
+    let y = bounds.top
 
     this.ui.create(widget.TEXT, {
-      x: 0,
+      x: bounds.left,
       y: y,
-      w: screenWidth,
+      w: bounds.width,
       h: 48 * S,
       color: 0xffffff,
       text_size: sysText(32),
@@ -96,9 +97,9 @@ Page({
 
     if (entries.length === 0) {
       this.ui.create(widget.TEXT, {
-        x: 0,
+        x: bounds.left,
         y: y,
-        w: screenWidth,
+        w: bounds.width,
         h: 36 * S,
         color: 0x888888,
         text_size: sysText(26),
@@ -109,54 +110,58 @@ Page({
       })
     }
 
+    const checkColW = 40 * S
+    const checkGap = 16 * S
+
     for (const entry of entries) {
-      const blockH = (48 + entry.items.length * 40 + (entry._takenTime ? 32 : 0) + (entry._cancelled ? 32 : 0) + 15) * S
+      const items = entry.items || []
+      const statusH = (entry._takenTime ? 32 : 0) + (entry._cancelled ? 32 : 0)
+      const blockH = (44 + items.length * 40 + statusH + 15) * S
       if (y + blockH > btnY - 5) break
 
       const intake = entry.intake
       const textColor = entry._cancelled ? 0x666666 : (entry._taken ? 0x4caf50 : 0xffffff)
-      const headerDecor = entry._cancelled ? text_style.STRIKETHROUGH : text_style.NONE
       const statusIcon = entry._taken ? ' \u2713' : ''
-      const headerText = '───── ' + intake.time + ' ────' + statusIcon
+      const headerText = intake.time + statusIcon
 
-      this.ui.create(widget.TEXT, {
-        x: 20,
-        y: y,
-        w: screenWidth - 40,
-        h: 44 * S,
-        color: textColor,
-        text_size: sysText(26),
-        align_h: align.LEFT,
-        align_v: align.CENTER_V,
-        text_style: headerDecor,
+      renderTimeHeader(this.ui, {
         text: headerText,
+        x: bounds.left,
+        y: y,
+        right: bounds.right,
+        color: textColor,
+        sizeSp: 26,
+        rowH: 44 * S,
       })
       y += 44 * S
 
-      for (const item of entry.items) {
+      const medX = bounds.left + checkColW + checkGap
+      const medW = bounds.right - medX
+      const firstMedY = y
+
+      for (const item of items) {
         const medColor = entry._cancelled ? 0x555555 : (entry._taken ? 0x888888 : 0xffffff)
         const medDecor = entry._cancelled ? text_style.STRIKETHROUGH : text_style.NONE
-        const checkMark = entry._taken ? '\u2713 ' : '  '
         this.ui.create(widget.TEXT, {
-          x: 40,
+          x: medX,
           y: y,
-          w: screenWidth - 80,
+          w: medW,
           h: 40 * S,
           color: medColor,
           text_size: sysText(24),
           align_h: align.LEFT,
           align_v: align.CENTER_V,
           text_style: medDecor,
-          text: checkMark + item.med.name + ' \u00d7 ' + (item.amount || ''),
+          text: item.med.name + ' \u00d7 ' + (item.amount || ''),
         })
         y += 40 * S
       }
 
       if (entry._taken && entry._takenTime) {
         this.ui.create(widget.TEXT, {
-          x: 40,
+          x: medX,
           y: y,
-          w: screenWidth - 80,
+          w: medW,
           h: 32 * S,
           color: 0x666666,
           text_size: sysText(20),
@@ -170,9 +175,9 @@ Page({
 
       if (entry._cancelled) {
         const restoreBtn = this.ui.create(widget.TEXT, {
-          x: 40,
+          x: medX,
           y: y,
-          w: screenWidth - 80,
+          w: medW,
           h: 32 * S,
           color: 0x4fc3f7,
           text_size: sysText(20),
@@ -187,60 +192,45 @@ Page({
         y += 32 * S
       }
 
-      const indicatorX = screenWidth - 50
-      const medAreaH = (entry.items.length * 40 + (entry._takenTime ? 32 : 0)) * S
-      const indicatorY = y - medAreaH - 5 * S
-      const indicatorH = medAreaH + 10 * S
-
-      if (!entry._cancelled && !entry._taken) {
-        const checkBtn = this.ui.create(widget.TEXT, {
-          x: indicatorX,
-          y: indicatorY,
-          w: 40,
-          h: indicatorH,
-          color: 0xffffff,
+      if (!entry._cancelled) {
+        const symbol = entry._taken ? '\u2713' : '\u2610'
+        const color = entry._taken ? 0x4caf50 : 0xffffff
+        const ctrl = this.ui.create(widget.TEXT, {
+          x: bounds.left,
+          y: firstMedY,
+          w: checkColW,
+          h: 40 * S,
+          color: color,
           text_size: sysText(36),
           align_h: align.CENTER_H,
           align_v: align.CENTER_V,
           text_style: text_style.NONE,
-          text: '\u2610',
+          text: symbol,
         })
-        checkBtn.addEventListener(event.CLICK_UP, () => {
-          this.takeIntake(intake)
+        ctrl.addEventListener(event.CLICK_UP, () => {
+          if (entry._taken) {
+            this.undoIntake(intake)
+          } else {
+            this.takeIntake(intake)
+          }
         })
-        checkBtn.addEventListener(event.CLICK_DOWN, () => {
-          this._pressTimer = setTimeout(() => {
-            this.cancelIntake(intake)
-          }, 1000)
-        })
-      }
-
-      if (entry._taken) {
-        const undoBtn = this.ui.create(widget.TEXT, {
-          x: indicatorX,
-          y: indicatorY,
-          w: 40,
-          h: indicatorH,
-          color: 0x4caf50,
-          text_size: sysText(36),
-          align_h: align.CENTER_H,
-          align_v: align.CENTER_V,
-          text_style: text_style.NONE,
-          text: '\u2713',
-        })
-        undoBtn.addEventListener(event.CLICK_UP, () => {
-          this.undoIntake(intake)
-        })
+        if (!entry._taken) {
+          ctrl.addEventListener(event.CLICK_DOWN, () => {
+            this._pressTimer = setTimeout(() => {
+              this.cancelIntake(intake)
+            }, 1000)
+          })
+        }
       }
 
       y += 15 * S
     }
 
     const backBtn = this.ui.create(widget.TEXT, {
-      x: 0,
+      x: bounds.left,
       y: btnY,
-      w: screenWidth,
-      h: btnHeight,
+      w: bounds.width,
+      h: btnH,
       color: 0x888888,
       text_size: sysText(26),
       align_h: align.CENTER_H,
