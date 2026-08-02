@@ -1,6 +1,6 @@
 import { log as Logger } from '@zos/utils'
 import { createWidget, deleteWidget, widget, event, align, text_style } from '@zos/ui'
-import { push as routerPush } from '@zos/router'
+import { replace as routerReplace } from '@zos/router'
 import {
   getMedications,
   getIntakes,
@@ -249,7 +249,7 @@ Page({
       text: '[На главную]',
     })
     backBtn.addEventListener(event.CLICK_UP, () => {
-      routerPush({ url: 'page/home/index' })
+      routerReplace({ url: 'page/home/index' })
     })
   },
 

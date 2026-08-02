@@ -7,9 +7,11 @@ register(new URL('./helpers/zos-loader.mjs', import.meta.url))
 let pageOpts = null
 globalThis.Page = (opts) => { pageOpts = opts }
 
-const { __getRegistry, __reset, deleteWidget } = await import('./helpers/stubs/zos-ui.mjs')
+const { __getRegistry, __reset, deleteWidget, event } = await import('./helpers/stubs/zos-ui.mjs')
 
 const storage = await import('./helpers/stubs/zos-storage.mjs')
+
+const router = await import('./helpers/stubs/zos-router.mjs')
 
 await import('../page/home/index.js')
 
@@ -35,7 +37,23 @@ function instance() {
 
 beforeEach(() => {
   __reset()
+  router.__reset()
   seed()
+})
+
+test('кнопка «Полный план» использует replace вместо push', () => {
+  const page = instance()
+  page.refreshView()
+  const btn = __getRegistry().find(w => w.props.text === '[Полный план \u2192]')
+  assert.ok(btn, 'кнопка «Полный план» должна существовать')
+  btn.listeners[event.CLICK_UP]()
+
+  const calls = router.__getCalls()
+  assert.ok(calls.length > 0, 'должен быть вызов роутера')
+  assert.ok(!calls.some(c => c.method === 'push'), 'не должен использовать push')
+  const last = calls[calls.length - 1]
+  assert.equal(last.method, 'replace', 'должен использовать replace')
+  assert.equal(last.opts.url, 'page/plan/index')
 })
 
 test('повторный refreshView удаляет виджеты предыдущей отрисовки', () => {

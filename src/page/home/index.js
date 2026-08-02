@@ -1,6 +1,6 @@
 import { log as Logger } from '@zos/utils'
 import { createWidget, deleteWidget, widget, event, align, text_style } from '@zos/ui'
-import { push as routerPush } from '@zos/router'
+import { replace as routerReplace } from '@zos/router'
 import { getMedications, getIntakes, getTakeLogs, getCancellations, addTakeLog, getTodayDateStr } from '../../utils/storage'
 import { sendTakeLogToPhone } from '../../utils/sync'
 import { getIntakeEntries, isIntakeOnDay, isIntakeTakenToday, isIntakeCancelledToday } from '../../utils/intake-logic.js'
@@ -171,7 +171,7 @@ Page({
       text: '[Полный план \u2192]',
     })
     planBtn.addEventListener(event.CLICK_UP, () => {
-      routerPush({ url: 'page/plan/index' })
+      routerReplace({ url: 'page/plan/index' })
     })
   },
 
