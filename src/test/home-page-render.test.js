@@ -162,3 +162,17 @@ test('отступ между заголовком и первым приёмо�
   assert.ok(time, 'время первого приёма должно существовать')
   assert.ok(time.props.y < 160, 'первый приём начинается близко к заголовку (было ~178)')
 })
+
+test('под кнопкой есть прокладка для отступа', () => {
+  const page = instance()
+  page.refreshView()
+
+  const btn = __getRegistry().find(w => w.type === widget.TEXT && w.props.text === 'Полный план')
+  assert.ok(btn, 'кнопка должна существовать')
+
+  const spacer = __getRegistry().find(
+    w => w.type === widget.FILL_RECT && w.props.y === btn.props.y + btn.props.h
+  )
+  assert.ok(spacer, 'под кнопкой должна быть прокладка')
+  assert.ok(spacer.props.h >= 80, 'высота прокладки заметная')
+})

@@ -180,6 +180,14 @@ Page({
     planBtn.addEventListener(event.CLICK_UP, () => {
       routerReplace({ url: 'page/plan/index' })
     })
+
+    this.ui.create(widget.FILL_RECT, {
+      x: bounds.left,
+      y: y + btnH,
+      w: bounds.width,
+      h: bottomPad,
+      color: 0x000000,
+    })
   },
 
   takeIntake(intake) {

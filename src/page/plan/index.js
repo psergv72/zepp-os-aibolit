@@ -247,6 +247,14 @@ Page({
     backBtn.addEventListener(event.CLICK_UP, () => {
       routerReplace({ url: 'page/home/index' })
     })
+
+    this.ui.create(widget.FILL_RECT, {
+      x: bounds.left,
+      y: y + btnH,
+      w: bounds.width,
+      h: bottomPad,
+      color: 0x000000,
+    })
   },
 
   takeIntake(intake) {
