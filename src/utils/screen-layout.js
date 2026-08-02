@@ -21,7 +21,7 @@ export function getContentBounds() {
   }
 }
 
-export function renderTimeHeader(ui, { text, x, y, right, color = 0xffffff, sizeSp = 26, rowH = 44, lineColor = 0x2a2a2a }) {
+export function renderTimeHeader(ui, { text, x, y, right, color = 0xffffff, sizeSp = 26, rowH = 44, lineColor = 0x2a2a2a, textStyle = text_style.NONE }) {
   const S = getUiScale()
   const size = sysText(sizeSp)
   const lineH = Math.max(2, 3 * S)
@@ -45,7 +45,7 @@ export function renderTimeHeader(ui, { text, x, y, right, color = 0xffffff, size
     text_size: size,
     align_h: align.LEFT,
     align_v: align.CENTER_V,
-    text_style: text_style.NONE,
+    text_style: textStyle,
     text: text,
   })
 

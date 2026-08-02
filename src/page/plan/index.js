@@ -132,6 +132,7 @@ Page({
         color: textColor,
         sizeSp: 26,
         rowH: 44 * S,
+        textStyle: entry._cancelled ? text_style.STRIKETHROUGH : text_style.NONE,
       })
       y += 44 * S
 
