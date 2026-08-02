@@ -1,10 +1,24 @@
 import { getSysFontSize } from '@zos/ui'
 
-let cached = null
+const SYS_MIN_FONT = 16
+
+let scaleCache = null
+let minCache = null
 
 export function getSysFontScale() {
-  if (cached === null) {
-    cached = getSysFontSize(100) / 100
+  if (scaleCache === null) {
+    scaleCache = getSysFontSize(SYS_MIN_FONT) / SYS_MIN_FONT
   }
-  return cached
+  return scaleCache
+}
+
+export function getMinSystemFontSize() {
+  if (minCache === null) {
+    minCache = getSysFontSize(SYS_MIN_FONT)
+  }
+  return minCache
+}
+
+export function sysText(size) {
+  return Math.max(size * getSysFontScale(), getMinSystemFontSize())
 }
