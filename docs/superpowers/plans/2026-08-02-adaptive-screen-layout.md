@@ -294,7 +294,7 @@ export function getContentBounds() {
   }
 }
 
-export function renderTimeHeader(ui, { text, x, y, right, color = 0xffffff, sizeSp = 26, rowH = 44, lineColor = 0x2a2a2a }) {
+export function renderTimeHeader(ui, { text, x, y, right, color = 0xffffff, sizeSp = 26, rowH = 44, lineColor = 0x2a2a2a, textStyle = text_style.NONE }) {
   const S = getUiScale()
   const size = sysText(sizeSp)
   const lineH = Math.max(2, 3 * S)
@@ -318,7 +318,7 @@ export function renderTimeHeader(ui, { text, x, y, right, color = 0xffffff, size
     text_size: size,
     align_h: align.LEFT,
     align_v: align.CENTER_V,
-    text_style: text_style.NONE,
+    text_style: textStyle,
     text: text,
   })
 
@@ -576,7 +576,7 @@ git commit -m "feat: adaptive home layout (round/square) with left-top checkbox"
 1. добавить импорт стаба устройства и `widget`:
 
 ```js
-const { __getRegistry, __reset, event, widget } = await import('./helpers/stubs/zos-ui.mjs')
+const { __getRegistry, __reset, event, widget, text_style } = await import('./helpers/stubs/zos-ui.mjs')
 const device = await import('./helpers/stubs/zos-device.mjs')
 ```
 
@@ -610,6 +610,19 @@ test('контрол приёма слева и по верхнему краю �
   const med = __getRegistry().find(w => w.type === widget.TEXT && w.props.text.startsWith('Аспирин'))
   assert.ok(med, 'строка лекарства должна существовать')
   assert.equal(ctrl.props.y, med.props.y, 'контрол по верхнему краю первой строки')
+})
+
+test('заголовок отменённого приёма перечёркнут', () => {
+  const { getTodayDateStr } = await import('../utils/storage.js')
+  const date = getTodayDateStr()
+  storage.__stores().get('aibolit-data.json').set('cancellations', [{ intakeId: 'i1', date: date }])
+
+  const page = instance()
+  page.refreshView()
+
+  const time = __getRegistry().find(w => w.type === widget.TEXT && w.props.text === '23:59')
+  assert.ok(time, 'заголовок времени отменённого приёма должен существовать')
+  assert.equal(time.props.text_style, text_style.STRIKETHROUGH, 'заголовок должен быть перечёркнут')
 })
 ```
 
@@ -682,6 +695,7 @@ Expected: FAIL — тире в тексте, контрол справа/по ц
         color: textColor,
         sizeSp: 26,
         rowH: 44 * S,
+        textStyle: entry._cancelled ? text_style.STRIKETHROUGH : text_style.NONE,
       })
       y += 44 * S
 
