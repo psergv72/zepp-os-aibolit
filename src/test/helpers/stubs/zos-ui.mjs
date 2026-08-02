@@ -24,6 +24,7 @@ export const event = {
 export const prop = {}
 
 const registry = []
+let redrawCount = 0
 
 export function createWidget(type, props) {
   const w = {
@@ -45,6 +46,10 @@ export function deleteWidget(w) {
   w.deleted = true
 }
 
+export function redraw() {
+  redrawCount++
+}
+
 export function getSysFontSize(size) {
   return size
 }
@@ -58,6 +63,11 @@ export function __getRegistry() {
   return registry
 }
 
+export function __getRedrawCount() {
+  return redrawCount
+}
+
 export function __reset() {
   registry.length = 0
+  redrawCount = 0
 }

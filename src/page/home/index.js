@@ -1,5 +1,5 @@
 import { log as Logger } from '@zos/utils'
-import { createWidget, deleteWidget, widget, event, align, text_style } from '@zos/ui'
+import { createWidget, deleteWidget, widget, event, align, text_style, redraw } from '@zos/ui'
 import { replace as routerReplace } from '@zos/router'
 import { getMedications, getIntakes, getTakeLogs, getCancellations, addTakeLog, getTodayDateStr } from '../../utils/storage'
 import { sendTakeLogToPhone } from '../../utils/sync'
@@ -18,13 +18,14 @@ Page({
 
   build() {
     logger.log('home page build')
+    this._destroyed = false
     this.refreshView()
     this.pullConfig()
   },
 
   pullConfig() {
     fetchConfigFromSide().then((config) => {
-      if (config) this.refreshView()
+      if (config && !this._destroyed) this.refreshView()
     })
   },
 
@@ -34,9 +35,12 @@ Page({
 
   onDestroy() {
     logger.log('home page onDestroy')
+    this._destroyed = true
+    if (this.ui) this.ui.clear()
   },
 
   refreshView() {
+    if (this._destroyed) return
     if (!this.ui) this.ui = createViewManager(createWidget, deleteWidget)
     const medications = getMedications()
     const intakes = getIntakes()
@@ -191,6 +195,8 @@ Page({
       h: bottomPad,
       color: 0x000000,
     })
+
+    redraw()
   },
 
   takeIntake(intake) {

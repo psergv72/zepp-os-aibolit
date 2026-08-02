@@ -7,7 +7,7 @@ register(new URL('./helpers/zos-loader.mjs', import.meta.url))
 let pageOpts = null
 globalThis.Page = (opts) => { pageOpts = opts }
 
-const { __getRegistry, __reset, event, widget, text_style } = await import('./helpers/stubs/zos-ui.mjs')
+const { __getRegistry, __getRedrawCount, __reset, event, widget, text_style } = await import('./helpers/stubs/zos-ui.mjs')
 
 const storage = await import('./helpers/stubs/zos-storage.mjs')
 
@@ -69,6 +69,36 @@ test('повторный refreshView удаляет виджеты предыд�
   const firstStillAlive = first.filter(w => !w.deleted)
   assert.equal(firstStillAlive.length, 0, 'все виджеты первой отрисовки должны быть удалены')
   assert.ok(__getRegistry().filter(w => !w.deleted).length > 0, 'вторая отрисовка должна создать новые виджеты')
+})
+
+test('повторный refreshView вызывает redraw для принудительной перерисовки', () => {
+  const page = instance()
+  page.refreshView()
+  const afterFirst = __getRedrawCount()
+  assert.ok(afterFirst >= 1, 'первая отрисовка должна вызывать redraw')
+
+  page.refreshView()
+  assert.ok(__getRedrawCount() > afterFirst, 'повторная отрисовка должна снова вызывать redraw')
+})
+
+test('onDestroy очищает виджеты страницы', () => {
+  const page = instance()
+  page.refreshView()
+  assert.ok(__getRegistry().filter(w => !w.deleted).length > 0, 'до onDestroy виджеты живы')
+
+  page.onDestroy()
+
+  assert.equal(__getRegistry().filter(w => !w.deleted).length, 0, 'onDestroy должен удалить все виджеты')
+})
+
+test('refreshView после onDestroy не создаёт новых виджетов', () => {
+  const page = instance()
+  page.refreshView()
+  page.onDestroy()
+
+  page.refreshView()
+
+  assert.equal(__getRegistry().filter(w => !w.deleted).length, 0, 'уничтоженная страница не должна рисовать')
 })
 
 test('refreshView после takeIntake/undo/cancel не накапливает виджеты', () => {
