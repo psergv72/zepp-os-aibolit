@@ -96,7 +96,8 @@ AppSettingsPage({
   },
 
   forceRender() {
-    this.storage().setItem('__ui_render', String(Date.now()))
+    this._renderSeq = (this._renderSeq || 0) + 1
+    this.storage().setItem('__ui_render', String(this._renderSeq))
   },
 
   navigateTo(page, params) {
@@ -186,10 +187,10 @@ AppSettingsPage({
 
     return View({ style: S.page }, [
       Text({ style: S.title, bold: true }, [isNew ? 'Добавить лекарство' : 'Редактировать лекарство']),
-      View({ style: S.field }, [TextInput({ label: 'Название', placeholder: 'Название', value: draft.name, onChange: v => { draft.name = v } })]),
-      View({ style: S.field }, [TextInput({ label: 'Дозировка', placeholder: 'Дозировка', value: draft.dosage, onChange: v => { draft.dosage = v } })]),
-      View({ style: S.field }, [TextInput({ label: 'Комментарии', placeholder: 'Комментарии', value: draft.comments, onChange: v => { draft.comments = v } })]),
-      View({ style: S.field }, [Toggle({ label: 'Активно', value: draft.enabled, onChange: v => { draft.enabled = v } })]),
+      View({ style: S.field }, [TextInput({ label: 'Название', placeholder: 'Название', value: draft.name, onChange: v => { draft.name = v; this.forceRender() } })]),
+      View({ style: S.field }, [TextInput({ label: 'Дозировка', placeholder: 'Дозировка', value: draft.dosage, onChange: v => { draft.dosage = v; this.forceRender() } })]),
+      View({ style: S.field }, [TextInput({ label: 'Комментарии', placeholder: 'Комментарии', value: draft.comments, onChange: v => { draft.comments = v; this.forceRender() } })]),
+      View({ style: S.field }, [Toggle({ label: 'Активно', value: draft.enabled, onChange: v => { draft.enabled = v; this.forceRender() } })]),
       Button({
         label: 'Сохранить',
         color: 'primary',
@@ -282,9 +283,9 @@ AppSettingsPage({
 
     return View({ style: S.page }, [
       Text({ style: S.title, bold: true }, [isNew ? 'Добавить приём' : 'Редактировать приём']),
-      View({ style: S.field }, [TextInput({ label: 'Время', placeholder: 'ЧЧ:ММ', value: draft.time, onChange: v => { draft.time = v } })]),
-      View({ style: S.field }, [TextInput({ label: 'Метка (утро/день/вечер)', placeholder: 'Метка', value: draft.label, onChange: v => { draft.label = v } })]),
-      View({ style: S.field }, [Toggle({ label: 'Каждый день', value: everyDay, onChange: v => { draft.weekDays = v ? null : [] } })]),
+      View({ style: S.field }, [TextInput({ label: 'Время', placeholder: 'ЧЧ:ММ', value: draft.time, onChange: v => { draft.time = v; this.forceRender() } })]),
+      View({ style: S.field }, [TextInput({ label: 'Метка (утро/день/вечер)', placeholder: 'Метка', value: draft.label, onChange: v => { draft.label = v; this.forceRender() } })]),
+      View({ style: S.field }, [Toggle({ label: 'Каждый день', value: everyDay, onChange: v => { draft.weekDays = v ? null : []; this.forceRender() } })]),
       View({ style: S.field }, [
         Select({
           label: 'Дни недели',
@@ -295,6 +296,7 @@ AppSettingsPage({
           onChange: v => {
             const arr = Array.isArray(v) ? v : [v]
             draft.weekDays = arr.map(x => Number(x))
+            this.forceRender()
           },
         }),
       ]),
@@ -358,13 +360,14 @@ AppSettingsPage({
             onChange: v => {
               const arr = Array.isArray(v) ? v : [v]
               draft.medicationId = arr[0] || null
+              this.forceRender()
             },
           }),
         ]),
       )
       rows.push(
         View({ style: S.field }, [
-          TextInput({ label: 'Количество', placeholder: '2 таблетки', value: draft.amount, onChange: v => { draft.amount = v } }),
+          TextInput({ label: 'Количество', placeholder: '2 таблетки', value: draft.amount, onChange: v => { draft.amount = v; this.forceRender() } }),
         ]),
       )
       rows.push(
@@ -467,23 +470,23 @@ AppSettingsPage({
     return View({ style: S.page }, [
       Text({ style: S.title, bold: true }, ['Настройки']),
       View({ style: S.field }, [
-        TextInput({ label: 'Интервал повтора (мин)', value: String(draft.retryInterval), onChange: v => { draft.retryInterval = parseInt(v, 10) || 60 } }),
+        TextInput({ label: 'Интервал повтора (мин)', value: String(draft.retryInterval), onChange: v => { draft.retryInterval = parseInt(v, 10) || 60; this.forceRender() } }),
       ]),
       View({ style: S.field }, [
-        TextInput({ label: 'Интервал синхронизации (мин)', value: String(draft.syncInterval), onChange: v => { draft.syncInterval = parseInt(v, 10) || 60 } }),
+        TextInput({ label: 'Интервал синхронизации (мин)', value: String(draft.syncInterval), onChange: v => { draft.syncInterval = parseInt(v, 10) || 60; this.forceRender() } }),
       ]),
       View({ style: S.field }, [
         TextInput({
           label: 'Варианты отложки (мин, через запятую)',
           value: draft.snoozeOptions.join(', '),
-          onChange: v => { draft.snoozeOptions = v.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n)) },
+          onChange: v => { draft.snoozeOptions = v.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n)); this.forceRender() },
         }),
       ]),
       View({ style: S.field }, [
         TextInput({
           label: 'Минимальный размер шрифта (16-40)',
           value: String(draft.minFontSize || 16),
-          onChange: v => { draft.minFontSize = Math.max(16, parseInt(v, 10) || 16) },
+          onChange: v => { draft.minFontSize = Math.max(16, parseInt(v, 10) || 16); this.forceRender() },
         }),
       ]),
       Button({
