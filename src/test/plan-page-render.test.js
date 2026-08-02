@@ -125,3 +125,29 @@ test('заголовок отменённого приёма перечёркн�
   assert.ok(time, 'заголовок времени отменённого приёма должен существовать')
   assert.equal(time.props.text_style, text_style.STRIKETHROUGH, 'заголовок должен быть перечёркнут')
 })
+
+test('все приёмы отображаются без обрыва при крупном шрифте и включается скролл', () => {
+  storage.__stores().get('aibolit-data.json').set('settings', { minFontSize: 40, snoozeOptions: [30, 45, 60, 90] })
+  const store = storage.__stores().get('aibolit-data.json')
+  const intakes = []
+  for (let i = 0; i < 5; i++) {
+    intakes.push({ id: 'i' + i, time: '0' + i + ':00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] })
+  }
+  store.set('intakes', intakes)
+
+  const calls = []
+  globalThis.hmUI = { setScrollView: (...args) => { calls.push(args); return true } }
+  try {
+    const page = instance()
+    page.refreshView()
+
+    const meds = __getRegistry().filter(w => w.type === widget.TEXT && w.props.text && w.props.text.startsWith('Аспирин'))
+    assert.equal(meds.length, 5, 'все 5 приёмов должны быть отрисованы')
+
+    assert.ok(calls.length > 0, 'должен быть вызван setScrollView')
+    assert.equal(calls[0][0], true, 'скролл включён')
+    assert.ok(calls[0][1] > 480, 'высота контента больше экрана')
+  } finally {
+    delete globalThis.hmUI
+  }
+})

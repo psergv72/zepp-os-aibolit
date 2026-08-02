@@ -41,3 +41,36 @@ test('getContentBounds: прямоугольная — вся ширина с п
     left: 20, top: 20, right: 460, bottom: 460, width: 440, height: 440,
   })
 })
+
+test('enableScroll: включает скролл при высоте больше экрана', async () => {
+  device.__setShape('round')
+  screenLayout = await import('../utils/screen-layout.js')
+  const calls = []
+  globalThis.hmUI = { setScrollView: (...args) => { calls.push(args); return true } }
+  try {
+    screenLayout.enableScroll(1000)
+    assert.deepEqual(calls, [[true, 1000, 1, true]])
+  } finally {
+    delete globalThis.hmUI
+  }
+})
+
+test('enableScroll: отключает скролл при высоте в пределах экрана', async () => {
+  device.__setShape('round')
+  screenLayout = await import('../utils/screen-layout.js')
+  const calls = []
+  globalThis.hmUI = { setScrollView: (...args) => { calls.push(args); return true } }
+  try {
+    screenLayout.enableScroll(400)
+    assert.deepEqual(calls, [[false, 480, 1, true]])
+  } finally {
+    delete globalThis.hmUI
+  }
+})
+
+test('enableScroll: без hmUI не бросает исключение', async () => {
+  device.__setShape('round')
+  screenLayout = await import('../utils/screen-layout.js')
+  delete globalThis.hmUI
+  assert.equal(screenLayout.enableScroll(1000), false)
+})

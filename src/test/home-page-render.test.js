@@ -121,3 +121,22 @@ test('круглая форма: все виджеты в пределах бе�
     assert.ok(w.props.x + w.props.w <= 410, 'x + w <= 410: ' + (w.props.text || w.props.x))
   }
 })
+
+test('приём отображается при крупном шрифте и включается скролл', () => {
+  storage.__stores().get('aibolit-data.json').set('settings', { minFontSize: 40, snoozeOptions: [30, 45, 60, 90] })
+  const calls = []
+  globalThis.hmUI = { setScrollView: (...args) => { calls.push(args); return true } }
+  try {
+    const page = instance()
+    page.refreshView()
+
+    const meds = __getRegistry().filter(w => w.type === widget.TEXT && w.props.text && w.props.text.startsWith('Аспирин'))
+    assert.equal(meds.length, 1, 'приём должен отображаться даже при крупном шрифте')
+
+    assert.ok(calls.length > 0, 'должен быть вызван setScrollView')
+    assert.equal(calls[0][0], true, 'скролл включён')
+    assert.ok(calls[0][1] > 480, 'высота контента больше экрана')
+  } finally {
+    delete globalThis.hmUI
+  }
+})

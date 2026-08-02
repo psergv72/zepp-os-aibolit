@@ -6,7 +6,7 @@ import { sendTakeLogToPhone } from '../../utils/sync'
 import { getIntakeEntries, isIntakeOnDay, isIntakeTakenToday, isIntakeCancelledToday } from '../../utils/intake-logic.js'
 import { fetchConfigFromSide } from '../../utils/watch-config'
 import { sysText, getUiScale } from '../../utils/ui-scale'
-import { getContentBounds, renderTimeHeader } from '../../utils/screen-layout'
+import { getContentBounds, renderTimeHeader, enableScroll } from '../../utils/screen-layout'
 import { createViewManager } from '../../utils/view-manager'
 
 const logger = Logger.getLogger('aibolit-home')
@@ -67,15 +67,29 @@ Page({
     this.ui.clear()
     const S = getUiScale()
     const bounds = getContentBounds()
+    const headerH = 48 * S
+    const headerGap = 60 * S
     const btnH = 48 * S
-    const btnY = bounds.bottom - btnH
+    const checkColW = 40 * S
+    const checkGap = 16 * S
+    const itemsOf = (entry) => entry.items || []
+    const blockHOf = (entry) => (44 + itemsOf(entry).length * 40 + 10) * S
+
+    let totalH = headerH + headerGap + btnH
+    if (entries.length === 0) {
+      totalH += (36 + 10) * S
+    } else {
+      for (const entry of entries) totalH += blockHOf(entry)
+    }
+    enableScroll(totalH)
+
     let y = bounds.top
 
     this.ui.create(widget.TEXT, {
       x: bounds.left,
       y: y,
       w: bounds.width,
-      h: 48 * S,
+      h: headerH,
       color: 0xffffff,
       text_size: sysText(32),
       align_h: align.CENTER_H,
@@ -83,7 +97,7 @@ Page({
       text_style: text_style.NONE,
       text: 'Ближайшие приёмы',
     })
-    y += 60 * S
+    y += headerH + headerGap
 
     if (entries.length === 0) {
       this.ui.create(widget.TEXT, {
@@ -98,16 +112,11 @@ Page({
         text_style: text_style.NONE,
         text: 'Нет предстоящих приёмов',
       })
+      y += (36 + 10) * S
     }
 
-    const checkColW = 40 * S
-    const checkGap = 16 * S
-
     for (const entry of entries) {
-      const items = entry.items || []
-      const blockH = (44 + items.length * 40 + 10) * S
-      if (y + blockH > btnY - 5) break
-
+      const items = itemsOf(entry)
       const intake = entry.intake
 
       renderTimeHeader(this.ui, {
@@ -162,7 +171,7 @@ Page({
 
     const planBtn = this.ui.create(widget.TEXT, {
       x: bounds.left,
-      y: btnY,
+      y: y,
       w: bounds.width,
       h: btnH,
       color: 0x888888,

@@ -4,9 +4,18 @@ import { sysText, getUiScale } from './ui-scale'
 
 const ROUND_MARGIN = 70
 const SQUARE_MARGIN = 20
+const SCREEN_HEIGHT = 480
 
 export function isRoundScreen() {
   return getDeviceInfo().screenShape === SCREEN_SHAPE_ROUND
+}
+
+export function enableScroll(totalHeight) {
+  if (typeof hmUI === 'undefined' || !hmUI.setScrollView) return false
+  if (totalHeight > SCREEN_HEIGHT) {
+    return hmUI.setScrollView(true, Math.ceil(totalHeight), 1, true)
+  }
+  return hmUI.setScrollView(false, SCREEN_HEIGHT, 1, true)
 }
 
 export function getContentBounds() {

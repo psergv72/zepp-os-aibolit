@@ -410,6 +410,25 @@ test('круглая форма: все виджеты в пределах бе�
     assert.ok(w.props.x + w.props.w <= 410, 'x + w <= 410: ' + (w.props.text || w.props.x))
   }
 })
+
+test('приём отображается при крупном шрифте и включается скролл', () => {
+  storage.__stores().get('aibolit-data.json').set('settings', { minFontSize: 40, snoozeOptions: [30, 45, 60, 90] })
+  const calls = []
+  globalThis.hmUI = { setScrollView: (...args) => { calls.push(args); return true } }
+  try {
+    const page = instance()
+    page.refreshView()
+
+    const meds = __getRegistry().filter(w => w.type === widget.TEXT && w.props.text && w.props.text.startsWith('Аспирин'))
+    assert.equal(meds.length, 1, 'приём должен отображаться даже при крупном шрифте')
+
+    assert.ok(calls.length > 0, 'должен быть вызван setScrollView')
+    assert.equal(calls[0][0], true, 'скролл включён')
+    assert.ok(calls[0][1] > 480, 'высота контента больше экрана')
+  } finally {
+    delete globalThis.hmUI
+  }
+})
 ```
 
 В тестах понадобится `widget` — импортировать: дополнить строку импорта стаба:
@@ -432,15 +451,29 @@ Expected: FAIL — новых тестов (время-как-текст с ти
     this.ui.clear()
     const S = getUiScale()
     const bounds = getContentBounds()
+    const headerH = 48 * S
+    const headerGap = 60 * S
     const btnH = 48 * S
-    const btnY = bounds.bottom - btnH
+    const checkColW = 40 * S
+    const checkGap = 16 * S
+    const itemsOf = (entry) => entry.items || []
+    const blockHOf = (entry) => (44 + itemsOf(entry).length * 40 + 10) * S
+
+    let totalH = headerH + headerGap + btnH
+    if (entries.length === 0) {
+      totalH += (36 + 10) * S
+    } else {
+      for (const entry of entries) totalH += blockHOf(entry)
+    }
+    enableScroll(totalH)
+
     let y = bounds.top
 
     this.ui.create(widget.TEXT, {
       x: bounds.left,
       y: y,
       w: bounds.width,
-      h: 48 * S,
+      h: headerH,
       color: 0xffffff,
       text_size: sysText(32),
       align_h: align.CENTER_H,
@@ -448,7 +481,7 @@ Expected: FAIL — новых тестов (время-как-текст с ти
       text_style: text_style.NONE,
       text: 'Ближайшие приёмы',
     })
-    y += 60 * S
+    y += headerH + headerGap
 
     if (entries.length === 0) {
       this.ui.create(widget.TEXT, {
@@ -463,16 +496,11 @@ Expected: FAIL — новых тестов (время-как-текст с ти
         text_style: text_style.NONE,
         text: 'Нет предстоящих приёмов',
       })
+      y += (36 + 10) * S
     }
 
-    const checkColW = 40 * S
-    const checkGap = 16 * S
-
     for (const entry of entries) {
-      const items = entry.items || []
-      const blockH = (44 + items.length * 40 + 10) * S
-      if (y + blockH > btnY - 5) break
-
+      const items = itemsOf(entry)
       const intake = entry.intake
 
       renderTimeHeader(this.ui, {
@@ -527,7 +555,7 @@ Expected: FAIL — новых тестов (время-как-текст с ти
 
     const planBtn = this.ui.create(widget.TEXT, {
       x: bounds.left,
-      y: btnY,
+      y: y,
       w: bounds.width,
       h: btnH,
       color: 0x888888,
@@ -547,7 +575,7 @@ Expected: FAIL — новых тестов (время-как-текст с ти
 
 ```js
 import { sysText, getUiScale } from '../../utils/ui-scale'
-import { isRoundScreen, getContentBounds, renderTimeHeader } from '../../utils/screen-layout'
+import { getContentBounds, renderTimeHeader, enableScroll } from '../../utils/screen-layout'
 ```
 
 - [ ] **Шаг 4: Прогнать тесты — убедиться, что проходят**
@@ -624,6 +652,32 @@ test('заголовок отменённого приёма перечёркн�
   assert.ok(time, 'заголовок времени отменённого приёма должен существовать')
   assert.equal(time.props.text_style, text_style.STRIKETHROUGH, 'заголовок должен быть перечёркнут')
 })
+
+test('все приёмы отображаются без обрыва при крупном шрифте и включается скролл', () => {
+  storage.__stores().get('aibolit-data.json').set('settings', { minFontSize: 40, snoozeOptions: [30, 45, 60, 90] })
+  const store = storage.__stores().get('aibolit-data.json')
+  const intakes = []
+  for (let i = 0; i < 5; i++) {
+    intakes.push({ id: 'i' + i, time: '0' + i + ':00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] })
+  }
+  store.set('intakes', intakes)
+
+  const calls = []
+  globalThis.hmUI = { setScrollView: (...args) => { calls.push(args); return true } }
+  try {
+    const page = instance()
+    page.refreshView()
+
+    const meds = __getRegistry().filter(w => w.type === widget.TEXT && w.props.text && w.props.text.startsWith('Аспирин'))
+    assert.equal(meds.length, 5, 'все 5 приёмов должны быть отрисованы')
+
+    assert.ok(calls.length > 0, 'должен быть вызван setScrollView')
+    assert.equal(calls[0][0], true, 'скролл включён')
+    assert.ok(calls[0][1] > 480, 'высота контента больше экрана')
+  } finally {
+    delete globalThis.hmUI
+  }
+})
 ```
 
 - [ ] **Шаг 2: Прогнать тесты — убедиться, что падают**
@@ -640,15 +694,30 @@ Expected: FAIL — тире в тексте, контрол справа/по ц
     this.ui.clear()
     const S = getUiScale()
     const bounds = getContentBounds()
+    const headerH = 48 * S
+    const headerGap = 60 * S
     const btnH = 48 * S
-    const btnY = bounds.bottom - btnH
+    const checkColW = 40 * S
+    const checkGap = 16 * S
+    const itemsOf = (entry) => entry.items || []
+    const statusHOf = (entry) => (entry._takenTime ? 32 : 0) + (entry._cancelled ? 32 : 0)
+    const blockHOf = (entry) => (44 + itemsOf(entry).length * 40 + statusHOf(entry) + 15) * S
+
+    let totalH = headerH + headerGap + btnH
+    if (entries.length === 0) {
+      totalH += (36 + 10) * S
+    } else {
+      for (const entry of entries) totalH += blockHOf(entry)
+    }
+    enableScroll(totalH)
+
     let y = bounds.top
 
     this.ui.create(widget.TEXT, {
       x: bounds.left,
       y: y,
       w: bounds.width,
-      h: 48 * S,
+      h: headerH,
       color: 0xffffff,
       text_size: sysText(32),
       align_h: align.CENTER_H,
@@ -656,7 +725,7 @@ Expected: FAIL — тире в тексте, контрол справа/по ц
       text_style: text_style.NONE,
       text: 'План на сегодня',
     })
-    y += 60 * S
+    y += headerH + headerGap
 
     if (entries.length === 0) {
       this.ui.create(widget.TEXT, {
@@ -671,17 +740,11 @@ Expected: FAIL — тире в тексте, контрол справа/по ц
         text_style: text_style.NONE,
         text: 'Нет приёмов на сегодня',
       })
+      y += (36 + 10) * S
     }
 
-    const checkColW = 40 * S
-    const checkGap = 16 * S
-
     for (const entry of entries) {
-      const items = entry.items || []
-      const statusH = (entry._takenTime ? 32 : 0) + (entry._cancelled ? 32 : 0)
-      const blockH = (44 + items.length * 40 + statusH + 15) * S
-      if (y + blockH > btnY - 5) break
-
+      const items = itemsOf(entry)
       const intake = entry.intake
       const textColor = entry._cancelled ? 0x666666 : (entry._taken ? 0x4caf50 : 0xffffff)
       const statusIcon = entry._taken ? ' \u2713' : ''
@@ -792,7 +855,7 @@ Expected: FAIL — тире в тексте, контрол справа/по ц
 
     const backBtn = this.ui.create(widget.TEXT, {
       x: bounds.left,
-      y: btnY,
+      y: y,
       w: bounds.width,
       h: btnH,
       color: 0x888888,
@@ -812,7 +875,7 @@ Expected: FAIL — тире в тексте, контрол справа/по ц
 
 ```js
 import { sysText, getUiScale } from '../../utils/ui-scale'
-import { isRoundScreen, getContentBounds, renderTimeHeader } from '../../utils/screen-layout'
+import { getContentBounds, renderTimeHeader, enableScroll } from '../../utils/screen-layout'
 ```
 
 - [ ] **Шаг 4: Прогнать тесты — убедиться, что проходят**
@@ -1146,3 +1209,33 @@ git commit -m "build: support square screens, add device info permission, bump 1
 - **Покрытие спеки:** форма экрана (задачи 1–2), безопасная зона (задача 2), время+линия (задача 3), чекбокс слева сверху Home/Plan (задачи 4–5), snooze с равными зазорами (задача 6), платформа `s` и разрешение (задача 7).
 - **Плейсхолдеры:** отсутствуют — весь код приведён полностью.
 - **Согласованность имён:** `renderTimeHeader(ui, { text, x, y, right, color, sizeSp, rowH, lineColor })` — сигнатура одинакова во всех задачах; `getContentBounds()` возвращает `{ left, top, right, bottom, width, height }` — одинаково в задачах 2–6; `isRoundScreen()` без кэша.
+
+## Дополнение (2026-08-02): прокручиваемый список — фикс пропадания данных
+
+**Проблема:** на круглом экране безопасная полоса 70…410 фиксирована, а высоты и
+кнопка растут с `S = sysFontScale × minFontSize/16`. При `S ≳ 1.4` (minFontSize
+≥ ~26 или крупный системный шрифт) цикл с условием «не влезает → break» не
+рисовал ни одного блока — список пропадал.
+
+**Решение (одна длинная страница, кнопка внизу списка):**
+- `src/utils/screen-layout.js` — новый `enableScroll(totalHeight)`:
+
+```js
+const SCREEN_HEIGHT = 480
+
+export function enableScroll(totalHeight) {
+  if (typeof hmUI === 'undefined' || !hmUI.setScrollView) return false
+  if (totalHeight > SCREEN_HEIGHT) {
+    return hmUI.setScrollView(true, Math.ceil(totalHeight), 1, true)
+  }
+  return hmUI.setScrollView(false, SCREEN_HEIGHT, 1, true)
+}
+```
+
+- Home/Plan (`renderUpcoming`/`renderPlan`): убран обрыв списка и фиксированный
+  низ кнопки; все приёмы отрисовываются подряд, высота контента считается
+  заранее, вызывается `enableScroll(totalH)`, кнопка перехода — в конце списка
+  (`y: y` после последнего блока).
+- Тесты: `screen-layout.test.js` (3 теста `enableScroll`), `home-page-render`
+  и `plan-page-render` (приём/все приёмы отображаются при `minFontSize: 40` и
+  вызывается `setScrollView` с высотой > 480).
