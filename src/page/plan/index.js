@@ -1,5 +1,5 @@
 import { log as Logger } from '@zos/utils'
-import { createWidget, widget, event, align, text_style } from '@zos/ui'
+import { createWidget, deleteWidget, widget, event, align, text_style } from '@zos/ui'
 import { push as routerPush } from '@zos/router'
 import {
   getMedications,
@@ -16,6 +16,7 @@ import { sendTakeLogToPhone, sendCancellationToPhone } from '../../utils/sync'
 import { getIntakeEntries, isIntakeOnDay, getIntakeStatus, getTakenTime } from '../../utils/intake-logic.js'
 import { fetchConfigFromSide } from '../../utils/watch-config'
 import { sysText, getUiScale } from '../../utils/ui-scale'
+import { createViewManager } from '../../utils/view-manager'
 
 const logger = Logger.getLogger('aibolit-plan')
 
@@ -45,6 +46,7 @@ Page({
   },
 
   refreshView() {
+    if (!this.ui) this.ui = createViewManager(createWidget, deleteWidget)
     const medications = getMedications()
     const intakes = getIntakes()
     const takeLogs = getTakeLogs()
@@ -71,13 +73,14 @@ Page({
   },
 
   renderPlan(entries) {
+    this.ui.clear()
     const screenWidth = 480
     const S = getUiScale()
     const btnHeight = 48 * S
     const btnY = 380 * S
     let y = 20 * S
 
-    createWidget(widget.TEXT, {
+    this.ui.create(widget.TEXT, {
       x: 0,
       y: y,
       w: screenWidth,
@@ -92,7 +95,7 @@ Page({
     y += 60 * S
 
     if (entries.length === 0) {
-      createWidget(widget.TEXT, {
+      this.ui.create(widget.TEXT, {
         x: 0,
         y: y,
         w: screenWidth,
@@ -116,7 +119,7 @@ Page({
       const statusIcon = entry._taken ? ' \u2713' : ''
       const headerText = '───── ' + intake.time + ' ────' + statusIcon
 
-      createWidget(widget.TEXT, {
+      this.ui.create(widget.TEXT, {
         x: 20,
         y: y,
         w: screenWidth - 40,
@@ -134,7 +137,7 @@ Page({
         const medColor = entry._cancelled ? 0x555555 : (entry._taken ? 0x888888 : 0xffffff)
         const medDecor = entry._cancelled ? text_style.STRIKETHROUGH : text_style.NONE
         const checkMark = entry._taken ? '\u2713 ' : '  '
-        createWidget(widget.TEXT, {
+        this.ui.create(widget.TEXT, {
           x: 40,
           y: y,
           w: screenWidth - 80,
@@ -150,7 +153,7 @@ Page({
       }
 
       if (entry._taken && entry._takenTime) {
-        createWidget(widget.TEXT, {
+        this.ui.create(widget.TEXT, {
           x: 40,
           y: y,
           w: screenWidth - 80,
@@ -166,7 +169,7 @@ Page({
       }
 
       if (entry._cancelled) {
-        const restoreBtn = createWidget(widget.TEXT, {
+        const restoreBtn = this.ui.create(widget.TEXT, {
           x: 40,
           y: y,
           w: screenWidth - 80,
@@ -190,7 +193,7 @@ Page({
       const indicatorH = medAreaH + 10 * S
 
       if (!entry._cancelled && !entry._taken) {
-        const checkBtn = createWidget(widget.TEXT, {
+        const checkBtn = this.ui.create(widget.TEXT, {
           x: indicatorX,
           y: indicatorY,
           w: 40,
@@ -213,7 +216,7 @@ Page({
       }
 
       if (entry._taken) {
-        const undoBtn = createWidget(widget.TEXT, {
+        const undoBtn = this.ui.create(widget.TEXT, {
           x: indicatorX,
           y: indicatorY,
           w: 40,
@@ -233,7 +236,7 @@ Page({
       y += 15 * S
     }
 
-    const backBtn = createWidget(widget.TEXT, {
+    const backBtn = this.ui.create(widget.TEXT, {
       x: 0,
       y: btnY,
       w: screenWidth,

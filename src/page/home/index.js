@@ -1,11 +1,12 @@
 import { log as Logger } from '@zos/utils'
-import { createWidget, widget, event, align, text_style } from '@zos/ui'
+import { createWidget, deleteWidget, widget, event, align, text_style } from '@zos/ui'
 import { push as routerPush } from '@zos/router'
 import { getMedications, getIntakes, getTakeLogs, getCancellations, addTakeLog, getTodayDateStr } from '../../utils/storage'
 import { sendTakeLogToPhone } from '../../utils/sync'
 import { getIntakeEntries, isIntakeOnDay, isIntakeTakenToday, isIntakeCancelledToday } from '../../utils/intake-logic.js'
 import { fetchConfigFromSide } from '../../utils/watch-config'
 import { sysText, getUiScale } from '../../utils/ui-scale'
+import { createViewManager } from '../../utils/view-manager'
 
 const logger = Logger.getLogger('aibolit-home')
 
@@ -35,6 +36,7 @@ Page({
   },
 
   refreshView() {
+    if (!this.ui) this.ui = createViewManager(createWidget, deleteWidget)
     const medications = getMedications()
     const intakes = getIntakes()
     const takeLogs = getTakeLogs()
@@ -61,13 +63,14 @@ Page({
   },
 
   renderUpcoming(entries) {
+    this.ui.clear()
     const screenWidth = 480
     const S = getUiScale()
     const btnHeight = 48 * S
     const btnY = 380 * S
     let y = 20 * S
 
-    createWidget(widget.TEXT, {
+    this.ui.create(widget.TEXT, {
       x: 0,
       y: y,
       w: screenWidth,
@@ -82,7 +85,7 @@ Page({
     y += 60 * S
 
     if (entries.length === 0) {
-      createWidget(widget.TEXT, {
+      this.ui.create(widget.TEXT, {
         x: 0,
         y: y,
         w: screenWidth,
@@ -102,7 +105,7 @@ Page({
 
       const intake = entry.intake
 
-      createWidget(widget.TEXT, {
+      this.ui.create(widget.TEXT, {
         x: 20,
         y: y,
         w: screenWidth - 60,
@@ -117,7 +120,7 @@ Page({
       y += 44 * S
 
       for (const item of entry.items) {
-        createWidget(widget.TEXT, {
+        this.ui.create(widget.TEXT, {
           x: 40,
           y: y,
           w: screenWidth - 90,
@@ -136,7 +139,7 @@ Page({
       const checkboxY = y - (entry.items.length * 40 + 5) * S
       const checkboxH = (entry.items.length * 40 + 12) * S
 
-      const takeAllBtn = createWidget(widget.TEXT, {
+      const takeAllBtn = this.ui.create(widget.TEXT, {
         x: checkboxX,
         y: checkboxY,
         w: 40,
@@ -155,7 +158,7 @@ Page({
       y += 10 * S
     }
 
-    const planBtn = createWidget(widget.TEXT, {
+    const planBtn = this.ui.create(widget.TEXT, {
       x: 0,
       y: btnY,
       w: screenWidth,
