@@ -62,6 +62,8 @@ test('круглая форма: кнопки в пределах безопас
   for (const b of buttonAreas()) {
     assert.ok(b.props.x >= 70, 'x >= 70')
     assert.ok(b.props.x + b.props.w <= 410, 'x + w <= 410')
+    assert.ok(b.props.y >= 70, 'y >= 70')
+    assert.ok(b.props.y + b.props.h <= 410, 'y + h <= 410')
   }
 })
 
@@ -76,5 +78,7 @@ test('прямоугольная форма: кнопки от левого кр
   for (const b of btns) {
     assert.ok(b.props.x >= 20, 'x >= 20')
     assert.ok(b.props.x + b.props.w <= 460, 'x + w <= 460')
+    assert.ok(b.props.y >= 20, 'y >= 20')
+    assert.ok(b.props.y + b.props.h <= 460, 'y + h <= 460')
   }
 })

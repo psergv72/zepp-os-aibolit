@@ -105,7 +105,7 @@ Page({
 
     const gap = 20 * S
     const rows = Math.ceil(options.length / 2)
-    const btnH = Math.min(72 * S, (bounds.bottom - y - (rows - 1) * gap) / rows)
+    const btnH = Math.max(0, Math.min(72 * S, (bounds.bottom - y - (rows - 1) * gap) / rows))
     const btnW = (bounds.width - gap) / 2
     const gridX = centerX - (btnW * 2 + gap) / 2
     let col = 0
