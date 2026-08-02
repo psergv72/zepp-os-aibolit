@@ -18,6 +18,7 @@ export const DEFAULT_SETTINGS = {
   retryInterval: 60,
   syncInterval: 60,
   snoozeOptions: [30, 45, 60, 90],
+  minFontSize: 16,
 }
 
 export const WEEK_DAYS = {

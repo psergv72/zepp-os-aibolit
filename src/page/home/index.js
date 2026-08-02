@@ -5,7 +5,7 @@ import { getMedications, getIntakes, getTakeLogs, getCancellations, addTakeLog, 
 import { sendTakeLogToPhone } from '../../utils/sync'
 import { getIntakeEntries, isIntakeOnDay, isIntakeTakenToday, isIntakeCancelledToday } from '../../utils/intake-logic.js'
 import { fetchConfigFromSide } from '../../utils/watch-config'
-import { getSysFontScale, sysText } from '../../utils/ui-scale'
+import { sysText, getUiScale } from '../../utils/ui-scale'
 
 const logger = Logger.getLogger('aibolit-home')
 
@@ -62,7 +62,7 @@ Page({
 
   renderUpcoming(entries) {
     const screenWidth = 480
-    const S = getSysFontScale()
+    const S = getUiScale()
     const btnHeight = 48 * S
     const btnY = 380 * S
     let y = 20 * S

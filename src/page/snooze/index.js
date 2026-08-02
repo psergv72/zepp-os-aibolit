@@ -2,7 +2,7 @@ import { log as Logger } from '@zos/utils'
 import { createWidget, widget, event, align, text_style } from '@zos/ui'
 import { push as routerPush } from '@zos/router'
 import { getSettings, getIntakes, getMedications } from '../../utils/storage'
-import { getSysFontScale, sysText } from '../../utils/ui-scale'
+import { sysText, getUiScale } from '../../utils/ui-scale'
 
 const logger = Logger.getLogger('aibolit-snooze-page')
 
@@ -42,7 +42,7 @@ Page({
     const settings = getSettings()
     const options = settings.snoozeOptions || [30, 45, 60, 90]
     const intake = this.state.intake
-    const S = getSysFontScale()
+    const S = getUiScale()
     let y = 48 * S
 
     const medications = getMedications()

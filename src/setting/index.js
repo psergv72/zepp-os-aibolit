@@ -4,7 +4,7 @@ const STORAGE_KEYS = {
   settings: 'settings',
 }
 
-const DEFAULT_SETTINGS = { retryInterval: 60, syncInterval: 60, snoozeOptions: [30, 45, 60, 90] }
+const DEFAULT_SETTINGS = { retryInterval: 60, syncInterval: 60, snoozeOptions: [30, 45, 60, 90], minFontSize: 16 }
 
 const DAY_NAMES = [
   { name: 'Пн', value: '1' },
@@ -477,6 +477,13 @@ AppSettingsPage({
           label: 'Варианты отложки (мин, через запятую)',
           value: draft.snoozeOptions.join(', '),
           onChange: v => { draft.snoozeOptions = v.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n)) },
+        }),
+      ]),
+      View({ style: S.field }, [
+        TextInput({
+          label: 'Минимальный размер шрифта (16-40)',
+          value: String(draft.minFontSize || 16),
+          onChange: v => { draft.minFontSize = Math.max(16, parseInt(v, 10) || 16) },
         }),
       ]),
       Button({
