@@ -20,13 +20,13 @@ const MEDS = [
 ]
 
 test('getWeekDayBit maps valid days', () => {
-  assert.equal(getWeekDayBit(1), 1)
-  assert.equal(getWeekDayBit(2), 2)
-  assert.equal(getWeekDayBit(3), 4)
-  assert.equal(getWeekDayBit(4), 8)
-  assert.equal(getWeekDayBit(5), 16)
-  assert.equal(getWeekDayBit(6), 32)
-  assert.equal(getWeekDayBit(7), 64)
+  assert.equal(getWeekDayBit(1), 2)
+  assert.equal(getWeekDayBit(2), 4)
+  assert.equal(getWeekDayBit(3), 8)
+  assert.equal(getWeekDayBit(4), 16)
+  assert.equal(getWeekDayBit(5), 32)
+  assert.equal(getWeekDayBit(6), 64)
+  assert.equal(getWeekDayBit(7), 128)
 })
 
 test('getWeekDayBit returns 0 for unknown day', () => {
@@ -35,15 +35,15 @@ test('getWeekDayBit returns 0 for unknown day', () => {
 })
 
 test('getWeekDaysBitmask empty or null means every day', () => {
-  assert.equal(getWeekDaysBitmask([]), 127)
-  assert.equal(getWeekDaysBitmask(null), 127)
-  assert.equal(getWeekDaysBitmask(undefined), 127)
+  assert.equal(getWeekDaysBitmask([]), 254)
+  assert.equal(getWeekDaysBitmask(null), 254)
+  assert.equal(getWeekDaysBitmask(undefined), 254)
 })
 
 test('getWeekDaysBitmask combines bits', () => {
-  assert.equal(getWeekDaysBitmask([1]), 1)
-  assert.equal(getWeekDaysBitmask([1, 3, 5]), 21)
-  assert.equal(getWeekDaysBitmask([2, 7]), 66)
+  assert.equal(getWeekDaysBitmask([1]), 2)
+  assert.equal(getWeekDaysBitmask([1, 3, 5]), 42)
+  assert.equal(getWeekDaysBitmask([2, 7]), 132)
 })
 
 test('isIntakeOnDay: null weekDays = every day', () => {

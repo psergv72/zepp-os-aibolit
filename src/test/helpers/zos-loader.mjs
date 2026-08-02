@@ -8,6 +8,7 @@ const ZOS_STUBS = {
   '@zos/storage': './stubs/zos-storage.mjs',
   '@zos/alarm': './stubs/zos-alarm.mjs',
   '@zos/device': './stubs/zos-device.mjs',
+  '@zos/notification': './stubs/zos-notification.mjs',
 }
 
 export async function resolve(specifier, context, nextResolve) {

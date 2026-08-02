@@ -1,10 +1,10 @@
 export function getWeekDayBit(dayOfWeek) {
-  const bits = { 1: 1, 2: 2, 3: 4, 4: 8, 5: 16, 6: 32, 7: 64 }
+  const bits = { 1: 2, 2: 4, 3: 8, 4: 16, 5: 32, 6: 64, 7: 128 }
   return bits[dayOfWeek] || 0
 }
 
 export function getWeekDaysBitmask(weekDays) {
-  if (!weekDays || weekDays.length === 0) return 127
+  if (!weekDays || weekDays.length === 0) return 254
   let mask = 0
   for (const day of weekDays) {
     mask |= getWeekDayBit(day)
