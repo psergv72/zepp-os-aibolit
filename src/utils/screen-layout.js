@@ -1,4 +1,6 @@
+import { widget, align, text_style, getTextLayout } from '@zos/ui'
 import { getDeviceInfo, SCREEN_SHAPE_ROUND } from '@zos/device'
+import { sysText, getUiScale } from './ui-scale'
 
 const ROUND_MARGIN = 70
 const SQUARE_MARGIN = 20
@@ -16,5 +18,45 @@ export function getContentBounds() {
     bottom: 480 - m,
     width: 480 - m * 2,
     height: 480 - m * 2,
+  }
+}
+
+export function renderTimeHeader(ui, { text, x, y, right, color = 0xffffff, sizeSp = 26, rowH = 44, lineColor = 0x2a2a2a }) {
+  const S = getUiScale()
+  const size = sysText(sizeSp)
+  const lineH = Math.max(2, 3 * S)
+
+  let timeW = 0
+  try {
+    const layout = getTextLayout(text, { text_size: size, text_width: 0, wrapped: 0 })
+    timeW = layout && layout.width ? layout.width : 0
+  } catch (e) {
+    timeW = 0
+  }
+  if (!timeW) timeW = text.length * size * 0.6
+
+  const gap = 18 * S
+  ui.create(widget.TEXT, {
+    x: x,
+    y: y,
+    w: timeW + gap,
+    h: rowH,
+    color: color,
+    text_size: size,
+    align_h: align.LEFT,
+    align_v: align.CENTER_V,
+    text_style: text_style.NONE,
+    text: text,
+  })
+
+  const lineX = x + timeW + gap
+  if (lineX < right - 4) {
+    ui.create(widget.FILL_RECT, {
+      x: lineX,
+      y: y + rowH / 2 - lineH / 2,
+      w: right - lineX,
+      h: lineH,
+      color: lineColor,
+    })
   }
 }
