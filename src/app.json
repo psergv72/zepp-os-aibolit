@@ -3,8 +3,8 @@
   "app": {
     "appType": "app",
     "version": {
-      "code": 1,
-      "name": "1.0.0"
+      "code": 2,
+      "name": "1.1.0"
     },
     "appId": 20002,
     "appName": "Aibolit",
@@ -46,6 +46,9 @@
       "platforms": [
         {
           "st": "r"
+        },
+        {
+          "st": "s"
         }
       ],
       "designWidth": 480
@@ -55,7 +58,8 @@
     "device:os.alarm",
     "device:os.notification",
     "device:os.local_storage",
-    "device:os.bg_service"
+    "device:os.bg_service",
+    "data:os.device.info"
   ],
   "i18n": {
     "en-US": {
