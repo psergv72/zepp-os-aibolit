@@ -80,7 +80,7 @@ Page({
     const headerH = 40 * S
     const headerGap = 10 * S
     const btnH = 48 * S
-    const bottomPad = 80 * S
+    const bottomPad = 48 * S
     const checkColW = 40 * S
     const checkGap = 16 * S
     const itemsOf = (entry) => entry.items || []
