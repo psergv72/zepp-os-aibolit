@@ -19,6 +19,7 @@ const DAY_NAMES = [
 const S = {
   page: { padding: '12px 20px' },
   title: { fontSize: '18px', marginBottom: '8px' },
+  section: { marginBottom: '14px' },
   field: { marginBottom: '12px' },
   row: { padding: '10px 0', borderBottom: '1px solid #eaeaea' },
   rowTitle: { fontSize: '15px' },
@@ -469,20 +470,16 @@ AppSettingsPage({
 
     return View({ style: S.page }, [
       Text({ style: S.title, bold: true }, ['Настройки']),
-      View({ style: S.field }, [
+      Section({ title: 'Напоминания', style: S.section }, [
         TextInput({ label: 'Интервал повтора (мин)', value: String(draft.retryInterval), onChange: v => { draft.retryInterval = parseInt(v, 10) || 60; this.forceRender() } }),
-      ]),
-      View({ style: S.field }, [
         TextInput({ label: 'Интервал синхронизации (мин)', value: String(draft.syncInterval), onChange: v => { draft.syncInterval = parseInt(v, 10) || 60; this.forceRender() } }),
-      ]),
-      View({ style: S.field }, [
         TextInput({
           label: 'Варианты отложки (мин, через запятую)',
           value: draft.snoozeOptions.join(', '),
           onChange: v => { draft.snoozeOptions = v.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n)); this.forceRender() },
         }),
       ]),
-      View({ style: S.field }, [
+      Section({ title: 'Отображение', style: S.section }, [
         TextInput({
           label: 'Минимальный размер шрифта (16-40)',
           value: String(draft.minFontSize || 16),
