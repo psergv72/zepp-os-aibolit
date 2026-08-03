@@ -30,8 +30,7 @@ const S = {
   chevron: { fontSize: '20px', color: '#c7c7cc', marginLeft: '8px' },
   hint: { fontSize: '14px', color: '#8a8a8f' },
   linkAdd: { fontSize: '16px', fontWeight: '600', color: '#2f6fed' },
-  linkBack: { display: 'block', padding: '4px 0', marginBottom: '2px' },
-  linkBackText: { fontSize: '15px', fontWeight: '400', color: '#555555' },
+  backBtn: { display: 'inline-block', width: 'auto', borderRadius: '16px', background: '#ffffff', color: '#555555', border: '1px solid #d9dae0', fontSize: '14px', padding: '6px 14px', marginBottom: '8px' },
   btnPrimary: { display: 'block', width: '100%', borderRadius: '12px', background: '#2f6fed', color: '#ffffff', fontSize: '16px', fontWeight: '600', marginTop: '10px' },
   btnDefault: { display: 'block', width: '100%', borderRadius: '12px', background: '#ffffff', color: '#333333', border: '1px solid #d9dae0', fontSize: '16px', fontWeight: '600', marginTop: '10px' },
 }
@@ -45,6 +44,10 @@ function rowNode(content, onClick, last) {
 
 function controlRow(content, last) {
   return View({ style: last ? S.controlLast : S.control }, content)
+}
+
+function backButton(onClick) {
+  return Button({ label: '‹ Назад', color: 'default', style: S.backBtn, onClick })
 }
 
 function generateId() {
@@ -225,9 +228,7 @@ AppSettingsPage({
       : [rowNode([Text({ style: S.hint }, ['Нет лекарств. Добавьте первое.'])], null, false), addRow]
 
     return View({ style: S.page }, [
-      View({ style: S.linkBack, onClick: () => this.navigateTo('list') }, [
-        Text({ style: S.linkBackText }, ['‹ Назад']),
-      ]),
+      backButton(() => this.navigateTo('list')),
       Text({ style: S.groupTitle }, ['Лекарства']),
       View({ style: S.card }, medCard),
     ])
@@ -240,6 +241,7 @@ AppSettingsPage({
     const isNew = !draft.id
 
     return View({ style: S.page }, [
+      backButton(() => this.navigateTo('medications')),
       Text({ style: S.title, bold: true }, [isNew ? 'Добавить лекарство' : 'Редактировать лекарство']),
       Text({ style: S.groupTitle }, ['Основное']),
       View({ style: S.card }, [
@@ -266,7 +268,6 @@ AppSettingsPage({
           this.navigateTo('medications')
         },
       }),
-      Button({ label: 'Назад', color: 'default', style: S.btnDefault, onClick: () => this.navigateTo('medications') }),
     ])
   },
 
@@ -312,9 +313,7 @@ AppSettingsPage({
       : [rowNode([Text({ style: S.hint }, ['Нет приёмов. Добавьте первый.'])], null, false), addRow]
 
     return View({ style: S.page }, [
-      View({ style: S.linkBack, onClick: () => this.navigateTo('list') }, [
-        Text({ style: S.linkBackText }, ['‹ Назад']),
-      ]),
+      backButton(() => this.navigateTo('list')),
       Text({ style: S.groupTitle }, ['Режим приема лекарств']),
       View({ style: S.card }, listChildren),
     ])
@@ -355,6 +354,7 @@ AppSettingsPage({
       : [rowNode([Text({ style: S.hint }, ['Нет лекарств в приёме'])], null, false), addRow]
 
     return View({ style: S.page }, [
+      backButton(() => this.navigateTo('intakes')),
       Text({ style: S.title, bold: true }, [isNew ? 'Добавить приём' : 'Редактировать приём']),
       Text({ style: S.groupTitle }, ['Время']),
       View({ style: S.card }, [
@@ -404,7 +404,6 @@ AppSettingsPage({
           this.navigateTo('intakes')
         },
       }),
-      Button({ label: 'Назад', color: 'default', style: S.btnDefault, onClick: () => this.navigateTo('intakes') }),
     ])
   },
 
@@ -472,9 +471,9 @@ AppSettingsPage({
     }
 
     return View({ style: S.page }, [
+      backButton(() => this.navigateTo('intakeEdit', { intake: this.state.intakeDraft })),
       Text({ style: S.title, bold: true }, ['Лекарство в приёме']),
       ...rows,
-      Button({ label: 'Назад', color: 'default', style: S.btnDefault, onClick: () => this.navigateTo('intakeEdit', { intake: this.state.intakeDraft }) }),
     ])
   },
 
@@ -513,6 +512,10 @@ AppSettingsPage({
       : [rowNode([Text({ style: S.hint }, ['Нет данных за эту дату'])], null, true)]
 
     return View({ style: S.page }, [
+      backButton(() => {
+        this.state.viewHistoryDate = null
+        this.navigateTo('list')
+      }),
       Text({ style: S.title, bold: true }, ['История']),
       Text({ style: S.groupTitle }, ['Период']),
       View({ style: S.card }, [
@@ -527,15 +530,6 @@ AppSettingsPage({
       ]),
       Text({ style: S.groupTitle }, ['Записи']),
       View({ style: S.card }, listChildren),
-      Button({
-        label: 'Назад',
-        color: 'default',
-        style: S.btnDefault,
-        onClick: () => {
-          this.state.viewHistoryDate = null
-          this.navigateTo('list')
-        },
-      }),
     ])
   },
 
@@ -545,6 +539,7 @@ AppSettingsPage({
     const draft = this.state.settingsDraft
 
     return View({ style: S.page }, [
+      backButton(() => this.navigateTo('list')),
       Text({ style: S.title, bold: true }, ['Настройки']),
       Text({ style: S.groupTitle }, ['Напоминания']),
       View({ style: S.card }, [
@@ -573,7 +568,6 @@ AppSettingsPage({
           this.navigateTo('list')
         },
       }),
-      Button({ label: 'Назад', color: 'default', style: S.btnDefault, onClick: () => this.navigateTo('list') }),
     ])
   },
 })
