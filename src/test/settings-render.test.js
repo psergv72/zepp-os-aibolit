@@ -207,6 +207,6 @@ test('список лекарств группирует содержимое в
   storage.setItem('medications', JSON.stringify([{ id: 'm1', name: 'Аспирин', dosage: '100 мг', comments: '', enabled: true }]))
   setup(storage)
   const tree = options.build({ settingsStorage: storage })
-  assert.ok(findByTextContent(tree, 'Мои лекарства'), 'должен быть заголовок группы Мои лекарства')
+  assert.ok(findByTextContent(tree, 'Лекарства'), 'должен быть заголовок группы Лекарства')
   assert.ok(findByTextContent(tree, 'Управление'), 'должен быть заголовок группы Управление')
 })

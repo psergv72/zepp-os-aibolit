@@ -18,8 +18,8 @@ const DAY_NAMES = [
 
 const S = {
   page: { padding: '12px 20px', background: '#f2f3f5', minHeight: '100vh' },
-  title: { fontSize: '22px', fontWeight: '700', marginBottom: '18px' },
-  groupTitle: { fontSize: '13px', color: '#8a8a8f', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: '14px', marginBottom: '8px' },
+  title: { display: 'block', fontSize: '22px', fontWeight: '700', marginBottom: '10px' },
+  groupTitle: { display: 'block', fontSize: '12px', color: '#8a8a8f', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: '20px', marginBottom: '8px' },
   card: { background: '#ffffff', borderRadius: '12px', border: '1px solid #ecedf0' },
   row: { padding: '13px 16px', borderBottom: '1px solid #ecedf0', display: 'flex', flexDirection: 'row', alignItems: 'center' },
   rowLast: { padding: '13px 16px', display: 'flex', flexDirection: 'row', alignItems: 'center' },
@@ -169,7 +169,7 @@ AppSettingsPage({
     const medications = this.getMedications()
     const intakes = this.getIntakes()
 
-    const medRows = medications.map((med, i) => {
+    const medRows = medications.map(med => {
       const intakeCount = intakes.filter(x => (x.items || []).some(item => item.medicationId === med.id)).length
       const subText = intakeCount > 0 ? 'в ' + intakeCount + ' приёмах' : ''
       return rowNode(
@@ -181,7 +181,7 @@ AppSettingsPage({
           Text({ style: S.chevron }, ['›']),
         ],
         () => this.navigateTo('edit', { medication: med }),
-        i === medications.length - 1,
+        false,
       )
     })
 
@@ -209,8 +209,7 @@ AppSettingsPage({
       : [rowNode([Text({ style: S.hint }, ['Нет лекарств. Добавьте первое.'])], null, false), addRow]
 
     return View({ style: S.page }, [
-      Text({ style: S.title, bold: true }, ['Лекарства']),
-      Text({ style: S.groupTitle }, ['Мои лекарства']),
+      Text({ style: S.groupTitle }, ['Лекарства']),
       View({ style: S.card }, medCard),
       Text({ style: S.groupTitle }, ['Управление']),
       View({ style: S.card }, navRows),
@@ -262,7 +261,7 @@ AppSettingsPage({
     const medMap = {}
     for (const med of medications) medMap[med.id] = med
 
-    const rows = intakes.map((intake, i) => {
+    const rows = intakes.map(intake => {
       const daysText = intake.weekDays && intake.weekDays.length
         ? intake.weekDays.map(d => dayName(d)).join(', ')
         : 'Каждый день'
@@ -281,7 +280,7 @@ AppSettingsPage({
           Text({ style: S.chevron }, ['›']),
         ],
         () => this.navigateTo('intakeEdit', { intake }),
-        i === intakes.length - 1,
+        false,
       )
     })
 
@@ -323,7 +322,7 @@ AppSettingsPage({
           Text({ style: S.chevron }, ['›']),
         ],
         () => this.navigateTo('itemEdit', { index: i }),
-        i === draft.items.length - 1,
+        false,
       )
     })
 
