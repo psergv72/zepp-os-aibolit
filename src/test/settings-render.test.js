@@ -202,11 +202,22 @@ test('страница Настройки группирует параметр�
   assert.ok(findByTextContent(tree, 'Отображение'), 'должен быть заголовок группы Отображение')
 })
 
+test('первая страница — меню управления', () => {
+  const storage = createStorage()
+  setup(storage)
+  const tree = options.build({ settingsStorage: storage })
+  assert.ok(findByTextContent(tree, 'Управление'), 'должна быть группа Управление')
+  assert.ok(findByTextContent(tree, 'Лекарства'), 'должен быть пункт Лекарства')
+  assert.ok(findByTextContent(tree, 'Приёмы'), 'должен быть пункт Приёмы')
+  assert.ok(findByTextContent(tree, 'История'), 'должен быть пункт История')
+  assert.ok(findByTextContent(tree, 'Настройки'), 'должен быть пункт Настройки')
+})
+
 test('список лекарств группирует содержимое в карточки', () => {
   const storage = createStorage()
   storage.setItem('medications', JSON.stringify([{ id: 'm1', name: 'Аспирин', dosage: '100 мг', comments: '', enabled: true }]))
   setup(storage)
+  options.navigateTo('medications')
   const tree = options.build({ settingsStorage: storage })
   assert.ok(findByTextContent(tree, 'Лекарства'), 'должен быть заголовок группы Лекарства')
-  assert.ok(findByTextContent(tree, 'Управление'), 'должен быть заголовок группы Управление')
 })

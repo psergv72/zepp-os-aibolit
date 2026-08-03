@@ -31,7 +31,7 @@ const S = {
   hint: { fontSize: '14px', color: '#8a8a8f' },
   linkAdd: { fontSize: '16px', fontWeight: '600', color: '#2f6fed' },
   linkBack: { display: 'block', padding: '4px 0', marginBottom: '2px' },
-  linkBackText: { fontSize: '16px', fontWeight: '600', color: '#2f6fed' },
+  linkBackText: { fontSize: '15px', fontWeight: '400', color: '#555555' },
   btnPrimary: { display: 'block', width: '100%', borderRadius: '12px', background: '#2f6fed', color: '#ffffff', fontSize: '16px', fontWeight: '600', marginTop: '10px' },
   btnDefault: { display: 'block', width: '100%', borderRadius: '12px', background: '#ffffff', color: '#333333', border: '1px solid #d9dae0', fontSize: '16px', fontWeight: '600', marginTop: '10px' },
 }
@@ -160,9 +160,36 @@ AppSettingsPage({
         return this.renderHistory()
       case 'settings':
         return this.renderSettingsPage()
-      default:
+      case 'medications':
         return this.renderMedicationList()
+      default:
+        return this.renderHomePage()
     }
+  },
+
+  // ── Home (Navigation) Page ──
+
+  renderHomePage() {
+    const navItems = [
+      { label: 'Лекарства', page: 'medications' },
+      { label: 'Приёмы', page: 'intakes' },
+      { label: 'История', page: 'history' },
+      { label: 'Настройки', page: 'settings' },
+    ]
+
+    const navRows = navItems.map((item, i) => rowNode(
+      [
+        View({ style: { flex: 1 } }, [Text({ style: S.rowTitle }, [item.label])]),
+        Text({ style: S.chevron }, ['›']),
+      ],
+      () => this.navigateTo(item.page),
+      i === navItems.length - 1,
+    ))
+
+    return View({ style: S.page }, [
+      Text({ style: S.groupTitle }, ['Управление']),
+      View({ style: S.card }, navRows),
+    ])
   },
 
   // ── Medication List Page ──
@@ -187,19 +214,6 @@ AppSettingsPage({
       )
     })
 
-    const navRows = [
-      { label: 'Приёмы', page: 'intakes' },
-      { label: 'История', page: 'history' },
-      { label: 'Настройки', page: 'settings' },
-    ].map((item, i) => rowNode(
-      [
-        View({ style: { flex: 1 } }, [Text({ style: S.rowTitle }, [item.label])]),
-        Text({ style: S.chevron }, ['›']),
-      ],
-      () => this.navigateTo(item.page),
-      i === 2,
-    ))
-
     const addRow = rowNode(
       [Text({ style: S.linkAdd }, ['+ Добавить лекарство'])],
       () => this.navigateTo('edit', { medication: null }),
@@ -211,10 +225,11 @@ AppSettingsPage({
       : [rowNode([Text({ style: S.hint }, ['Нет лекарств. Добавьте первое.'])], null, false), addRow]
 
     return View({ style: S.page }, [
+      View({ style: S.linkBack, onClick: () => this.navigateTo('list') }, [
+        Text({ style: S.linkBackText }, ['‹ Назад']),
+      ]),
       Text({ style: S.groupTitle }, ['Лекарства']),
       View({ style: S.card }, medCard),
-      Text({ style: S.groupTitle }, ['Управление']),
-      View({ style: S.card }, navRows),
     ])
   },
 
@@ -248,10 +263,10 @@ AppSettingsPage({
             if (idx >= 0) medications[idx] = draft
           }
           this.setMedications(medications)
-          this.navigateTo('list')
+          this.navigateTo('medications')
         },
       }),
-      Button({ label: 'Назад', color: 'default', style: S.btnDefault, onClick: () => this.navigateTo('list') }),
+      Button({ label: 'Назад', color: 'default', style: S.btnDefault, onClick: () => this.navigateTo('medications') }),
     ])
   },
 
@@ -298,7 +313,7 @@ AppSettingsPage({
 
     return View({ style: S.page }, [
       View({ style: S.linkBack, onClick: () => this.navigateTo('list') }, [
-        Text({ style: S.linkBackText }, ['< Назад']),
+        Text({ style: S.linkBackText }, ['‹ Назад']),
       ]),
       Text({ style: S.groupTitle }, ['Режим приема лекарств']),
       View({ style: S.card }, listChildren),
