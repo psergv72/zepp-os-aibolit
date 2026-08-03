@@ -278,9 +278,9 @@ AppSettingsPage({
       backLink(() => this.navigateTo('medications')),
       Text({ style: S.groupTitle }, ['Лекарство']),
       View({ style: S.card }, [
-        fieldRow('Название', TextInput({ placeholder: 'Название', value: draft.name, onChange: v => { draft.name = v; this.forceRender() } })),
-        fieldRow('Дозировка', TextInput({ placeholder: 'Дозировка', value: draft.dosage, onChange: v => { draft.dosage = v; this.forceRender() } })),
-        fieldRow('Комментарии', TextInput({ placeholder: 'Комментарии', value: draft.comments, onChange: v => { draft.comments = v; this.forceRender() } })),
+        fieldRow('Название', TextInput({ label: '', placeholder: 'Название', value: draft.name, onChange: v => { draft.name = v; this.forceRender() } })),
+        fieldRow('Дозировка', TextInput({ label: '', placeholder: 'Дозировка', value: draft.dosage, onChange: v => { draft.dosage = v; this.forceRender() } })),
+        fieldRow('Комментарии', TextInput({ label: '', placeholder: 'Комментарии', value: draft.comments, onChange: v => { draft.comments = v; this.forceRender() } })),
         fieldRow('Активно', Toggle({ value: draft.enabled, onChange: v => { draft.enabled = v; this.forceRender() } }), true),
       ]),
       View({ style: S.btnRow }, [
@@ -404,8 +404,8 @@ AppSettingsPage({
       Text({ style: S.title, bold: true }, [isNew ? 'Добавить приём' : 'Редактировать приём']),
       Text({ style: S.groupTitle }, ['Время']),
       View({ style: S.card }, [
-        fieldRow('Время', TextInput({ placeholder: 'ЧЧ:ММ', value: draft.time, onChange: v => { draft.time = v; this.forceRender() } })),
-        fieldRow('Метка (утро/день/вечер)', TextInput({ placeholder: 'Метка', value: draft.label, onChange: v => { draft.label = v; this.forceRender() } })),
+        fieldRow('Время', TextInput({ label: '', placeholder: 'ЧЧ:ММ', value: draft.time, onChange: v => { draft.time = v; this.forceRender() } })),
+        fieldRow('Метка (утро/день/вечер)', TextInput({ label: '', placeholder: 'Метка', value: draft.label, onChange: v => { draft.label = v; this.forceRender() } })),
         fieldRow('Каждый день', Toggle({ value: everyDay, onChange: v => { draft.weekDays = v ? null : []; this.forceRender() } })),
         fieldRow('Дни недели', Select({
           title: 'Дни недели',
@@ -482,7 +482,7 @@ AppSettingsPage({
               this.forceRender()
             },
           })),
-          fieldRow('Количество', TextInput({ placeholder: '2 таблетки', value: draft.amount, onChange: v => { draft.amount = v; this.forceRender() } }), true),
+          fieldRow('Количество', TextInput({ label: '', placeholder: '2 таблетки', value: draft.amount, onChange: v => { draft.amount = v; this.forceRender() } }), true),
         ]),
       )
       rows.push(
@@ -569,7 +569,7 @@ AppSettingsPage({
       Text({ style: S.title, bold: true }, ['История']),
       Text({ style: S.groupTitle }, ['Период']),
       View({ style: S.card }, [
-        fieldRow('Дата (ГГГГ-ММ-ДД)', TextInput({
+        fieldRow('Дата (ГГГГ-ММ-ДД)', TextInput({ label: '',
           value: dateStr,
           onChange: v => {
             this.state.viewHistoryDate = v
@@ -591,16 +591,16 @@ AppSettingsPage({
       backLink(() => this.navigateTo('list')),
       Text({ style: S.groupTitle }, ['Напоминания']),
       View({ style: S.card }, [
-        fieldRow('Интервал повтора (мин)', TextInput({ value: String(draft.retryInterval), onChange: v => { draft.retryInterval = parseInt(v, 10) || 60; this.forceRender() } })),
-        fieldRow('Интервал синхронизации (мин)', TextInput({ value: String(draft.syncInterval), onChange: v => { draft.syncInterval = parseInt(v, 10) || 60; this.forceRender() } })),
-        fieldRow('Варианты отложки (мин, через запятую)', TextInput({
+        fieldRow('Интервал повтора (мин)', TextInput({ label: '', value: String(draft.retryInterval), onChange: v => { draft.retryInterval = parseInt(v, 10) || 60; this.forceRender() } })),
+        fieldRow('Интервал синхронизации (мин)', TextInput({ label: '', value: String(draft.syncInterval), onChange: v => { draft.syncInterval = parseInt(v, 10) || 60; this.forceRender() } })),
+        fieldRow('Варианты отложки (мин, через запятую)', TextInput({ label: '',
           value: draft.snoozeOptions.join(', '),
           onChange: v => { draft.snoozeOptions = v.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n)); this.forceRender() },
         }), true),
       ]),
       Text({ style: S.groupTitle }, ['Отображение']),
       View({ style: S.card }, [
-        fieldRow('Минимальный размер шрифта (16-40)', TextInput({
+        fieldRow('Минимальный размер шрифта (16-40)', TextInput({ label: '',
           value: String(draft.minFontSize || 16),
           onChange: v => { draft.minFontSize = Math.max(16, parseInt(v, 10) || 16); this.forceRender() },
         }), true),
