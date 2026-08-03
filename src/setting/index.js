@@ -25,7 +25,8 @@ const S = {
   rowLast: { padding: '13px 16px', display: 'flex', flexDirection: 'row', alignItems: 'center' },
   fieldRow: { display: 'flex', flexDirection: 'row', alignItems: 'center', padding: '14px 16px', borderBottom: '1px solid #ecedf0' },
   fieldRowLast: { display: 'flex', flexDirection: 'row', alignItems: 'center', padding: '14px 16px' },
-  fieldLabel: { fontSize: '15px', color: '#333333', marginRight: '12px', flexShrink: '0', width: '45%' },
+  fieldLabel: { fontSize: '15px', color: '#333333', marginRight: '12px', flexShrink: '0', width: '42%' },
+  inputLabel: { fontSize: '13px', color: '#b0b3b8' },
   rowTitle: { display: 'block', fontSize: '16px', fontWeight: '600' },
   rowSub: { display: 'block', fontSize: '13px', color: '#8a8a8f', marginTop: '2px' },
   bullet: { display: 'block', fontSize: '13px', color: '#8a8a8f', marginTop: '2px', paddingLeft: '20px' },
@@ -51,6 +52,12 @@ function fieldRow(label, control, last) {
   return View({ style: last ? S.fieldRowLast : S.fieldRow }, [
     Text({ style: S.fieldLabel }, [label]),
     View({ style: { flex: 1 } }, [control]),
+  ])
+}
+
+function textField(name, value, onChange, last) {
+  return View({ style: last ? S.fieldRowLast : S.fieldRow }, [
+    TextInput({ label: name, labelStyle: S.inputLabel, placeholder: name, value: value || '', onChange }),
   ])
 }
 
@@ -278,9 +285,9 @@ AppSettingsPage({
       backLink(() => this.navigateTo('medications')),
       Text({ style: S.groupTitle }, ['Лекарство']),
       View({ style: S.card }, [
-        fieldRow('Название', TextInput({ label: '', placeholder: 'Название', value: draft.name, onChange: v => { draft.name = v; this.forceRender() } })),
-        fieldRow('Дозировка', TextInput({ label: '', placeholder: 'Дозировка', value: draft.dosage, onChange: v => { draft.dosage = v; this.forceRender() } })),
-        fieldRow('Комментарии', TextInput({ label: '', placeholder: 'Комментарии', value: draft.comments, onChange: v => { draft.comments = v; this.forceRender() } })),
+        textField('Название', draft.name, v => { draft.name = v; this.forceRender() }),
+        textField('Дозировка', draft.dosage, v => { draft.dosage = v; this.forceRender() }),
+        textField('Комментарии', draft.comments, v => { draft.comments = v; this.forceRender() }),
         fieldRow('Активно', Toggle({ value: draft.enabled, onChange: v => { draft.enabled = v; this.forceRender() } }), true),
       ]),
       View({ style: S.btnRow }, [
@@ -404,8 +411,8 @@ AppSettingsPage({
       Text({ style: S.title, bold: true }, [isNew ? 'Добавить приём' : 'Редактировать приём']),
       Text({ style: S.groupTitle }, ['Время']),
       View({ style: S.card }, [
-        fieldRow('Время', TextInput({ label: '', placeholder: 'ЧЧ:ММ', value: draft.time, onChange: v => { draft.time = v; this.forceRender() } })),
-        fieldRow('Метка (утро/день/вечер)', TextInput({ label: '', placeholder: 'Метка', value: draft.label, onChange: v => { draft.label = v; this.forceRender() } })),
+        textField('Время', draft.time, v => { draft.time = v; this.forceRender() }),
+        textField('Метка (утро/день/вечер)', draft.label, v => { draft.label = v; this.forceRender() }),
         fieldRow('Каждый день', Toggle({ value: everyDay, onChange: v => { draft.weekDays = v ? null : []; this.forceRender() } })),
         fieldRow('Дни недели', Select({
           title: 'Дни недели',
@@ -482,7 +489,7 @@ AppSettingsPage({
               this.forceRender()
             },
           })),
-          fieldRow('Количество', TextInput({ label: '', placeholder: '2 таблетки', value: draft.amount, onChange: v => { draft.amount = v; this.forceRender() } }), true),
+          textField('Количество', draft.amount, v => { draft.amount = v; this.forceRender() }, true),
         ]),
       )
       rows.push(
@@ -569,13 +576,10 @@ AppSettingsPage({
       Text({ style: S.title, bold: true }, ['История']),
       Text({ style: S.groupTitle }, ['Период']),
       View({ style: S.card }, [
-        fieldRow('Дата (ГГГГ-ММ-ДД)', TextInput({ label: '',
-          value: dateStr,
-          onChange: v => {
-            this.state.viewHistoryDate = v
-            this.forceRender()
-          },
-        }), true),
+        textField('Дата (ГГГГ-ММ-ДД)', dateStr, v => {
+          this.state.viewHistoryDate = v
+          this.forceRender()
+        }, true),
       ]),
       Text({ style: S.groupTitle }, ['Записи']),
       View({ style: S.card }, listChildren),
@@ -591,19 +595,13 @@ AppSettingsPage({
       backLink(() => this.navigateTo('list')),
       Text({ style: S.groupTitle }, ['Напоминания']),
       View({ style: S.card }, [
-        fieldRow('Интервал повтора (мин)', TextInput({ label: '', value: String(draft.retryInterval), onChange: v => { draft.retryInterval = parseInt(v, 10) || 60; this.forceRender() } })),
-        fieldRow('Интервал синхронизации (мин)', TextInput({ label: '', value: String(draft.syncInterval), onChange: v => { draft.syncInterval = parseInt(v, 10) || 60; this.forceRender() } })),
-        fieldRow('Варианты отложки (мин, через запятую)', TextInput({ label: '',
-          value: draft.snoozeOptions.join(', '),
-          onChange: v => { draft.snoozeOptions = v.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n)); this.forceRender() },
-        }), true),
+        textField('Интервал повтора (мин)', String(draft.retryInterval), v => { draft.retryInterval = parseInt(v, 10) || 60; this.forceRender() }),
+        textField('Интервал синхронизации (мин)', String(draft.syncInterval), v => { draft.syncInterval = parseInt(v, 10) || 60; this.forceRender() }),
+        textField('Варианты отложки (мин, через запятую)', draft.snoozeOptions.join(', '), v => { draft.snoozeOptions = v.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n)); this.forceRender() }, true),
       ]),
       Text({ style: S.groupTitle }, ['Отображение']),
       View({ style: S.card }, [
-        fieldRow('Минимальный размер шрифта (16-40)', TextInput({ label: '',
-          value: String(draft.minFontSize || 16),
-          onChange: v => { draft.minFontSize = Math.max(16, parseInt(v, 10) || 16); this.forceRender() },
-        }), true),
+        textField('Минимальный размер шрифта (16-40)', String(draft.minFontSize || 16), v => { draft.minFontSize = Math.max(16, parseInt(v, 10) || 16); this.forceRender() }, true),
       ]),
       View({ style: S.btnRow }, [
         Button({

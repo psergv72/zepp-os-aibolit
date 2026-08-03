@@ -44,6 +44,14 @@ function findByButton(tree, label) {
   return findByLabel(tree, 'Button', label)
 }
 
+function findByPlaceholder(tree, type, placeholder) {
+  let found = null
+  walk(tree, (n) => {
+    if (!found && n.type === type && n.props && n.props.placeholder === placeholder) found = n
+  })
+  return found
+}
+
 function findByLink(tree, text) {
   let found = null
   walk(tree, (n) => {
@@ -99,7 +107,7 @@ test('изменение названия лекарства вызывает п
   setup(storage)
   options.navigateTo('edit', { medication: null })
   const tree = options.build({ settingsStorage: storage })
-  const input = findByRowControl(tree, 'Название')
+  const input = findByPlaceholder(tree, 'TextInput', 'Название')
   assert.ok(input, 'поле Название должно существовать')
   assertRefresh(storage, () => input.props.onChange('Аспирин'))
 })
@@ -109,7 +117,7 @@ test('изменение дозировки лекарства вызывает 
   setup(storage)
   options.navigateTo('edit', { medication: null })
   const tree = options.build({ settingsStorage: storage })
-  const input = findByRowControl(tree, 'Дозировка')
+  const input = findByPlaceholder(tree, 'TextInput', 'Дозировка')
   assert.ok(input)
   assertRefresh(storage, () => input.props.onChange('100 мг'))
 })
@@ -129,7 +137,7 @@ test('изменение времени приёма вызывает перер
   setup(storage)
   options.navigateTo('intakeEdit', { intake: null })
   const tree = options.build({ settingsStorage: storage })
-  const input = findByRowControl(tree, 'Время')
+  const input = findByPlaceholder(tree, 'TextInput', 'Время')
   assert.ok(input)
   assertRefresh(storage, () => input.props.onChange('08:00'))
 })
@@ -178,7 +186,7 @@ test('изменение количества в приёме вызывает �
   const addBtn = findByLink(tree, '+ Добавить лекарство')
   addBtn.props.onClick()
   tree = options.build({ settingsStorage: storage })
-  const input = findByRowControl(tree, 'Количество')
+  const input = findByPlaceholder(tree, 'TextInput', 'Количество')
   assert.ok(input)
   assertRefresh(storage, () => input.props.onChange('2 таблетки'))
 })
@@ -188,7 +196,7 @@ test('изменение интервала повтора вызывает пе
   setup(storage)
   options.navigateTo('settings')
   const tree = options.build({ settingsStorage: storage })
-  const input = findByRowControl(tree, 'Интервал повтора (мин)')
+  const input = findByPlaceholder(tree, 'TextInput', 'Интервал повтора (мин)')
   assert.ok(input)
   assertRefresh(storage, () => input.props.onChange('90'))
 })
@@ -198,7 +206,7 @@ test('изменение минимального размера шрифта в
   setup(storage)
   options.navigateTo('settings')
   const tree = options.build({ settingsStorage: storage })
-  const input = findByRowControl(tree, 'Минимальный размер шрифта (16-40)')
+  const input = findByPlaceholder(tree, 'TextInput', 'Минимальный размер шрифта (16-40)')
   assert.ok(input)
   assertRefresh(storage, () => input.props.onChange('18'))
 })
