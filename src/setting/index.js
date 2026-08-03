@@ -222,7 +222,7 @@ AppSettingsPage({
         .sort((a, b) => timeMinutes(a.time) - timeMinutes(b.time))
       const intakeLines = medIntakes.map(intake => {
         const item = (intake.items || []).find(i => i.medicationId === med.id)
-        const amount = item && item.amount ? ' (' + item.amount + ')' : ''
+        const amount = item && item.amount ? ', ' + item.amount : ''
         const daysText = intake.weekDays && intake.weekDays.length
           ? ' ' + intake.weekDays.map(d => dayName(d)).join(', ')
           : ''
@@ -313,18 +313,23 @@ AppSettingsPage({
     const rows = sorted.map(intake => {
       const daysText = intake.weekDays && intake.weekDays.length
         ? intake.weekDays.map(d => dayName(d)).join(', ')
-        : 'Каждый день'
-      const itemsText = (intake.items || []).map(item => {
+        : 'каждый день'
+      const labelPrefix = intake.label ? intake.label + ' — ' : ''
+      const timeLine = labelPrefix + intake.time + ', ' + daysText
+
+      const medLines = (intake.items || []).map(item => {
         const med = medMap[item.medicationId]
         const name = med ? med.name : '?'
-        return name + ' \u00d7 ' + (item.amount || '')
-      }).join(', ')
+        const dosage = med && med.dosage ? ' (' + med.dosage + ')' : ''
+        const amount = item.amount ? ', ' + item.amount : ''
+        return Text({ style: S.bullet }, ['• ' + name + dosage + amount])
+      })
 
       return rowNode(
         [
           View({ style: { flex: 1 } }, [
-            Text({ style: S.rowTitle }, [(intake.label || intake.time) + ' — ' + intake.time]),
-            Text({ style: S.rowSub }, [daysText + (itemsText ? ' · ' + itemsText : '')]),
+            Text({ style: S.rowTitle }, [timeLine]),
+            ...medLines,
           ]),
           Text({ style: S.chevron }, ['›']),
         ],
