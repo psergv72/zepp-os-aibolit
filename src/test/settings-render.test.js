@@ -193,6 +193,34 @@ function findByTextContent(tree, text) {
   return found
 }
 
+function collectTexts(tree) {
+  const out = []
+  walk(tree, (n) => {
+    if (n && n.type === 'Text' && Array.isArray(n.children)) {
+      n.children.forEach(c => { if (typeof c === 'string') out.push(c) })
+    }
+  })
+  return out
+}
+
+test('список приёмов сортируется по времени и дням недели', () => {
+  const storage = createStorage()
+  storage.setItem('medications', JSON.stringify([{ id: 'm1', name: 'Аспирин', dosage: '100 мг', comments: '', enabled: true }]))
+  storage.setItem('intakes', JSON.stringify([
+    { id: 'i1', time: '09:00', weekDays: null, label: 'День', items: [{ medicationId: 'm1', amount: '1' }] },
+    { id: 'i2', time: '08:00', weekDays: [5], label: 'Вечер', items: [{ medicationId: 'm1', amount: '1' }] },
+    { id: 'i3', time: '08:00', weekDays: [1], label: 'Утро', items: [{ medicationId: 'm1', amount: '1' }] },
+  ]))
+  setup(storage)
+  options.navigateTo('intakes')
+  const tree = options.build({ settingsStorage: storage })
+  const texts = collectTexts(tree)
+  const idx = t => texts.indexOf(t)
+  assert.ok(idx('Утро — 08:00') >= 0, 'Утро должно быть в списке')
+  assert.ok(idx('Утро — 08:00') < idx('Вечер — 08:00'), 'сначала Пн, затем Пт при одинаковом времени')
+  assert.ok(idx('Вечер — 08:00') < idx('День — 09:00'), 'приёмы раньше времени идут раньше')
+})
+
 test('страница Настройки группирует параметры в группы', () => {
   const storage = createStorage()
   setup(storage)
@@ -208,7 +236,7 @@ test('первая страница — меню управления', () => {
   const tree = options.build({ settingsStorage: storage })
   assert.ok(findByTextContent(tree, 'Управление'), 'должна быть группа Управление')
   assert.ok(findByTextContent(tree, 'Лекарства'), 'должен быть пункт Лекарства')
-  assert.ok(findByTextContent(tree, 'Приёмы'), 'должен быть пункт Приёмы')
+  assert.ok(findByTextContent(tree, 'Режим приема лекарств'), 'должен быть пункт Режим приема лекарств')
   assert.ok(findByTextContent(tree, 'История'), 'должен быть пункт История')
   assert.ok(findByTextContent(tree, 'Настройки'), 'должен быть пункт Настройки')
 })
@@ -220,4 +248,19 @@ test('список лекарств группирует содержимое в
   options.navigateTo('medications')
   const tree = options.build({ settingsStorage: storage })
   assert.ok(findByTextContent(tree, 'Лекарства'), 'должен быть заголовок группы Лекарства')
+})
+
+test('в списке лекарств показываются времена приёмов с днями недели', () => {
+  const storage = createStorage()
+  storage.setItem('medications', JSON.stringify([{ id: 'm1', name: 'Аспирин', dosage: '100 мг', comments: '', enabled: true }]))
+  storage.setItem('intakes', JSON.stringify([
+    { id: 'i1', time: '09:00', weekDays: null, label: '', items: [{ medicationId: 'm1', amount: '1' }] },
+    { id: 'i2', time: '08:00', weekDays: [1, 5], label: '', items: [{ medicationId: 'm1', amount: '1' }] },
+  ]))
+  setup(storage)
+  options.navigateTo('medications')
+  const tree = options.build({ settingsStorage: storage })
+  const texts = collectTexts(tree)
+  assert.ok(texts.includes('• 08:00 Пн, Пт'), 'должна быть строка приёма с днями')
+  assert.ok(texts.includes('• 09:00 каждый день'), 'должна быть строка приёма каждый день')
 })

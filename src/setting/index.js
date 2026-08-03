@@ -25,8 +25,8 @@ const S = {
   rowLast: { padding: '13px 16px', display: 'flex', flexDirection: 'row', alignItems: 'center' },
   control: { padding: '8px 16px', borderBottom: '1px solid #ecedf0' },
   controlLast: { padding: '8px 16px' },
-  rowTitle: { fontSize: '16px', fontWeight: '600' },
-  rowSub: { fontSize: '13px', color: '#8a8a8f', marginTop: '2px' },
+  rowTitle: { display: 'block', fontSize: '16px', fontWeight: '600' },
+  rowSub: { display: 'block', fontSize: '13px', color: '#8a8a8f', marginTop: '2px' },
   chevron: { fontSize: '20px', color: '#c7c7cc', marginLeft: '8px' },
   hint: { fontSize: '14px', color: '#8a8a8f' },
   linkAdd: { fontSize: '16px', fontWeight: '600', color: '#2f6fed' },
@@ -65,6 +65,16 @@ function todayDateStr() {
 function dayName(d) {
   const found = DAY_NAMES.find(x => x.value === String(d))
   return found ? found.name : String(d)
+}
+
+function timeMinutes(str) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(str || '')
+  return m ? Number(m[1]) * 60 + Number(m[2]) : 0
+}
+
+function daySortKey(intake) {
+  const days = intake.weekDays && intake.weekDays.length ? intake.weekDays.slice().sort((a, b) => a - b) : null
+  return days ? days[0] : 0
 }
 
 AppSettingsPage({
@@ -178,7 +188,7 @@ AppSettingsPage({
   renderHomePage() {
     const navItems = [
       { label: 'Лекарства', page: 'medications' },
-      { label: 'Приёмы', page: 'intakes' },
+      { label: 'Режим приема лекарств', page: 'intakes' },
       { label: 'История', page: 'history' },
       { label: 'Настройки', page: 'settings' },
     ]
@@ -205,13 +215,21 @@ AppSettingsPage({
     const intakes = this.getIntakes()
 
     const medRows = medications.map(med => {
-      const intakeCount = intakes.filter(x => (x.items || []).some(item => item.medicationId === med.id)).length
-      const subText = intakeCount > 0 ? 'в ' + intakeCount + ' приёмах' : ''
+      const medIntakes = intakes
+        .filter(x => (x.items || []).some(item => item.medicationId === med.id))
+        .slice()
+        .sort((a, b) => timeMinutes(a.time) - timeMinutes(b.time))
+      const intakeLines = medIntakes.map(intake => {
+        const daysText = intake.weekDays && intake.weekDays.length
+          ? intake.weekDays.map(d => dayName(d)).join(', ')
+          : 'каждый день'
+        return Text({ style: S.rowSub }, ['• ' + intake.time + ' ' + daysText])
+      })
       return rowNode(
         [
           View({ style: { flex: 1 } }, [
             Text({ style: S.rowTitle }, [med.name + ' (' + med.dosage + ')' + (!med.enabled ? ' [OFF]' : '')]),
-            subText ? Text({ style: S.rowSub }, [subText]) : null,
+            ...intakeLines,
           ]),
           Text({ style: S.chevron }, ['›']),
         ],
@@ -282,7 +300,14 @@ AppSettingsPage({
     const medMap = {}
     for (const med of medications) medMap[med.id] = med
 
-    const rows = intakes.map(intake => {
+    const sorted = intakes.slice().sort((a, b) => {
+      const ta = timeMinutes(a.time)
+      const tb = timeMinutes(b.time)
+      if (ta !== tb) return ta - tb
+      return daySortKey(a) - daySortKey(b)
+    })
+
+    const rows = sorted.map(intake => {
       const daysText = intake.weekDays && intake.weekDays.length
         ? intake.weekDays.map(d => dayName(d)).join(', ')
         : 'Каждый день'
