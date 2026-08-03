@@ -78,6 +78,11 @@ function daySortKey(intake) {
   return days ? days[0] : 0
 }
 
+function weekDaysText(weekDays) {
+  if (!weekDays || weekDays.length === 0) return null
+  return weekDays.slice().sort((a, b) => a - b).map(d => dayName(d)).join(', ')
+}
+
 AppSettingsPage({
   state: {
     props: null,
@@ -223,9 +228,8 @@ AppSettingsPage({
       const intakeLines = medIntakes.map(intake => {
         const item = (intake.items || []).find(i => i.medicationId === med.id)
         const amount = item && item.amount ? ', ' + item.amount : ''
-        const daysText = intake.weekDays && intake.weekDays.length
-          ? ' ' + intake.weekDays.map(d => dayName(d)).join(', ')
-          : ''
+        const wd = weekDaysText(intake.weekDays)
+        const daysText = wd ? ' ' + wd : ''
         return Text({ style: S.bullet }, ['• ' + intake.time + daysText + amount])
       })
       return rowNode(
@@ -311,9 +315,7 @@ AppSettingsPage({
     })
 
     const rows = sorted.map(intake => {
-      const daysText = intake.weekDays && intake.weekDays.length
-        ? intake.weekDays.map(d => dayName(d)).join(', ')
-        : 'каждый день'
+      const daysText = weekDaysText(intake.weekDays) || 'каждый день'
       const labelPrefix = intake.label ? intake.label + ' — ' : ''
       const timeLine = labelPrefix + intake.time + ', ' + daysText
 
