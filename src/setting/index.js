@@ -33,8 +33,10 @@ const S = {
   linkAdd: { fontSize: '16px', fontWeight: '600', color: '#2f6fed' },
   linkBack: { display: 'block', padding: '4px 0', marginBottom: '2px' },
   linkBackText: { fontSize: '15px', fontWeight: '400', color: '#555555' },
-  btnPrimary: { display: 'block', width: '100%', borderRadius: '12px', background: '#2f6fed', color: '#ffffff', fontSize: '16px', fontWeight: '600', marginTop: '10px' },
   btnDefault: { display: 'block', width: '100%', borderRadius: '12px', background: '#ffffff', color: '#333333', border: '1px solid #d9dae0', fontSize: '16px', fontWeight: '600', marginTop: '10px' },
+  btnRow: { display: 'flex', flexDirection: 'row', marginTop: '10px' },
+  btnHalfPrimary: { flex: 1, borderRadius: '12px', background: '#2f6fed', color: '#ffffff', fontSize: '16px', fontWeight: '600' },
+  btnHalfDefault: { flex: 1, marginLeft: '10px', borderRadius: '12px', background: '#ffffff', color: '#333333', border: '1px solid #d9dae0', fontSize: '16px', fontWeight: '600' },
 }
 
 function rowNode(content, onClick, last) {
@@ -278,24 +280,27 @@ AppSettingsPage({
         controlRow([TextInput({ label: 'Комментарии', placeholder: 'Комментарии', value: draft.comments, onChange: v => { draft.comments = v; this.forceRender() } })]),
         controlRow([Toggle({ label: 'Активно', value: draft.enabled, onChange: v => { draft.enabled = v; this.forceRender() } })], true),
       ]),
-      Button({
-        label: 'Сохранить',
-        color: 'primary',
-        style: S.btnPrimary,
-        onClick: () => {
-          if (!draft.name.trim()) return
-          const medications = this.getMedications()
-          if (isNew) {
-            draft.id = generateId()
-            medications.push(draft)
-          } else {
-            const idx = medications.findIndex(m => m.id === draft.id)
-            if (idx >= 0) medications[idx] = draft
-          }
-          this.setMedications(medications)
-          this.navigateTo('medications')
-        },
-      }),
+      View({ style: S.btnRow }, [
+        Button({
+          label: 'Сохранить',
+          color: 'primary',
+          style: S.btnHalfPrimary,
+          onClick: () => {
+            if (!draft.name.trim()) return
+            const medications = this.getMedications()
+            if (isNew) {
+              draft.id = generateId()
+              medications.push(draft)
+            } else {
+              const idx = medications.findIndex(m => m.id === draft.id)
+              if (idx >= 0) medications[idx] = draft
+            }
+            this.setMedications(medications)
+            this.navigateTo('medications')
+          },
+        }),
+        Button({ label: 'Отмена', color: 'default', style: S.btnHalfDefault, onClick: () => this.navigateTo('medications') }),
+      ]),
     ])
   },
 
@@ -414,24 +419,27 @@ AppSettingsPage({
       ]),
       Text({ style: S.groupTitle }, ['Лекарства']),
       View({ style: S.card }, itemChildren),
-      Button({
-        label: 'Сохранить',
-        color: 'primary',
-        style: S.btnPrimary,
-        onClick: () => {
-          if (!draft.time.trim() || draft.items.length === 0) return
-          const intakes = this.getIntakes()
-          if (isNew) {
-            draft.id = generateId()
-            intakes.push(draft)
-          } else {
-            const idx = intakes.findIndex(x => x.id === draft.id)
-            if (idx >= 0) intakes[idx] = draft
-          }
-          this.setIntakes(intakes)
-          this.navigateTo('intakes')
-        },
-      }),
+      View({ style: S.btnRow }, [
+        Button({
+          label: 'Сохранить',
+          color: 'primary',
+          style: S.btnHalfPrimary,
+          onClick: () => {
+            if (!draft.time.trim() || draft.items.length === 0) return
+            const intakes = this.getIntakes()
+            if (isNew) {
+              draft.id = generateId()
+              intakes.push(draft)
+            } else {
+              const idx = intakes.findIndex(x => x.id === draft.id)
+              if (idx >= 0) intakes[idx] = draft
+            }
+            this.setIntakes(intakes)
+            this.navigateTo('intakes')
+          },
+        }),
+        Button({ label: 'Отмена', color: 'default', style: S.btnHalfDefault, onClick: () => this.navigateTo('intakes') }),
+      ]),
       !isNew && Button({
         label: 'Удалить',
         color: 'default',
@@ -477,21 +485,24 @@ AppSettingsPage({
         ]),
       )
       rows.push(
-        Button({
-          label: 'Сохранить',
-          color: 'primary',
-          style: S.btnPrimary,
-          onClick: () => {
-            if (!draft.medicationId) return
-            const intake = this.state.intakeDraft
-            if (isEditing) {
-              intake.items[index] = { ...draft }
-            } else {
-              intake.items.push({ ...draft })
-            }
-            this.navigateTo('intakeEdit', { intake })
-          },
-        }),
+        View({ style: S.btnRow }, [
+          Button({
+            label: 'Сохранить',
+            color: 'primary',
+            style: S.btnHalfPrimary,
+            onClick: () => {
+              if (!draft.medicationId) return
+              const intake = this.state.intakeDraft
+              if (isEditing) {
+                intake.items[index] = { ...draft }
+              } else {
+                intake.items.push({ ...draft })
+              }
+              this.navigateTo('intakeEdit', { intake })
+            },
+          }),
+          Button({ label: 'Отмена', color: 'default', style: S.btnHalfDefault, onClick: () => this.navigateTo('intakeEdit', { intake: this.state.intakeDraft }) }),
+        ]),
       )
       if (isEditing) {
         rows.push(
@@ -596,15 +607,18 @@ AppSettingsPage({
           onChange: v => { draft.minFontSize = Math.max(16, parseInt(v, 10) || 16); this.forceRender() },
         })], true),
       ]),
-      Button({
-        label: 'Сохранить',
-        color: 'primary',
-        style: S.btnPrimary,
-        onClick: () => {
-          this.setAppSettings(draft)
-          this.navigateTo('list')
-        },
-      }),
+      View({ style: S.btnRow }, [
+        Button({
+          label: 'Сохранить',
+          color: 'primary',
+          style: S.btnHalfPrimary,
+          onClick: () => {
+            this.setAppSettings(draft)
+            this.navigateTo('list')
+          },
+        }),
+        Button({ label: 'Отмена', color: 'default', style: S.btnHalfDefault, onClick: () => this.navigateTo('list') }),
+      ]),
     ])
   },
 })
