@@ -272,8 +272,7 @@ AppSettingsPage({
 
     return View({ style: S.page }, [
       backLink(() => this.navigateTo('medications')),
-      Text({ style: S.title, bold: true }, [isNew ? 'Добавить лекарство' : 'Редактировать лекарство']),
-      Text({ style: S.groupTitle }, ['Основное']),
+      Text({ style: S.groupTitle }, ['Лекарство']),
       View({ style: S.card }, [
         controlRow([TextInput({ label: 'Название', placeholder: 'Название', value: draft.name, onChange: v => { draft.name = v; this.forceRender() } })]),
         controlRow([TextInput({ label: 'Дозировка', placeholder: 'Дозировка', value: draft.dosage, onChange: v => { draft.dosage = v; this.forceRender() } })]),
