@@ -172,3 +172,29 @@ test('изменение минимального размера шрифта в
   assert.ok(input)
   assertRefresh(storage, () => input.props.onChange('18'))
 })
+
+function findBySection(tree, title) {
+  let found = null
+  walk(tree, (n) => {
+    if (!found && n.type === 'Section' && n.props && n.props.title === title) found = n
+  })
+  return found
+}
+
+test('страница Настройки группирует параметры в секции', () => {
+  const storage = createStorage()
+  setup(storage)
+  options.navigateTo('settings')
+  const tree = options.build({ settingsStorage: storage })
+  assert.ok(findBySection(tree, 'Напоминания'), 'должна быть секция Напоминания')
+  assert.ok(findBySection(tree, 'Отображение'), 'должна быть секция Отображение')
+})
+
+test('список лекарств использует секции', () => {
+  const storage = createStorage()
+  storage.setItem('medications', JSON.stringify([{ id: 'm1', name: 'Аспирин', dosage: '100 мг', comments: '', enabled: true }]))
+  setup(storage)
+  const tree = options.build({ settingsStorage: storage })
+  assert.ok(findBySection(tree, 'Мои лекарства'), 'должна быть секция Мои лекарства')
+  assert.ok(findBySection(tree, 'Управление'), 'должна быть секция Управление')
+})
