@@ -173,28 +173,28 @@ test('изменение минимального размера шрифта в
   assertRefresh(storage, () => input.props.onChange('18'))
 })
 
-function findBySection(tree, title) {
+function findByTextContent(tree, text) {
   let found = null
   walk(tree, (n) => {
-    if (!found && n.type === 'Section' && n.props && n.props.title === title) found = n
+    if (!found && n && n.type === 'Text' && Array.isArray(n.children) && n.children.some(c => typeof c === 'string' && c === text)) found = n
   })
   return found
 }
 
-test('страница Настройки группирует параметры в секции', () => {
+test('страница Настройки группирует параметры в группы', () => {
   const storage = createStorage()
   setup(storage)
   options.navigateTo('settings')
   const tree = options.build({ settingsStorage: storage })
-  assert.ok(findBySection(tree, 'Напоминания'), 'должна быть секция Напоминания')
-  assert.ok(findBySection(tree, 'Отображение'), 'должна быть секция Отображение')
+  assert.ok(findByTextContent(tree, 'Напоминания'), 'должен быть заголовок группы Напоминания')
+  assert.ok(findByTextContent(tree, 'Отображение'), 'должен быть заголовок группы Отображение')
 })
 
-test('список лекарств использует секции', () => {
+test('список лекарств группирует содержимое в карточки', () => {
   const storage = createStorage()
   storage.setItem('medications', JSON.stringify([{ id: 'm1', name: 'Аспирин', dosage: '100 мг', comments: '', enabled: true }]))
   setup(storage)
   const tree = options.build({ settingsStorage: storage })
-  assert.ok(findBySection(tree, 'Мои лекарства'), 'должна быть секция Мои лекарства')
-  assert.ok(findBySection(tree, 'Управление'), 'должна быть секция Управление')
+  assert.ok(findByTextContent(tree, 'Мои лекарства'), 'должен быть заголовок группы Мои лекарства')
+  assert.ok(findByTextContent(tree, 'Управление'), 'должен быть заголовок группы Управление')
 })

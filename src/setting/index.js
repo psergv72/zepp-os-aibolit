@@ -17,13 +17,30 @@ const DAY_NAMES = [
 ]
 
 const S = {
-  page: { padding: '12px 20px' },
-  title: { marginBottom: '8px' },
-  section: { marginBottom: '14px' },
-  row: { padding: '10px 0' },
-  rowSub: { color: '#888' },
-  hint: { color: '#888' },
+  page: { padding: '12px 20px', background: '#f2f3f5', minHeight: '100vh' },
+  title: { fontSize: '22px', fontWeight: '700', marginBottom: '18px' },
+  groupTitle: { fontSize: '13px', color: '#8a8a8f', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: '14px', marginBottom: '8px' },
+  card: { background: '#ffffff', borderRadius: '12px', border: '1px solid #ecedf0' },
+  row: { padding: '13px 16px', borderBottom: '1px solid #ecedf0', display: 'flex', flexDirection: 'row', alignItems: 'center' },
+  rowLast: { padding: '13px 16px', display: 'flex', flexDirection: 'row', alignItems: 'center' },
+  control: { padding: '8px 16px', borderBottom: '1px solid #ecedf0' },
+  controlLast: { padding: '8px 16px' },
+  rowTitle: { fontSize: '16px', fontWeight: '600' },
+  rowSub: { fontSize: '13px', color: '#8a8a8f', marginTop: '2px' },
+  chevron: { fontSize: '20px', color: '#c7c7cc', marginLeft: '8px' },
+  hint: { fontSize: '14px', color: '#8a8a8f' },
   btn: { marginTop: '10px' },
+}
+
+function rowNode(content, onClick, last) {
+  const style = last ? S.rowLast : S.row
+  return onClick
+    ? View({ style, onClick }, content)
+    : View({ style }, content)
+}
+
+function controlRow(content, last) {
+  return View({ style: last ? S.controlLast : S.control }, content)
 }
 
 function generateId() {
@@ -150,36 +167,46 @@ AppSettingsPage({
     const medications = this.getMedications()
     const intakes = this.getIntakes()
 
-    const rows = []
-    for (const med of medications) {
+    const medRows = medications.map((med, i) => {
       const intakeCount = intakes.filter(x => (x.items || []).some(item => item.medicationId === med.id)).length
       const subText = intakeCount > 0 ? 'в ' + intakeCount + ' приёмах' : ''
-      rows.push(
-        View(
-          { style: S.row, onClick: () => this.navigateTo('edit', { medication: med }) },
-          [
-            Text({ bold: true }, [med.name + ' (' + med.dosage + ')' + (!med.enabled ? ' [OFF]' : '')]),
+      return rowNode(
+        [
+          View({ style: { flex: 1 } }, [
+            Text({ style: S.rowTitle }, [med.name + ' (' + med.dosage + ')' + (!med.enabled ? ' [OFF]' : '')]),
             subText ? Text({ style: S.rowSub }, [subText]) : null,
-          ],
-        ),
-      )
-    }
-
-    const navRows = ['Приёмы', 'История', 'Настройки'].map(label => {
-      const page = label === 'Приёмы' ? 'intakes' : (label === 'История' ? 'history' : 'settings')
-      return View(
-        { style: S.row, onClick: () => this.navigateTo(page) },
-        [Text({ bold: true }, [label])],
+          ]),
+          Text({ style: S.chevron }, ['›']),
+        ],
+        () => this.navigateTo('edit', { medication: med }),
+        i === medications.length - 1,
       )
     })
 
-    const listChildren = rows.length ? rows : [Text({ style: S.hint }, ['Нет лекарств. Добавьте первое.'])]
+    const navRows = [
+      { label: 'Приёмы', page: 'intakes' },
+      { label: 'История', page: 'history' },
+      { label: 'Настройки', page: 'settings' },
+    ].map((item, i) => rowNode(
+      [
+        View({ style: { flex: 1 } }, [Text({ style: S.rowTitle }, [item.label])]),
+        Text({ style: S.chevron }, ['›']),
+      ],
+      () => this.navigateTo(item.page),
+      i === 2,
+    ))
+
+    const medCard = medRows.length
+      ? medRows
+      : [rowNode([Text({ style: S.hint }, ['Нет лекарств. Добавьте первое.'])], null, true)]
 
     return View({ style: S.page }, [
       Text({ style: S.title, bold: true }, ['Лекарства']),
-      Section({ title: 'Мои лекарства', style: S.section }, listChildren),
+      Text({ style: S.groupTitle }, ['Мои лекарства']),
+      View({ style: S.card }, medCard),
       Button({ label: '+ Добавить лекарство', color: 'primary', style: S.btn, onClick: () => this.navigateTo('edit', { medication: null }) }),
-      Section({ title: 'Управление', style: S.section }, navRows),
+      Text({ style: S.groupTitle }, ['Управление']),
+      View({ style: S.card }, navRows),
     ])
   },
 
@@ -191,11 +218,12 @@ AppSettingsPage({
 
     return View({ style: S.page }, [
       Text({ style: S.title, bold: true }, [isNew ? 'Добавить лекарство' : 'Редактировать лекарство']),
-      Section({ title: 'Основное', style: S.section }, [
-        TextInput({ label: 'Название', placeholder: 'Название', value: draft.name, onChange: v => { draft.name = v; this.forceRender() } }),
-        TextInput({ label: 'Дозировка', placeholder: 'Дозировка', value: draft.dosage, onChange: v => { draft.dosage = v; this.forceRender() } }),
-        TextInput({ label: 'Комментарии', placeholder: 'Комментарии', value: draft.comments, onChange: v => { draft.comments = v; this.forceRender() } }),
-        Toggle({ label: 'Активно', value: draft.enabled, onChange: v => { draft.enabled = v; this.forceRender() } }),
+      Text({ style: S.groupTitle }, ['Основное']),
+      View({ style: S.card }, [
+        controlRow([TextInput({ label: 'Название', placeholder: 'Название', value: draft.name, onChange: v => { draft.name = v; this.forceRender() } })]),
+        controlRow([TextInput({ label: 'Дозировка', placeholder: 'Дозировка', value: draft.dosage, onChange: v => { draft.dosage = v; this.forceRender() } })]),
+        controlRow([TextInput({ label: 'Комментарии', placeholder: 'Комментарии', value: draft.comments, onChange: v => { draft.comments = v; this.forceRender() } })]),
+        controlRow([Toggle({ label: 'Активно', value: draft.enabled, onChange: v => { draft.enabled = v; this.forceRender() } })], true),
       ]),
       Button({
         label: 'Сохранить',
@@ -227,8 +255,7 @@ AppSettingsPage({
     const medMap = {}
     for (const med of medications) medMap[med.id] = med
 
-    const rows = []
-    for (const intake of intakes) {
+    const rows = intakes.map((intake, i) => {
       const daysText = intake.weekDays && intake.weekDays.length
         ? intake.weekDays.map(d => dayName(d)).join(', ')
         : 'Каждый день'
@@ -238,22 +265,27 @@ AppSettingsPage({
         return name + ' \u00d7 ' + (item.amount || '')
       }).join(', ')
 
-      rows.push(
-        View(
-          { style: S.row, onClick: () => this.navigateTo('intakeEdit', { intake }) },
-          [
-            Text({ bold: true }, [(intake.label || intake.time) + ' — ' + intake.time]),
+      return rowNode(
+        [
+          View({ style: { flex: 1 } }, [
+            Text({ style: S.rowTitle }, [(intake.label || intake.time) + ' — ' + intake.time]),
             Text({ style: S.rowSub }, [daysText + (itemsText ? ' · ' + itemsText : '')]),
-          ],
-        ),
+          ]),
+          Text({ style: S.chevron }, ['›']),
+        ],
+        () => this.navigateTo('intakeEdit', { intake }),
+        i === intakes.length - 1,
       )
-    }
+    })
 
-    const listChildren = rows.length ? rows : [Text({ style: S.hint }, ['Нет приёмов. Добавьте первый.'])]
+    const listChildren = rows.length
+      ? rows
+      : [rowNode([Text({ style: S.hint }, ['Нет приёмов. Добавьте первый.'])], null, true)]
 
     return View({ style: S.page }, [
       Text({ style: S.title, bold: true }, ['Приёмы']),
-      Section({ title: 'Расписание', style: S.section }, listChildren),
+      Text({ style: S.groupTitle }, ['Расписание']),
+      View({ style: S.card }, listChildren),
       Button({ label: '+ Добавить приём', color: 'primary', style: S.btn, onClick: () => this.navigateTo('intakeEdit', { intake: null }) }),
       Button({ label: 'Назад', color: 'default', style: S.btn, onClick: () => this.navigateTo('list') }),
     ])
@@ -270,28 +302,31 @@ AppSettingsPage({
     const everyDay = !draft.weekDays || draft.weekDays.length === 0
     const weekDaysValue = everyDay ? [] : draft.weekDays.map(d => String(d))
 
-    const itemRows = []
-    for (let i = 0; i < draft.items.length; i++) {
-      const item = draft.items[i]
+    const itemRows = draft.items.map((item, i) => {
       const med = medMap[item.medicationId]
       const name = med ? med.name : '?'
-      itemRows.push(
-        View(
-          { style: S.row, onClick: () => this.navigateTo('itemEdit', { index: i }) },
-          [Text({ bold: true }, [name + ' \u00d7 ' + (item.amount || '')])],
-        ),
+      return rowNode(
+        [
+          View({ style: { flex: 1 } }, [Text({ style: S.rowTitle }, [name + ' \u00d7 ' + (item.amount || '')])]),
+          Text({ style: S.chevron }, ['›']),
+        ],
+        () => this.navigateTo('itemEdit', { index: i }),
+        i === draft.items.length - 1,
       )
-    }
+    })
 
-    const itemChildren = itemRows.length ? itemRows : [Text({ style: S.hint }, ['Нет лекарств в приёме'])]
+    const itemChildren = itemRows.length
+      ? itemRows
+      : [rowNode([Text({ style: S.hint }, ['Нет лекарств в приёме'])], null, true)]
 
     return View({ style: S.page }, [
       Text({ style: S.title, bold: true }, [isNew ? 'Добавить приём' : 'Редактировать приём']),
-      Section({ title: 'Время', style: S.section }, [
-        TextInput({ label: 'Время', placeholder: 'ЧЧ:ММ', value: draft.time, onChange: v => { draft.time = v; this.forceRender() } }),
-        TextInput({ label: 'Метка (утро/день/вечер)', placeholder: 'Метка', value: draft.label, onChange: v => { draft.label = v; this.forceRender() } }),
-        Toggle({ label: 'Каждый день', value: everyDay, onChange: v => { draft.weekDays = v ? null : []; this.forceRender() } }),
-        Select({
+      Text({ style: S.groupTitle }, ['Время']),
+      View({ style: S.card }, [
+        controlRow([TextInput({ label: 'Время', placeholder: 'ЧЧ:ММ', value: draft.time, onChange: v => { draft.time = v; this.forceRender() } })]),
+        controlRow([TextInput({ label: 'Метка (утро/день/вечер)', placeholder: 'Метка', value: draft.label, onChange: v => { draft.label = v; this.forceRender() } })]),
+        controlRow([Toggle({ label: 'Каждый день', value: everyDay, onChange: v => { draft.weekDays = v ? null : []; this.forceRender() } })]),
+        controlRow([Select({
           label: 'Дни недели',
           title: 'Дни недели',
           options: DAY_NAMES,
@@ -302,9 +337,10 @@ AppSettingsPage({
             draft.weekDays = arr.map(x => Number(x))
             this.forceRender()
           },
-        }),
+        })], true),
       ]),
-      Section({ title: 'Лекарства', style: S.section }, itemChildren),
+      Text({ style: S.groupTitle }, ['Лекарства']),
+      View({ style: S.card }, itemChildren),
       Button({ label: '+ Добавить лекарство', color: 'primary', style: S.btn, onClick: () => this.navigateTo('itemEdit', { index: -1 }) }),
       Button({
         label: 'Сохранить',
@@ -354,8 +390,8 @@ AppSettingsPage({
       rows.push(Text({ style: S.hint }, ['Нет лекарств. Сначала добавьте лекарство.']))
     } else {
       rows.push(
-        Section({ style: S.section }, [
-          Select({
+        View({ style: S.card }, [
+          controlRow([Select({
             label: 'Лекарство',
             title: 'Лекарство',
             options: options,
@@ -365,8 +401,8 @@ AppSettingsPage({
               draft.medicationId = arr[0] || null
               this.forceRender()
             },
-          }),
-          TextInput({ label: 'Количество', placeholder: '2 таблетки', value: draft.amount, onChange: v => { draft.amount = v; this.forceRender() } }),
+          })]),
+          controlRow([TextInput({ label: 'Количество', placeholder: '2 таблетки', value: draft.amount, onChange: v => { draft.amount = v; this.forceRender() } })], true),
         ]),
       )
       rows.push(
@@ -417,8 +453,7 @@ AppSettingsPage({
     const medMap = {}
     for (const med of medications) medMap[med.id] = med
 
-    const rows = []
-    for (const rec of records) {
+    const rows = records.map((rec, i) => {
       const statusText = rec.status === 'taken'
         ? 'Принято в ' + (rec.takenTime || rec.time)
         : (rec.status === 'cancelled' ? 'Отменено' : rec.status)
@@ -427,27 +462,37 @@ AppSettingsPage({
         const name = med ? med.name : '?'
         return name + ' \u00d7 ' + (item.amount || '')
       }).join(', ')
-      rows.push(View({ style: S.row }, [
-        Text({ bold: true }, [(rec.time || '') + ' — ' + statusText]),
-        itemsText ? Text({ style: S.rowSub }, [itemsText]) : null,
-      ]))
-    }
+      return rowNode(
+        [
+          View({ style: { flex: 1 } }, [
+            Text({ style: S.rowTitle }, [(rec.time || '') + ' — ' + statusText]),
+            itemsText ? Text({ style: S.rowSub }, [itemsText]) : null,
+          ]),
+        ],
+        null,
+        i === records.length - 1,
+      )
+    })
 
-    const listChildren = rows.length ? rows : [Text({ style: S.hint }, ['Нет данных за эту дату'])]
+    const listChildren = rows.length
+      ? rows
+      : [rowNode([Text({ style: S.hint }, ['Нет данных за эту дату'])], null, true)]
 
     return View({ style: S.page }, [
       Text({ style: S.title, bold: true }, ['История']),
-      Section({ title: 'Период', style: S.section }, [
-        TextInput({
+      Text({ style: S.groupTitle }, ['Период']),
+      View({ style: S.card }, [
+        controlRow([TextInput({
           label: 'Дата (ГГГГ-ММ-ДД)',
           value: dateStr,
           onChange: v => {
             this.state.viewHistoryDate = v
             this.forceRender()
           },
-        }),
+        })], true),
       ]),
-      Section({ title: 'Записи', style: S.section }, listChildren),
+      Text({ style: S.groupTitle }, ['Записи']),
+      View({ style: S.card }, listChildren),
       Button({
         label: 'Назад',
         color: 'default',
@@ -467,21 +512,23 @@ AppSettingsPage({
 
     return View({ style: S.page }, [
       Text({ style: S.title, bold: true }, ['Настройки']),
-      Section({ title: 'Напоминания', style: S.section }, [
-        TextInput({ label: 'Интервал повтора (мин)', value: String(draft.retryInterval), onChange: v => { draft.retryInterval = parseInt(v, 10) || 60; this.forceRender() } }),
-        TextInput({ label: 'Интервал синхронизации (мин)', value: String(draft.syncInterval), onChange: v => { draft.syncInterval = parseInt(v, 10) || 60; this.forceRender() } }),
-        TextInput({
+      Text({ style: S.groupTitle }, ['Напоминания']),
+      View({ style: S.card }, [
+        controlRow([TextInput({ label: 'Интервал повтора (мин)', value: String(draft.retryInterval), onChange: v => { draft.retryInterval = parseInt(v, 10) || 60; this.forceRender() } })]),
+        controlRow([TextInput({ label: 'Интервал синхронизации (мин)', value: String(draft.syncInterval), onChange: v => { draft.syncInterval = parseInt(v, 10) || 60; this.forceRender() } })]),
+        controlRow([TextInput({
           label: 'Варианты отложки (мин, через запятую)',
           value: draft.snoozeOptions.join(', '),
           onChange: v => { draft.snoozeOptions = v.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n)); this.forceRender() },
-        }),
+        })], true),
       ]),
-      Section({ title: 'Отображение', style: S.section }, [
-        TextInput({
+      Text({ style: S.groupTitle }, ['Отображение']),
+      View({ style: S.card }, [
+        controlRow([TextInput({
           label: 'Минимальный размер шрифта (16-40)',
           value: String(draft.minFontSize || 16),
           onChange: v => { draft.minFontSize = Math.max(16, parseInt(v, 10) || 16); this.forceRender() },
-        }),
+        })], true),
       ]),
       Button({
         label: 'Сохранить',
