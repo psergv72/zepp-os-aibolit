@@ -254,13 +254,13 @@ test('в списке лекарств показываются времена �
   const storage = createStorage()
   storage.setItem('medications', JSON.stringify([{ id: 'm1', name: 'Аспирин', dosage: '100 мг', comments: '', enabled: true }]))
   storage.setItem('intakes', JSON.stringify([
-    { id: 'i1', time: '09:00', weekDays: null, label: '', items: [{ medicationId: 'm1', amount: '1' }] },
-    { id: 'i2', time: '08:00', weekDays: [1, 5], label: '', items: [{ medicationId: 'm1', amount: '1' }] },
+    { id: 'i1', time: '09:00', weekDays: null, label: '', items: [{ medicationId: 'm1', amount: '2 таблетки' }] },
+    { id: 'i2', time: '08:00', weekDays: [1, 5], label: '', items: [{ medicationId: 'm1', amount: '1 таблетка' }] },
   ]))
   setup(storage)
   options.navigateTo('medications')
   const tree = options.build({ settingsStorage: storage })
   const texts = collectTexts(tree)
-  assert.ok(texts.includes('• 08:00 Пн, Пт'), 'должна быть строка приёма с днями')
-  assert.ok(texts.includes('• 09:00 каждый день'), 'должна быть строка приёма каждый день')
+  assert.ok(texts.includes('• 08:00 Пн, Пт (1 таблетка)'), 'должна быть строка приёма с днями и количеством')
+  assert.ok(texts.includes('• 09:00 (2 таблетки)'), 'для каждого дня дни не пишутся, но количество есть')
 })

@@ -221,10 +221,12 @@ AppSettingsPage({
         .slice()
         .sort((a, b) => timeMinutes(a.time) - timeMinutes(b.time))
       const intakeLines = medIntakes.map(intake => {
+        const item = (intake.items || []).find(i => i.medicationId === med.id)
+        const amount = item && item.amount ? ' (' + item.amount + ')' : ''
         const daysText = intake.weekDays && intake.weekDays.length
-          ? intake.weekDays.map(d => dayName(d)).join(', ')
-          : 'каждый день'
-        return Text({ style: S.bullet }, ['• ' + intake.time + ' ' + daysText])
+          ? ' ' + intake.weekDays.map(d => dayName(d)).join(', ')
+          : ''
+        return Text({ style: S.bullet }, ['• ' + intake.time + daysText + amount])
       })
       return rowNode(
         [
