@@ -18,13 +18,11 @@ const DAY_NAMES = [
 
 const S = {
   page: { padding: '12px 20px' },
-  title: { fontSize: '18px', marginBottom: '8px' },
+  title: { marginBottom: '8px' },
   section: { marginBottom: '14px' },
-  field: { marginBottom: '12px' },
-  row: { padding: '10px 0', borderBottom: '1px solid #eaeaea' },
-  rowTitle: { fontSize: '15px' },
-  rowSub: { fontSize: '12px', color: '#888' },
-  hint: { fontSize: '13px', color: '#888', marginTop: '10px' },
+  row: { padding: '10px 0' },
+  rowSub: { color: '#888' },
+  hint: { color: '#888' },
   btn: { marginTop: '10px' },
 }
 
@@ -193,10 +191,12 @@ AppSettingsPage({
 
     return View({ style: S.page }, [
       Text({ style: S.title, bold: true }, [isNew ? 'Добавить лекарство' : 'Редактировать лекарство']),
-      View({ style: S.field }, [TextInput({ label: 'Название', placeholder: 'Название', value: draft.name, onChange: v => { draft.name = v; this.forceRender() } })]),
-      View({ style: S.field }, [TextInput({ label: 'Дозировка', placeholder: 'Дозировка', value: draft.dosage, onChange: v => { draft.dosage = v; this.forceRender() } })]),
-      View({ style: S.field }, [TextInput({ label: 'Комментарии', placeholder: 'Комментарии', value: draft.comments, onChange: v => { draft.comments = v; this.forceRender() } })]),
-      View({ style: S.field }, [Toggle({ label: 'Активно', value: draft.enabled, onChange: v => { draft.enabled = v; this.forceRender() } })]),
+      Section({ title: 'Основное', style: S.section }, [
+        TextInput({ label: 'Название', placeholder: 'Название', value: draft.name, onChange: v => { draft.name = v; this.forceRender() } }),
+        TextInput({ label: 'Дозировка', placeholder: 'Дозировка', value: draft.dosage, onChange: v => { draft.dosage = v; this.forceRender() } }),
+        TextInput({ label: 'Комментарии', placeholder: 'Комментарии', value: draft.comments, onChange: v => { draft.comments = v; this.forceRender() } }),
+        Toggle({ label: 'Активно', value: draft.enabled, onChange: v => { draft.enabled = v; this.forceRender() } }),
+      ]),
       Button({
         label: 'Сохранить',
         color: 'primary',
@@ -242,19 +242,18 @@ AppSettingsPage({
         View(
           { style: S.row, onClick: () => this.navigateTo('intakeEdit', { intake }) },
           [
-            Text({ style: S.rowTitle }, [(intake.label || intake.time) + ' — ' + intake.time]),
+            Text({ bold: true }, [(intake.label || intake.time) + ' — ' + intake.time]),
             Text({ style: S.rowSub }, [daysText + (itemsText ? ' · ' + itemsText : '')]),
           ],
         ),
       )
     }
-    if (rows.length === 0) {
-      rows.push(Text({ style: S.hint }, ['Нет приёмов. Добавьте первый.']))
-    }
+
+    const listChildren = rows.length ? rows : [Text({ style: S.hint }, ['Нет приёмов. Добавьте первый.'])]
 
     return View({ style: S.page }, [
       Text({ style: S.title, bold: true }, ['Приёмы']),
-      ...rows,
+      Section({ title: 'Расписание', style: S.section }, listChildren),
       Button({ label: '+ Добавить приём', color: 'primary', style: S.btn, onClick: () => this.navigateTo('intakeEdit', { intake: null }) }),
       Button({ label: 'Назад', color: 'default', style: S.btn, onClick: () => this.navigateTo('list') }),
     ])
@@ -279,20 +278,19 @@ AppSettingsPage({
       itemRows.push(
         View(
           { style: S.row, onClick: () => this.navigateTo('itemEdit', { index: i }) },
-          [Text({ style: S.rowTitle }, [name + ' \u00d7 ' + (item.amount || '')])],
+          [Text({ bold: true }, [name + ' \u00d7 ' + (item.amount || '')])],
         ),
       )
     }
-    if (itemRows.length === 0) {
-      itemRows.push(Text({ style: S.hint }, ['Нет лекарств в приёме']))
-    }
+
+    const itemChildren = itemRows.length ? itemRows : [Text({ style: S.hint }, ['Нет лекарств в приёме'])]
 
     return View({ style: S.page }, [
       Text({ style: S.title, bold: true }, [isNew ? 'Добавить приём' : 'Редактировать приём']),
-      View({ style: S.field }, [TextInput({ label: 'Время', placeholder: 'ЧЧ:ММ', value: draft.time, onChange: v => { draft.time = v; this.forceRender() } })]),
-      View({ style: S.field }, [TextInput({ label: 'Метка (утро/день/вечер)', placeholder: 'Метка', value: draft.label, onChange: v => { draft.label = v; this.forceRender() } })]),
-      View({ style: S.field }, [Toggle({ label: 'Каждый день', value: everyDay, onChange: v => { draft.weekDays = v ? null : []; this.forceRender() } })]),
-      View({ style: S.field }, [
+      Section({ title: 'Время', style: S.section }, [
+        TextInput({ label: 'Время', placeholder: 'ЧЧ:ММ', value: draft.time, onChange: v => { draft.time = v; this.forceRender() } }),
+        TextInput({ label: 'Метка (утро/день/вечер)', placeholder: 'Метка', value: draft.label, onChange: v => { draft.label = v; this.forceRender() } }),
+        Toggle({ label: 'Каждый день', value: everyDay, onChange: v => { draft.weekDays = v ? null : []; this.forceRender() } }),
         Select({
           label: 'Дни недели',
           title: 'Дни недели',
@@ -306,8 +304,7 @@ AppSettingsPage({
           },
         }),
       ]),
-      Text({ style: S.title, bold: true }, ['Лекарства']),
-      ...itemRows,
+      Section({ title: 'Лекарства', style: S.section }, itemChildren),
       Button({ label: '+ Добавить лекарство', color: 'primary', style: S.btn, onClick: () => this.navigateTo('itemEdit', { index: -1 }) }),
       Button({
         label: 'Сохранить',
@@ -357,7 +354,7 @@ AppSettingsPage({
       rows.push(Text({ style: S.hint }, ['Нет лекарств. Сначала добавьте лекарство.']))
     } else {
       rows.push(
-        View({ style: S.field }, [
+        Section({ style: S.section }, [
           Select({
             label: 'Лекарство',
             title: 'Лекарство',
@@ -369,10 +366,6 @@ AppSettingsPage({
               this.forceRender()
             },
           }),
-        ]),
-      )
-      rows.push(
-        View({ style: S.field }, [
           TextInput({ label: 'Количество', placeholder: '2 таблетки', value: draft.amount, onChange: v => { draft.amount = v; this.forceRender() } }),
         ]),
       )
@@ -435,17 +428,16 @@ AppSettingsPage({
         return name + ' \u00d7 ' + (item.amount || '')
       }).join(', ')
       rows.push(View({ style: S.row }, [
-        Text({ style: S.rowTitle }, [(rec.time || '') + ' — ' + statusText]),
+        Text({ bold: true }, [(rec.time || '') + ' — ' + statusText]),
         itemsText ? Text({ style: S.rowSub }, [itemsText]) : null,
       ]))
     }
-    if (rows.length === 0) {
-      rows.push(Text({ style: S.hint }, ['Нет данных за эту дату']))
-    }
+
+    const listChildren = rows.length ? rows : [Text({ style: S.hint }, ['Нет данных за эту дату'])]
 
     return View({ style: S.page }, [
       Text({ style: S.title, bold: true }, ['История']),
-      View({ style: S.field }, [
+      Section({ title: 'Период', style: S.section }, [
         TextInput({
           label: 'Дата (ГГГГ-ММ-ДД)',
           value: dateStr,
@@ -455,7 +447,7 @@ AppSettingsPage({
           },
         }),
       ]),
-      ...rows,
+      Section({ title: 'Записи', style: S.section }, listChildren),
       Button({
         label: 'Назад',
         color: 'default',
