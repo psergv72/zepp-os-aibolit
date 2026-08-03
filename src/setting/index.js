@@ -160,23 +160,28 @@ AppSettingsPage({
         View(
           { style: S.row, onClick: () => this.navigateTo('edit', { medication: med }) },
           [
-            Text({ style: S.rowTitle }, [med.name + ' (' + med.dosage + ')' + (!med.enabled ? ' [OFF]' : '')]),
+            Text({ bold: true }, [med.name + ' (' + med.dosage + ')' + (!med.enabled ? ' [OFF]' : '')]),
             subText ? Text({ style: S.rowSub }, [subText]) : null,
           ],
         ),
       )
     }
-    if (rows.length === 0) {
-      rows.push(Text({ style: S.hint }, ['Нет лекарств. Добавьте первое.']))
-    }
+
+    const navRows = ['Приёмы', 'История', 'Настройки'].map(label => {
+      const page = label === 'Приёмы' ? 'intakes' : (label === 'История' ? 'history' : 'settings')
+      return View(
+        { style: S.row, onClick: () => this.navigateTo(page) },
+        [Text({ bold: true }, [label])],
+      )
+    })
+
+    const listChildren = rows.length ? rows : [Text({ style: S.hint }, ['Нет лекарств. Добавьте первое.'])]
 
     return View({ style: S.page }, [
       Text({ style: S.title, bold: true }, ['Лекарства']),
-      ...rows,
+      Section({ title: 'Мои лекарства', style: S.section }, listChildren),
       Button({ label: '+ Добавить лекарство', color: 'primary', style: S.btn, onClick: () => this.navigateTo('edit', { medication: null }) }),
-      Button({ label: 'Приёмы', color: 'default', style: S.btn, onClick: () => this.navigateTo('intakes') }),
-      Button({ label: 'История', color: 'default', style: S.btn, onClick: () => this.navigateTo('history') }),
-      Button({ label: 'Настройки', color: 'default', style: S.btn, onClick: () => this.navigateTo('settings') }),
+      Section({ title: 'Управление', style: S.section }, navRows),
     ])
   },
 
