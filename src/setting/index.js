@@ -23,8 +23,9 @@ const S = {
   card: { background: '#ffffff', borderRadius: '12px', border: '1px solid #ecedf0' },
   row: { padding: '13px 16px', borderBottom: '1px solid #ecedf0', display: 'flex', flexDirection: 'row', alignItems: 'center' },
   rowLast: { padding: '13px 16px', display: 'flex', flexDirection: 'row', alignItems: 'center' },
-  control: { padding: '8px 16px', borderBottom: '1px solid #ecedf0' },
-  controlLast: { padding: '8px 16px' },
+  fieldRow: { display: 'flex', flexDirection: 'row', alignItems: 'center', padding: '14px 16px', borderBottom: '1px solid #ecedf0' },
+  fieldRowLast: { display: 'flex', flexDirection: 'row', alignItems: 'center', padding: '14px 16px' },
+  fieldLabel: { fontSize: '15px', color: '#333333', marginRight: '12px', flexShrink: '0', width: '45%' },
   rowTitle: { display: 'block', fontSize: '16px', fontWeight: '600' },
   rowSub: { display: 'block', fontSize: '13px', color: '#8a8a8f', marginTop: '2px' },
   bullet: { display: 'block', fontSize: '13px', color: '#8a8a8f', marginTop: '2px', paddingLeft: '20px' },
@@ -46,8 +47,11 @@ function rowNode(content, onClick, last) {
     : View({ style }, content)
 }
 
-function controlRow(content, last) {
-  return View({ style: last ? S.controlLast : S.control }, content)
+function fieldRow(label, control, last) {
+  return View({ style: last ? S.fieldRowLast : S.fieldRow }, [
+    Text({ style: S.fieldLabel }, [label]),
+    View({ style: { flex: 1 } }, [control]),
+  ])
 }
 
 function backLink(onClick) {
@@ -274,10 +278,10 @@ AppSettingsPage({
       backLink(() => this.navigateTo('medications')),
       Text({ style: S.groupTitle }, ['Лекарство']),
       View({ style: S.card }, [
-        controlRow([TextInput({ label: 'Название', placeholder: 'Название', value: draft.name, onChange: v => { draft.name = v; this.forceRender() } })]),
-        controlRow([TextInput({ label: 'Дозировка', placeholder: 'Дозировка', value: draft.dosage, onChange: v => { draft.dosage = v; this.forceRender() } })]),
-        controlRow([TextInput({ label: 'Комментарии', placeholder: 'Комментарии', value: draft.comments, onChange: v => { draft.comments = v; this.forceRender() } })]),
-        controlRow([Toggle({ label: 'Активно', value: draft.enabled, onChange: v => { draft.enabled = v; this.forceRender() } })], true),
+        fieldRow('Название', TextInput({ placeholder: 'Название', value: draft.name, onChange: v => { draft.name = v; this.forceRender() } })),
+        fieldRow('Дозировка', TextInput({ placeholder: 'Дозировка', value: draft.dosage, onChange: v => { draft.dosage = v; this.forceRender() } })),
+        fieldRow('Комментарии', TextInput({ placeholder: 'Комментарии', value: draft.comments, onChange: v => { draft.comments = v; this.forceRender() } })),
+        fieldRow('Активно', Toggle({ value: draft.enabled, onChange: v => { draft.enabled = v; this.forceRender() } }), true),
       ]),
       View({ style: S.btnRow }, [
         Button({
@@ -400,11 +404,10 @@ AppSettingsPage({
       Text({ style: S.title, bold: true }, [isNew ? 'Добавить приём' : 'Редактировать приём']),
       Text({ style: S.groupTitle }, ['Время']),
       View({ style: S.card }, [
-        controlRow([TextInput({ label: 'Время', placeholder: 'ЧЧ:ММ', value: draft.time, onChange: v => { draft.time = v; this.forceRender() } })]),
-        controlRow([TextInput({ label: 'Метка (утро/день/вечер)', placeholder: 'Метка', value: draft.label, onChange: v => { draft.label = v; this.forceRender() } })]),
-        controlRow([Toggle({ label: 'Каждый день', value: everyDay, onChange: v => { draft.weekDays = v ? null : []; this.forceRender() } })]),
-        controlRow([Select({
-          label: 'Дни недели',
+        fieldRow('Время', TextInput({ placeholder: 'ЧЧ:ММ', value: draft.time, onChange: v => { draft.time = v; this.forceRender() } })),
+        fieldRow('Метка (утро/день/вечер)', TextInput({ placeholder: 'Метка', value: draft.label, onChange: v => { draft.label = v; this.forceRender() } })),
+        fieldRow('Каждый день', Toggle({ value: everyDay, onChange: v => { draft.weekDays = v ? null : []; this.forceRender() } })),
+        fieldRow('Дни недели', Select({
           title: 'Дни недели',
           options: DAY_NAMES,
           multiple: true,
@@ -414,7 +417,7 @@ AppSettingsPage({
             draft.weekDays = arr.map(x => Number(x))
             this.forceRender()
           },
-        })], true),
+        }), true),
       ]),
       Text({ style: S.groupTitle }, ['Лекарства']),
       View({ style: S.card }, itemChildren),
@@ -469,8 +472,7 @@ AppSettingsPage({
     } else {
       rows.push(
         View({ style: S.card }, [
-          controlRow([Select({
-            label: 'Лекарство',
+          fieldRow('Лекарство', Select({
             title: 'Лекарство',
             options: options,
             value: selectedValue,
@@ -479,8 +481,8 @@ AppSettingsPage({
               draft.medicationId = arr[0] || null
               this.forceRender()
             },
-          })]),
-          controlRow([TextInput({ label: 'Количество', placeholder: '2 таблетки', value: draft.amount, onChange: v => { draft.amount = v; this.forceRender() } })], true),
+          })),
+          fieldRow('Количество', TextInput({ placeholder: '2 таблетки', value: draft.amount, onChange: v => { draft.amount = v; this.forceRender() } }), true),
         ]),
       )
       rows.push(
@@ -567,14 +569,13 @@ AppSettingsPage({
       Text({ style: S.title, bold: true }, ['История']),
       Text({ style: S.groupTitle }, ['Период']),
       View({ style: S.card }, [
-        controlRow([TextInput({
-          label: 'Дата (ГГГГ-ММ-ДД)',
+        fieldRow('Дата (ГГГГ-ММ-ДД)', TextInput({
           value: dateStr,
           onChange: v => {
             this.state.viewHistoryDate = v
             this.forceRender()
           },
-        })], true),
+        }), true),
       ]),
       Text({ style: S.groupTitle }, ['Записи']),
       View({ style: S.card }, listChildren),
@@ -590,21 +591,19 @@ AppSettingsPage({
       backLink(() => this.navigateTo('list')),
       Text({ style: S.groupTitle }, ['Напоминания']),
       View({ style: S.card }, [
-        controlRow([TextInput({ label: 'Интервал повтора (мин)', value: String(draft.retryInterval), onChange: v => { draft.retryInterval = parseInt(v, 10) || 60; this.forceRender() } })]),
-        controlRow([TextInput({ label: 'Интервал синхронизации (мин)', value: String(draft.syncInterval), onChange: v => { draft.syncInterval = parseInt(v, 10) || 60; this.forceRender() } })]),
-        controlRow([TextInput({
-          label: 'Варианты отложки (мин, через запятую)',
+        fieldRow('Интервал повтора (мин)', TextInput({ value: String(draft.retryInterval), onChange: v => { draft.retryInterval = parseInt(v, 10) || 60; this.forceRender() } })),
+        fieldRow('Интервал синхронизации (мин)', TextInput({ value: String(draft.syncInterval), onChange: v => { draft.syncInterval = parseInt(v, 10) || 60; this.forceRender() } })),
+        fieldRow('Варианты отложки (мин, через запятую)', TextInput({
           value: draft.snoozeOptions.join(', '),
           onChange: v => { draft.snoozeOptions = v.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n)); this.forceRender() },
-        })], true),
+        }), true),
       ]),
       Text({ style: S.groupTitle }, ['Отображение']),
       View({ style: S.card }, [
-        controlRow([TextInput({
-          label: 'Минимальный размер шрифта (16-40)',
+        fieldRow('Минимальный размер шрифта (16-40)', TextInput({
           value: String(draft.minFontSize || 16),
           onChange: v => { draft.minFontSize = Math.max(16, parseInt(v, 10) || 16); this.forceRender() },
-        })], true),
+        }), true),
       ]),
       View({ style: S.btnRow }, [
         Button({

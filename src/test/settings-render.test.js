@@ -56,6 +56,24 @@ function findByLink(tree, text) {
   return found
 }
 
+function findByRowControl(tree, label) {
+  let found = null
+  walk(tree, (n) => {
+    if (found) return
+    if (n && n.type === 'View' && Array.isArray(n.children)) {
+      const hasLabel = n.children.some(c => c && c.type === 'Text' && Array.isArray(c.children) && c.children.some(x => typeof x === 'string' && x === label))
+      if (hasLabel) {
+        let control = null
+        walk(n, (c) => {
+          if (!control && c && (c.type === 'TextInput' || c.type === 'Toggle' || c.type === 'Select')) control = c
+        })
+        if (control) found = control
+      }
+    }
+  })
+  return found
+}
+
 function setup(storage) {
   options.state.page = 'list'
   options.state.props = null
@@ -81,7 +99,7 @@ test('изменение названия лекарства вызывает п
   setup(storage)
   options.navigateTo('edit', { medication: null })
   const tree = options.build({ settingsStorage: storage })
-  const input = findByLabel(tree, 'TextInput', 'Название')
+  const input = findByRowControl(tree, 'Название')
   assert.ok(input, 'поле Название должно существовать')
   assertRefresh(storage, () => input.props.onChange('Аспирин'))
 })
@@ -91,7 +109,7 @@ test('изменение дозировки лекарства вызывает 
   setup(storage)
   options.navigateTo('edit', { medication: null })
   const tree = options.build({ settingsStorage: storage })
-  const input = findByLabel(tree, 'TextInput', 'Дозировка')
+  const input = findByRowControl(tree, 'Дозировка')
   assert.ok(input)
   assertRefresh(storage, () => input.props.onChange('100 мг'))
 })
@@ -101,7 +119,7 @@ test('переключение "Активно" вызывает перерис�
   setup(storage)
   options.navigateTo('edit', { medication: null })
   const tree = options.build({ settingsStorage: storage })
-  const toggle = findByLabel(tree, 'Toggle', 'Активно')
+  const toggle = findByRowControl(tree, 'Активно')
   assert.ok(toggle)
   assertRefresh(storage, () => toggle.props.onChange(false))
 })
@@ -111,7 +129,7 @@ test('изменение времени приёма вызывает перер
   setup(storage)
   options.navigateTo('intakeEdit', { intake: null })
   const tree = options.build({ settingsStorage: storage })
-  const input = findByLabel(tree, 'TextInput', 'Время')
+  const input = findByRowControl(tree, 'Время')
   assert.ok(input)
   assertRefresh(storage, () => input.props.onChange('08:00'))
 })
@@ -121,7 +139,7 @@ test('переключение "Каждый день" вызывает пере
   setup(storage)
   options.navigateTo('intakeEdit', { intake: null })
   const tree = options.build({ settingsStorage: storage })
-  const toggle = findByLabel(tree, 'Toggle', 'Каждый день')
+  const toggle = findByRowControl(tree, 'Каждый день')
   assert.ok(toggle)
   assertRefresh(storage, () => toggle.props.onChange(true))
 })
@@ -131,7 +149,7 @@ test('изменение дней недели вызывает перерисо
   setup(storage)
   options.navigateTo('intakeEdit', { intake: null })
   const tree = options.build({ settingsStorage: storage })
-  const select = findByLabel(tree, 'Select', 'Дни недели')
+  const select = findByRowControl(tree, 'Дни недели')
   assert.ok(select)
   assertRefresh(storage, () => select.props.onChange(['1', '2']))
 })
@@ -146,7 +164,7 @@ test('изменение лекарства в приёме вызывает п�
   assert.ok(addBtn)
   addBtn.props.onClick()
   tree = options.build({ settingsStorage: storage })
-  const select = findByLabel(tree, 'Select', 'Лекарство')
+  const select = findByRowControl(tree, 'Лекарство')
   assert.ok(select, 'Select Лекарство должен существовать')
   assertRefresh(storage, () => select.props.onChange(['m1']))
 })
@@ -160,7 +178,7 @@ test('изменение количества в приёме вызывает �
   const addBtn = findByLink(tree, '+ Добавить лекарство')
   addBtn.props.onClick()
   tree = options.build({ settingsStorage: storage })
-  const input = findByLabel(tree, 'TextInput', 'Количество')
+  const input = findByRowControl(tree, 'Количество')
   assert.ok(input)
   assertRefresh(storage, () => input.props.onChange('2 таблетки'))
 })
@@ -170,7 +188,7 @@ test('изменение интервала повтора вызывает пе
   setup(storage)
   options.navigateTo('settings')
   const tree = options.build({ settingsStorage: storage })
-  const input = findByLabel(tree, 'TextInput', 'Интервал повтора (мин)')
+  const input = findByRowControl(tree, 'Интервал повтора (мин)')
   assert.ok(input)
   assertRefresh(storage, () => input.props.onChange('90'))
 })
@@ -180,7 +198,7 @@ test('изменение минимального размера шрифта в
   setup(storage)
   options.navigateTo('settings')
   const tree = options.build({ settingsStorage: storage })
-  const input = findByLabel(tree, 'TextInput', 'Минимальный размер шрифта (16-40)')
+  const input = findByRowControl(tree, 'Минимальный размер шрифта (16-40)')
   assert.ok(input)
   assertRefresh(storage, () => input.props.onChange('18'))
 })
