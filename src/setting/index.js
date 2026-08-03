@@ -30,6 +30,8 @@ const S = {
   chevron: { fontSize: '20px', color: '#c7c7cc', marginLeft: '8px' },
   hint: { fontSize: '14px', color: '#8a8a8f' },
   linkAdd: { fontSize: '16px', fontWeight: '600', color: '#2f6fed' },
+  linkBack: { display: 'block', padding: '4px 0', marginBottom: '2px' },
+  linkBackText: { fontSize: '16px', fontWeight: '600', color: '#2f6fed' },
   btnPrimary: { display: 'block', width: '100%', borderRadius: '12px', background: '#2f6fed', color: '#ffffff', fontSize: '16px', fontWeight: '600', marginTop: '10px' },
   btnDefault: { display: 'block', width: '100%', borderRadius: '12px', background: '#ffffff', color: '#333333', border: '1px solid #d9dae0', fontSize: '16px', fontWeight: '600', marginTop: '10px' },
 }
@@ -295,10 +297,11 @@ AppSettingsPage({
       : [rowNode([Text({ style: S.hint }, ['Нет приёмов. Добавьте первый.'])], null, false), addRow]
 
     return View({ style: S.page }, [
-      Text({ style: S.title, bold: true }, ['Приёмы']),
-      Text({ style: S.groupTitle }, ['Расписание']),
+      View({ style: S.linkBack, onClick: () => this.navigateTo('list') }, [
+        Text({ style: S.linkBackText }, ['< Назад']),
+      ]),
+      Text({ style: S.groupTitle }, ['Режим приема лекарств']),
       View({ style: S.card }, listChildren),
-      Button({ label: 'Назад', color: 'default', style: S.btnDefault, onClick: () => this.navigateTo('list') }),
     ])
   },
 
