@@ -27,6 +27,7 @@ const S = {
   controlLast: { padding: '8px 16px' },
   rowTitle: { display: 'block', fontSize: '16px', fontWeight: '600' },
   rowSub: { display: 'block', fontSize: '13px', color: '#8a8a8f', marginTop: '2px' },
+  bullet: { display: 'block', fontSize: '13px', color: '#8a8a8f', marginTop: '2px', paddingLeft: '20px' },
   chevron: { fontSize: '20px', color: '#c7c7cc', marginLeft: '8px' },
   hint: { fontSize: '14px', color: '#8a8a8f' },
   linkAdd: { fontSize: '16px', fontWeight: '600', color: '#2f6fed' },
@@ -223,7 +224,7 @@ AppSettingsPage({
         const daysText = intake.weekDays && intake.weekDays.length
           ? intake.weekDays.map(d => dayName(d)).join(', ')
           : 'каждый день'
-        return Text({ style: S.rowSub }, ['• ' + intake.time + ' ' + daysText])
+        return Text({ style: S.bullet }, ['• ' + intake.time + ' ' + daysText])
       })
       return rowNode(
         [
