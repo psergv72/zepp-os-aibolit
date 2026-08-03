@@ -29,7 +29,9 @@ const S = {
   rowSub: { fontSize: '13px', color: '#8a8a8f', marginTop: '2px' },
   chevron: { fontSize: '20px', color: '#c7c7cc', marginLeft: '8px' },
   hint: { fontSize: '14px', color: '#8a8a8f' },
-  btn: { marginTop: '10px' },
+  linkAdd: { fontSize: '16px', fontWeight: '600', color: '#2f6fed' },
+  btnPrimary: { display: 'block', width: '100%', borderRadius: '12px', background: '#2f6fed', color: '#ffffff', fontSize: '16px', fontWeight: '600', marginTop: '10px' },
+  btnDefault: { display: 'block', width: '100%', borderRadius: '12px', background: '#ffffff', color: '#333333', border: '1px solid #d9dae0', fontSize: '16px', fontWeight: '600', marginTop: '10px' },
 }
 
 function rowNode(content, onClick, last) {
@@ -196,15 +198,20 @@ AppSettingsPage({
       i === 2,
     ))
 
+    const addRow = rowNode(
+      [Text({ style: S.linkAdd }, ['+ Добавить лекарство'])],
+      () => this.navigateTo('edit', { medication: null }),
+      true,
+    )
+
     const medCard = medRows.length
-      ? medRows
-      : [rowNode([Text({ style: S.hint }, ['Нет лекарств. Добавьте первое.'])], null, true)]
+      ? [...medRows, addRow]
+      : [rowNode([Text({ style: S.hint }, ['Нет лекарств. Добавьте первое.'])], null, false), addRow]
 
     return View({ style: S.page }, [
       Text({ style: S.title, bold: true }, ['Лекарства']),
       Text({ style: S.groupTitle }, ['Мои лекарства']),
       View({ style: S.card }, medCard),
-      Button({ label: '+ Добавить лекарство', color: 'primary', style: S.btn, onClick: () => this.navigateTo('edit', { medication: null }) }),
       Text({ style: S.groupTitle }, ['Управление']),
       View({ style: S.card }, navRows),
     ])
@@ -228,7 +235,7 @@ AppSettingsPage({
       Button({
         label: 'Сохранить',
         color: 'primary',
-        style: S.btn,
+        style: S.btnPrimary,
         onClick: () => {
           if (!draft.name.trim()) return
           const medications = this.getMedications()
@@ -243,7 +250,7 @@ AppSettingsPage({
           this.navigateTo('list')
         },
       }),
-      Button({ label: 'Назад', color: 'default', style: S.btn, onClick: () => this.navigateTo('list') }),
+      Button({ label: 'Назад', color: 'default', style: S.btnDefault, onClick: () => this.navigateTo('list') }),
     ])
   },
 
@@ -278,16 +285,21 @@ AppSettingsPage({
       )
     })
 
+    const addRow = rowNode(
+      [Text({ style: S.linkAdd }, ['+ Добавить приём'])],
+      () => this.navigateTo('intakeEdit', { intake: null }),
+      true,
+    )
+
     const listChildren = rows.length
-      ? rows
-      : [rowNode([Text({ style: S.hint }, ['Нет приёмов. Добавьте первый.'])], null, true)]
+      ? [...rows, addRow]
+      : [rowNode([Text({ style: S.hint }, ['Нет приёмов. Добавьте первый.'])], null, false), addRow]
 
     return View({ style: S.page }, [
       Text({ style: S.title, bold: true }, ['Приёмы']),
       Text({ style: S.groupTitle }, ['Расписание']),
       View({ style: S.card }, listChildren),
-      Button({ label: '+ Добавить приём', color: 'primary', style: S.btn, onClick: () => this.navigateTo('intakeEdit', { intake: null }) }),
-      Button({ label: 'Назад', color: 'default', style: S.btn, onClick: () => this.navigateTo('list') }),
+      Button({ label: 'Назад', color: 'default', style: S.btnDefault, onClick: () => this.navigateTo('list') }),
     ])
   },
 
@@ -315,9 +327,15 @@ AppSettingsPage({
       )
     })
 
+    const addRow = rowNode(
+      [Text({ style: S.linkAdd }, ['+ Добавить лекарство'])],
+      () => this.navigateTo('itemEdit', { index: -1 }),
+      true,
+    )
+
     const itemChildren = itemRows.length
-      ? itemRows
-      : [rowNode([Text({ style: S.hint }, ['Нет лекарств в приёме'])], null, true)]
+      ? [...itemRows, addRow]
+      : [rowNode([Text({ style: S.hint }, ['Нет лекарств в приёме'])], null, false), addRow]
 
     return View({ style: S.page }, [
       Text({ style: S.title, bold: true }, [isNew ? 'Добавить приём' : 'Редактировать приём']),
@@ -341,11 +359,10 @@ AppSettingsPage({
       ]),
       Text({ style: S.groupTitle }, ['Лекарства']),
       View({ style: S.card }, itemChildren),
-      Button({ label: '+ Добавить лекарство', color: 'primary', style: S.btn, onClick: () => this.navigateTo('itemEdit', { index: -1 }) }),
       Button({
         label: 'Сохранить',
         color: 'primary',
-        style: S.btn,
+        style: S.btnPrimary,
         onClick: () => {
           if (!draft.time.trim() || draft.items.length === 0) return
           const intakes = this.getIntakes()
@@ -363,14 +380,14 @@ AppSettingsPage({
       !isNew && Button({
         label: 'Удалить',
         color: 'default',
-        style: S.btn,
+        style: S.btnDefault,
         onClick: () => {
           const intakes = this.getIntakes().filter(x => x.id !== draft.id)
           this.setIntakes(intakes)
           this.navigateTo('intakes')
         },
       }),
-      Button({ label: 'Назад', color: 'default', style: S.btn, onClick: () => this.navigateTo('intakes') }),
+      Button({ label: 'Назад', color: 'default', style: S.btnDefault, onClick: () => this.navigateTo('intakes') }),
     ])
   },
 
@@ -409,7 +426,7 @@ AppSettingsPage({
         Button({
           label: 'Сохранить',
           color: 'primary',
-          style: S.btn,
+          style: S.btnPrimary,
           onClick: () => {
             if (!draft.medicationId) return
             const intake = this.state.intakeDraft
@@ -427,7 +444,7 @@ AppSettingsPage({
           Button({
             label: 'Удалить из приёма',
             color: 'default',
-            style: S.btn,
+            style: S.btnDefault,
             onClick: () => {
               this.state.intakeDraft.items.splice(index, 1)
               this.navigateTo('intakeEdit', { intake: this.state.intakeDraft })
@@ -440,7 +457,7 @@ AppSettingsPage({
     return View({ style: S.page }, [
       Text({ style: S.title, bold: true }, ['Лекарство в приёме']),
       ...rows,
-      Button({ label: 'Назад', color: 'default', style: S.btn, onClick: () => this.navigateTo('intakeEdit', { intake: this.state.intakeDraft }) }),
+      Button({ label: 'Назад', color: 'default', style: S.btnDefault, onClick: () => this.navigateTo('intakeEdit', { intake: this.state.intakeDraft }) }),
     ])
   },
 
@@ -496,7 +513,7 @@ AppSettingsPage({
       Button({
         label: 'Назад',
         color: 'default',
-        style: S.btn,
+        style: S.btnDefault,
         onClick: () => {
           this.state.viewHistoryDate = null
           this.navigateTo('list')
@@ -533,13 +550,13 @@ AppSettingsPage({
       Button({
         label: 'Сохранить',
         color: 'primary',
-        style: S.btn,
+        style: S.btnPrimary,
         onClick: () => {
           this.setAppSettings(draft)
           this.navigateTo('list')
         },
       }),
-      Button({ label: 'Назад', color: 'default', style: S.btn, onClick: () => this.navigateTo('list') }),
+      Button({ label: 'Назад', color: 'default', style: S.btnDefault, onClick: () => this.navigateTo('list') }),
     ])
   },
 })

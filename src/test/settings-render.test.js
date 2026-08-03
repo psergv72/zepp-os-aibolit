@@ -44,6 +44,18 @@ function findByButton(tree, label) {
   return findByLabel(tree, 'Button', label)
 }
 
+function findByLink(tree, text) {
+  let found = null
+  walk(tree, (n) => {
+    if (found) return
+    if (n && n.type === 'View' && n.props && typeof n.props.onClick === 'function' && Array.isArray(n.children)) {
+      const hit = n.children.some(c => c && c.type === 'Text' && Array.isArray(c.children) && c.children.some(x => typeof x === 'string' && x === text))
+      if (hit) found = n
+    }
+  })
+  return found
+}
+
 function setup(storage) {
   options.state.page = 'list'
   options.state.props = null
@@ -130,7 +142,7 @@ test('изменение лекарства в приёме вызывает п�
   setup(storage)
   options.navigateTo('intakeEdit', { intake: null })
   let tree = options.build({ settingsStorage: storage })
-  const addBtn = findByButton(tree, '+ Добавить лекарство')
+  const addBtn = findByLink(tree, '+ Добавить лекарство')
   assert.ok(addBtn)
   addBtn.props.onClick()
   tree = options.build({ settingsStorage: storage })
@@ -145,7 +157,7 @@ test('изменение количества в приёме вызывает �
   setup(storage)
   options.navigateTo('intakeEdit', { intake: null })
   let tree = options.build({ settingsStorage: storage })
-  const addBtn = findByButton(tree, '+ Добавить лекарство')
+  const addBtn = findByLink(tree, '+ Добавить лекарство')
   addBtn.props.onClick()
   tree = options.build({ settingsStorage: storage })
   const input = findByLabel(tree, 'TextInput', 'Количество')
