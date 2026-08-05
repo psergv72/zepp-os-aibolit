@@ -81,14 +81,19 @@ Page({
     const checkGap = 16 * S
     const medX = bounds.left + checkColW + checkGap
     const medW = bounds.right - medX
-    const lineH = 40 * S
+    const lineHSp = 32
+    const medGapSp = 40
+    const lineH = lineHSp * S
+    const medGap = medGapSp * S
     const medSize = sysText(24)
     const medTextOf = (item) => item.med.name + ' \u00d7 ' + (item.amount || '')
     const linesOf = (item) => wrapText(medTextOf(item), medSize, medW)
     const itemsOf = (entry) => entry.items || []
     const blockHOf = (entry) => {
-      const totalLines = itemsOf(entry).reduce((sum, it) => sum + linesOf(it).length, 0)
-      return (44 + totalLines * 40 + 10) * S
+      const items = itemsOf(entry)
+      const totalLines = items.reduce((sum, it) => sum + linesOf(it).length, 0)
+      const medSection = (totalLines - items.length) * lineHSp + items.length * medGapSp
+      return (44 + medSection + 10) * S
     }
 
     let totalH = bounds.top + headerH + headerGap + btnGap + btnH + bottomPad
@@ -164,7 +169,7 @@ Page({
             text: lines[i],
           })
         }
-        y += lines.length * lineH
+        y += (lines.length - 1) * lineH + medGap
       }
 
       const takeBtn = this.ui.create(widget.TEXT, {

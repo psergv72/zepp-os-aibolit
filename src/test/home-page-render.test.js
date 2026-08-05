@@ -220,15 +220,26 @@ test('заголовок страницы — «Сегодня»', () => {
 })
 
 test('длинное название лекарства переносится по словам', () => {
-  storage.__stores().get('aibolit-data.json').set('medications', [{ id: 'm1', name: 'Ацетилсалициловая кислота', enabled: true }])
+  storage.__stores().get('aibolit-data.json').set('medications', [
+    { id: 'm1', name: 'Ацетилсалициловая кислота', enabled: true },
+    { id: 'm2', name: 'Ибупрофен', enabled: true },
+  ])
+  storage.__stores().get('aibolit-data.json').set('intakes', [{
+    id: 'i1',
+    time: '23:59',
+    weekDays: null,
+    items: [{ medicationId: 'm1', amount: '1' }, { medicationId: 'm2', amount: '1' }],
+  }])
 
   const page = instance()
   page.refreshView()
 
   const first = __getRegistry().find(w => w.type === widget.TEXT && w.props.text === 'Ацетилсалициловая')
   const second = __getRegistry().find(w => w.type === widget.TEXT && w.props.text === 'кислота × 1')
-  assert.ok(first && second, 'название переносится на две строки')
-  assert.equal(second.props.y - first.props.y, 40, 'строки идут подряд с высотой 40')
+  const ibu = __getRegistry().find(w => w.type === widget.TEXT && w.props.text === 'Ибупрофен × 1')
+  assert.ok(first && second && ibu, 'все строки лекарств должны существовать')
+  assert.equal(second.props.y - first.props.y, 32, 'строки внутри названия расположены плотно')
+  assert.equal(ibu.props.y - second.props.y, 40, 'между лекарствами сохранён прежний интервал')
 
   const check = __getRegistry().find(w => w.type === widget.TEXT && w.props.text === '\u2610')
   assert.equal(check.props.y, first.props.y, 'чекбокс по верхнему краю первой строки')
