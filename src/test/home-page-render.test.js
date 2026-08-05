@@ -161,7 +161,7 @@ test('приём отображается при крупном шрифте и 
     page.refreshView()
 
     const S = 40 / 16
-    const medX = 70 + (40 + 16) * S
+    const medX = 70 + (40 + 8) * S
     const meds = __getRegistry().filter(
       w => w.type === widget.TEXT && w.props.x === medX && typeof w.props.text === 'string' && w.props.text.length > 0
     )
@@ -243,4 +243,5 @@ test('длинное название лекарства переносится 
 
   const check = __getRegistry().find(w => w.type === widget.TEXT && w.props.text === '\u2610')
   assert.equal(check.props.y, first.props.y, 'чекбокс по верхнему краю первой строки')
+  assert.equal(first.props.x - (check.props.x + check.props.w), 8, 'отступ между чекбоксом и названием уменьшен')
 })

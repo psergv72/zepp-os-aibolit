@@ -172,7 +172,7 @@ test('все приёмы отображаются без обрыва при к
     page.refreshView()
 
     const S = 40 / 16
-    const medX = 70 + (40 + 16) * S
+    const medX = 70 + (40 + 8) * S
     const meds = __getRegistry().filter(
       w => w.type === widget.TEXT && w.props.x === medX && typeof w.props.text === 'string' && w.props.text.length > 0
     )
@@ -210,4 +210,5 @@ test('длинное название лекарства переносится 
 
   const ctrl = __getRegistry().find(w => w.type === widget.TEXT && w.props.text === '\u2610')
   assert.equal(ctrl.props.y, first.props.y, 'контрол по верхнему краю первой строки')
+  assert.equal(first.props.x - (ctrl.props.x + ctrl.props.w), 8, 'отступ между контролом и названием уменьшен')
 })
