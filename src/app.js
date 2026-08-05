@@ -1,16 +1,22 @@
 import { BaseApp } from '@zeppos/zml/base-app'
+import { appPlugin } from '@zeppos/zml/3.0/module/messaging/plugin/app'
 import { log as Logger } from '@zos/utils'
 import { refreshAlarms } from './utils/schedule'
 import { applyConfigToStorage, applyConfigFromSettings } from './utils/watch-config'
 import { ZML_METHODS } from './utils/constants'
+import { initSync, retrySync } from './utils/sync'
 
 const logger = Logger.getLogger('aibolit-app')
+
+BaseApp.use(appPlugin)
 
 App(
   BaseApp({
     globalData: {},
     onCreate() {
       logger.log('app onCreate invoked')
+      initSync(this.globalData && this.globalData.messaging)
+      retrySync()
       if (applyConfigFromSettings()) {
         logger.log('config applied from settings on create')
       }

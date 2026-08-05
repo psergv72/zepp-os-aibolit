@@ -16,7 +16,8 @@ function handleEvent(e) {
     return
   }
 
-  const { intakeId, delayMinutes } = params
+  const { delayMinutes } = params
+  const intakeId = params.intakeId || params.intakeID
   if (!intakeId || !delayMinutes) return
 
   const intake = getIntakes().find(i => i.id === intakeId)

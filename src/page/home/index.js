@@ -2,7 +2,7 @@ import { log as Logger } from '@zos/utils'
 import { createWidget, deleteWidget, widget, event, align, text_style, redraw } from '@zos/ui'
 import { replace as routerReplace } from '@zos/router'
 import { getMedications, getIntakes, getTakeLogs, getCancellations, addTakeLog, getTodayDateStr } from '../../utils/storage'
-import { sendTakeLogToPhone } from '../../utils/sync'
+import { sendTakeLogToPhone, fetchTakesFromPhone, mergeTakeRecords } from '../../utils/sync'
 import { getIntakeEntries, isIntakeOnDay, isIntakeTakenToday, isIntakeCancelledToday, medItemText } from '../../utils/intake-logic.js'
 import { fetchConfigFromSide } from '../../utils/watch-config'
 import { sysText, getUiScale } from '../../utils/ui-scale'
@@ -22,11 +22,20 @@ Page({
     this._destroyed = false
     this.refreshView()
     this.pullConfig()
+    this.pullTakes()
   },
 
   pullConfig() {
     fetchConfigFromSide().then((config) => {
       if (config && !this._destroyed) this.refreshView()
+    })
+  },
+
+  pullTakes() {
+    const todayDateStr = getTodayDateStr()
+    fetchTakesFromPhone(todayDateStr).then((records) => {
+      if (this._destroyed) return
+      if (mergeTakeRecords(records)) this.refreshView()
     })
   },
 

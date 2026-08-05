@@ -12,7 +12,7 @@ import {
   addTakeLog,
   removeTakeLog,
 } from '../../utils/storage'
-import { sendTakeLogToPhone, sendCancellationToPhone } from '../../utils/sync'
+import { sendTakeLogToPhone, sendCancellationToPhone, fetchTakesFromPhone, mergeTakeRecords } from '../../utils/sync'
 import { getIntakeEntries, isIntakeOnDay, getIntakeStatus, getTakenTime, medItemText } from '../../utils/intake-logic.js'
 import { fetchConfigFromSide } from '../../utils/watch-config'
 import { sysText, getUiScale } from '../../utils/ui-scale'
@@ -32,11 +32,20 @@ Page({
     this._destroyed = false
     this.refreshView()
     this.pullConfig()
+    this.pullTakes()
   },
 
   pullConfig() {
     fetchConfigFromSide().then((config) => {
       if (config && !this._destroyed) this.refreshView()
+    })
+  },
+
+  pullTakes() {
+    const todayDateStr = getTodayDateStr()
+    fetchTakesFromPhone(todayDateStr).then((records) => {
+      if (this._destroyed) return
+      if (mergeTakeRecords(records)) this.refreshView()
     })
   },
 

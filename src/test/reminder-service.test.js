@@ -36,8 +36,18 @@ test('onInit при срабатывании alarm вызывает notify', () 
   serviceOpts.onInit(params)
 
   assert.equal(notification.__calls.length, 1)
-  assert.equal(notification.__calls[0].title, '08:00')
-  assert.match(notification.__calls[0].content, /Парацетамол/)
+  assert.equal(notification.__calls[0].title, 'Пора принимать лекарства')
+  assert.match(notification.__calls[0].content, /Парацетамол, 1 таблетка/)
+})
+
+test('action Принял открывает страницу take', () => {
+  serviceOpts.onInit(JSON.stringify({ mode: 'reminder', intakeId: 'i1' }))
+
+  assert.equal(notification.__calls.length, 1)
+  const takeAction = notification.__calls[0].actions.find(a => a.text === 'Принял')
+  assert.ok(takeAction, 'в уведомлении есть кнопка Принял')
+  assert.equal(takeAction.file, 'page/take/index')
+  assert.equal(takeAction.param, JSON.stringify({ intakeId: 'i1' }))
 })
 
 test('onInit пропускает уже принятый intake', () => {

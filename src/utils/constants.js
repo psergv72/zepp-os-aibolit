@@ -48,6 +48,7 @@ export const ZML_METHODS = {
   RESTORE_INTAKE: 'restore_intake',
   CONFIG_SYNCED: 'config_synced',
   GET_CONFIG: 'get_config',
+  GET_TAKE_LOGS: 'get_take_logs',
 }
 
 export const ALARM_MODES = {

@@ -28,8 +28,9 @@ Page({
       return
     }
 
-    this.state.intakeId = parsed.intakeId
-    this.state.intake = getIntakes().find(i => i.id === parsed.intakeId) || null
+    const intakeId = parsed.intakeId || parsed.intakeID
+    this.state.intakeId = intakeId
+    this.state.intake = getIntakes().find(i => i.id === intakeId) || null
 
     this.renderSnoozeOptions()
   },

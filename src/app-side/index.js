@@ -54,6 +54,15 @@ AppSideService(
         return
       }
 
+      if (req.method === ZML_METHODS.GET_TAKE_LOGS) {
+        const { date } = req.params || {}
+        const dateKey = `history_${date}`
+        const existing = settings.settingsStorage.getItem(dateKey)
+        const records = existing ? JSON.parse(existing) : []
+        res(null, { records })
+        return
+      }
+
       if (req.method === ZML_METHODS.SYNC_INTAKE) {
         const { records } = req.params
         if (records && records.length > 0) {

@@ -12,6 +12,10 @@ export function back(opts) {
   calls.push({ method: 'back', opts })
 }
 
+export function exit(opts) {
+  calls.push({ method: 'exit', opts })
+}
+
 export function __getCalls() {
   return calls
 }

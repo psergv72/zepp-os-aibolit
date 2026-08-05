@@ -26,7 +26,8 @@
           "pages": [
             "page/home/index",
             "page/plan/index",
-            "page/snooze/index"
+            "page/snooze/index",
+            "page/take/index"
           ]
         },
         "app-side": {
@@ -38,7 +39,6 @@
         "app-service": {
           "services": [
             "app-service/reminder",
-            "app-service/take",
             "app-service/snooze-handler"
           ]
         }

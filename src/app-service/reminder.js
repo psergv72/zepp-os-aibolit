@@ -32,7 +32,7 @@ function handleEvent(e) {
   const alreadyTaken = takeLogs.some(i => i.intakeId === intakeId && i.date === todayDateStr && i.status === 'taken')
   if (alreadyTaken) return
 
-  const title = intake.label || intake.time
+  const title = 'Пора принимать лекарства'
   const content = buildItemsSummary(intake.items || [], getMedications()) || 'Примите лекарство'
 
   notify({
@@ -42,7 +42,7 @@ function handleEvent(e) {
     actions: [
       {
         text: 'Принял',
-        file: 'app-service/take',
+        file: 'page/take/index',
         param: JSON.stringify({ intakeId }),
       },
       {

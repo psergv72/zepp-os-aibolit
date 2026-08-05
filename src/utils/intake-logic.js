@@ -60,20 +60,24 @@ export function getTakenTime(intakeId, date, takeLogs) {
   return log ? log.takenTime : null
 }
 
+function medItemLine(med, amount) {
+  const dosage = med.dosage ? ' (' + med.dosage + ')' : ''
+  const amountText = amount ? ', ' + amount : ''
+  return (med.name || '') + dosage + amountText
+}
+
 export function buildItemsSummary(items, medications) {
   const meds = medications || []
   const lines = []
   for (const item of items || []) {
     const med = meds.find(m => m.id === item.medicationId)
     if (!medIsEnabled(med)) continue
-    lines.push((med.name || '') + (item.amount ? ' \u00d7 ' + item.amount : ''))
+    lines.push(medItemLine(med, item.amount))
   }
   return lines.join(', ')
 }
 
 export function medItemText(item) {
   const med = (item && item.med) || {}
-  const dosage = med.dosage ? ' (' + med.dosage + ')' : ''
-  const amount = item.amount ? ', ' + item.amount : ''
-  return (med.name || '') + dosage + amount
+  return medItemLine(med, item.amount)
 }

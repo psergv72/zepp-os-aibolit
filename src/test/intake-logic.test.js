@@ -127,14 +127,14 @@ test('getTakenTime returns takenTime of taken log or null', () => {
   assert.equal(getTakenTime('i3', 'd', logs), null)
 })
 
-test('buildItemsSummary joins name × amount, skips disabled and missing', () => {
+test('buildItemsSummary joins name (dosage), amount, skips disabled and missing', () => {
   const items = [
     { medicationId: 'm1', amount: '2 таблетки' },
     { medicationId: 'm2', amount: '' },
     { medicationId: 'm3', amount: '3' },
     { medicationId: 'missing', amount: '1' },
   ]
-  assert.equal(buildItemsSummary(items, MEDS), 'Парацетамол \u00d7 2 таблетки, Аспирин')
+  assert.equal(buildItemsSummary(items, MEDS), 'Парацетамол, 2 таблетки, Аспирин')
   assert.equal(buildItemsSummary([], MEDS), '')
 })
 
