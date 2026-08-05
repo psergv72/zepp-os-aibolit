@@ -205,7 +205,7 @@ test('длинное название лекарства переносится 
   const second = __getRegistry().find(w => w.type === widget.TEXT && w.props.text === 'кислота × 1')
   const ibu = __getRegistry().find(w => w.type === widget.TEXT && w.props.text === 'Ибупрофен × 1')
   assert.ok(first && second && ibu, 'все строки лекарств должны существовать')
-  assert.equal(second.props.y - first.props.y, 32, 'строки внутри названия расположены плотно')
+  assert.equal(second.props.y - first.props.y, 28, 'строки внутри названия расположены плотно')
   assert.equal(ibu.props.y - second.props.y, 40, 'между лекарствами сохранён прежний интервал')
 
   const ctrl = __getRegistry().find(w => w.type === widget.TEXT && w.props.text === '\u2610')

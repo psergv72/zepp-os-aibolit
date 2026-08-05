@@ -91,7 +91,7 @@ Page({
     const checkGap = 16 * S
     const medX = bounds.left + checkColW + checkGap
     const medW = bounds.right - medX
-    const lineHSp = 32
+    const lineHSp = 28
     const medGapSp = 40
     const lineH = lineHSp * S
     const medGap = medGapSp * S
