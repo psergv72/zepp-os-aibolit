@@ -1,7 +1,11 @@
 import { log as Logger } from '@zos/utils'
 import { createWidget, widget, event, align, text_style } from '@zos/ui'
-import { push as routerPush } from '@zos/router'
-import { getSettings, getIntakes, getMedications } from '../../utils/storage'
+import { exit as routerExit } from '@zos/router'
+import { getSettings, getIntakes, getMedications, getTakeLogs, addTakeLog, getTodayDateStr } from '../../utils/storage'
+import { sendTakeLogToPhone } from '../../utils/sync'
+import { isIntakeTakenToday } from '../../utils/intake-logic'
+import { createSnoozeAlarm } from '../../utils/schedule'
+import { INTAKE_STATUS } from '../../utils/constants'
 import { sysText, getUiScale } from '../../utils/ui-scale'
 import { getContentBounds } from '../../utils/screen-layout'
 
@@ -168,12 +172,38 @@ Page({
 
   confirmSnooze(delayMinutes) {
     const intakeId = this.state.intakeId
+    const intake = this.state.intake
 
-    const param = JSON.stringify({
+    if (!intakeId || !delayMinutes) {
+      routerExit()
+      return
+    }
+
+    const todayDateStr = getTodayDateStr()
+    const takeLogs = getTakeLogs()
+    if (isIntakeTakenToday(intakeId, todayDateStr, takeLogs)) {
+      logger.log('snooze: already taken today ' + intakeId)
+      routerExit()
+      return
+    }
+
+    createSnoozeAlarm(intakeId, delayMinutes)
+
+    const now = new Date()
+    const snoozeRecord = {
+      id: 'snooze_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
       intakeId: intakeId,
-      delayMinutes: delayMinutes,
-    })
+      date: todayDateStr,
+      time: intake ? intake.time : null,
+      takenTime: String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0'),
+      status: INTAKE_STATUS.SNOOZED,
+      items: intake ? (intake.items || []).map(item => ({ ...item })) : [],
+    }
 
-    routerPush({ url: 'app-service/snooze-handler', param: param })
+    addTakeLog(snoozeRecord)
+    sendTakeLogToPhone(snoozeRecord)
+    logger.log('Snoozed intake ' + intakeId + ' for ' + delayMinutes + 'min')
+
+    routerExit()
   },
 })

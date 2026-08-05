@@ -38,8 +38,7 @@
         },
         "app-service": {
           "services": [
-            "app-service/reminder",
-            "app-service/snooze-handler"
+            "app-service/reminder"
           ]
         }
       },
