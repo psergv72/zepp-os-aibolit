@@ -78,7 +78,7 @@ Page({
     const btnH = 48 * S
     const bottomPad = 48 * S
     const checkColW = 40 * S
-    const checkGap = 8 * S
+    const checkGap = 4 * S
     const medX = bounds.left + checkColW + checkGap
     const medW = bounds.right - medX
     const lineHSp = 28
