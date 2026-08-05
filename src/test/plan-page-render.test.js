@@ -188,8 +188,8 @@ test('все приёмы отображаются без обрыва при к
 
 test('длинное название лекарства переносится по словам', () => {
   storage.__stores().get('aibolit-data.json').set('medications', [
-    { id: 'm1', name: 'Ацетилсалициловая кислота', enabled: true },
-    { id: 'm2', name: 'Ибупрофен', enabled: true },
+    { id: 'm1', name: 'Ацетилсалициловая кислота', dosage: '500 мг', enabled: true },
+    { id: 'm2', name: 'Панадол', dosage: '500 мг', enabled: true },
   ])
   storage.__stores().get('aibolit-data.json').set('intakes', [{
     id: 'i1',
@@ -202,8 +202,8 @@ test('длинное название лекарства переносится 
   page.refreshView()
 
   const first = __getRegistry().find(w => w.type === widget.TEXT && w.props.text === 'Ацетилсалициловая')
-  const second = __getRegistry().find(w => w.type === widget.TEXT && w.props.text === 'кислота × 1')
-  const ibu = __getRegistry().find(w => w.type === widget.TEXT && w.props.text === 'Ибупрофен × 1')
+  const second = __getRegistry().find(w => w.type === widget.TEXT && w.props.text === 'кислота (500 мг), 1')
+  const ibu = __getRegistry().find(w => w.type === widget.TEXT && w.props.text === 'Панадол (500 мг), 1')
   assert.ok(first && second && ibu, 'все строки лекарств должны существовать')
   assert.equal(second.props.y - first.props.y, 28, 'строки внутри названия расположены плотно')
   assert.equal(ibu.props.y - second.props.y, 40, 'между лекарствами сохранён прежний интервал')

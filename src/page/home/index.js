@@ -3,7 +3,7 @@ import { createWidget, deleteWidget, widget, event, align, text_style, redraw } 
 import { replace as routerReplace } from '@zos/router'
 import { getMedications, getIntakes, getTakeLogs, getCancellations, addTakeLog, getTodayDateStr } from '../../utils/storage'
 import { sendTakeLogToPhone } from '../../utils/sync'
-import { getIntakeEntries, isIntakeOnDay, isIntakeTakenToday, isIntakeCancelledToday } from '../../utils/intake-logic.js'
+import { getIntakeEntries, isIntakeOnDay, isIntakeTakenToday, isIntakeCancelledToday, medItemText } from '../../utils/intake-logic.js'
 import { fetchConfigFromSide } from '../../utils/watch-config'
 import { sysText, getUiScale } from '../../utils/ui-scale'
 import { getContentBounds, renderTimeHeader, renderNavButton, enableScroll } from '../../utils/screen-layout'
@@ -86,8 +86,7 @@ Page({
     const lineH = lineHSp * S
     const medGap = medGapSp * S
     const medSize = sysText(24)
-    const medTextOf = (item) => item.med.name + ' \u00d7 ' + (item.amount || '')
-    const linesOf = (item) => wrapText(medTextOf(item), medSize, medW)
+    const linesOf = (item) => wrapText(medItemText(item), medSize, medW)
     const itemsOf = (entry) => entry.items || []
     const blockHOf = (entry) => {
       const items = itemsOf(entry)

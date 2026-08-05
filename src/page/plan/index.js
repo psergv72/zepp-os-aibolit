@@ -13,7 +13,7 @@ import {
   removeTakeLog,
 } from '../../utils/storage'
 import { sendTakeLogToPhone, sendCancellationToPhone } from '../../utils/sync'
-import { getIntakeEntries, isIntakeOnDay, getIntakeStatus, getTakenTime } from '../../utils/intake-logic.js'
+import { getIntakeEntries, isIntakeOnDay, getIntakeStatus, getTakenTime, medItemText } from '../../utils/intake-logic.js'
 import { fetchConfigFromSide } from '../../utils/watch-config'
 import { sysText, getUiScale } from '../../utils/ui-scale'
 import { getContentBounds, renderTimeHeader, renderNavButton, enableScroll } from '../../utils/screen-layout'
@@ -96,8 +96,7 @@ Page({
     const lineH = lineHSp * S
     const medGap = medGapSp * S
     const medSize = sysText(24)
-    const medTextOf = (item) => item.med.name + ' \u00d7 ' + (item.amount || '')
-    const linesOf = (item) => wrapText(medTextOf(item), medSize, medW)
+    const linesOf = (item) => wrapText(medItemText(item), medSize, medW)
     const itemsOf = (entry) => entry.items || []
     const statusHOf = (entry) => (entry._takenTime ? 32 : 0) + (entry._cancelled ? 32 : 0)
     const blockHOf = (entry) => {

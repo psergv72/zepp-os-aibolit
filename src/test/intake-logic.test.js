@@ -11,6 +11,7 @@ import {
   getIntakeStatus,
   getTakenTime,
   buildItemsSummary,
+  medItemText,
 } from '../utils/intake-logic.js'
 
 const MEDS = [
@@ -135,4 +136,13 @@ test('buildItemsSummary joins name × amount, skips disabled and missing', () =>
   ]
   assert.equal(buildItemsSummary(items, MEDS), 'Парацетамол \u00d7 2 таблетки, Аспирин')
   assert.equal(buildItemsSummary([], MEDS), '')
+})
+
+test('medItemText formats name (dosage), amount', () => {
+  assert.equal(
+    medItemText({ med: { name: 'Аспирин', dosage: '100 мг' }, amount: '1' }),
+    'Аспирин (100 мг), 1'
+  )
+  assert.equal(medItemText({ med: { name: 'Аспирин', dosage: '' }, amount: '2' }), 'Аспирин, 2')
+  assert.equal(medItemText({ med: { name: 'Аспирин', dosage: '100 мг' }, amount: '' }), 'Аспирин (100 мг)')
 })

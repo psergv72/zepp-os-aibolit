@@ -70,3 +70,10 @@ export function buildItemsSummary(items, medications) {
   }
   return lines.join(', ')
 }
+
+export function medItemText(item) {
+  const med = (item && item.med) || {}
+  const dosage = med.dosage ? ' (' + med.dosage + ')' : ''
+  const amount = item.amount ? ', ' + item.amount : ''
+  return (med.name || '') + dosage + amount
+}
