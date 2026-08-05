@@ -18,6 +18,7 @@ import { fetchConfigFromSide } from '../../utils/watch-config'
 import { sysText, getUiScale } from '../../utils/ui-scale'
 import { getContentBounds, renderTimeHeader, renderNavButton, enableScroll } from '../../utils/screen-layout'
 import { createViewManager } from '../../utils/view-manager'
+import { wrapText } from '../../utils/text-wrap'
 
 const logger = Logger.getLogger('aibolit-plan')
 
@@ -88,9 +89,18 @@ Page({
     const bottomPad = 48 * S
     const checkColW = 40 * S
     const checkGap = 16 * S
+    const medX = bounds.left + checkColW + checkGap
+    const medW = bounds.right - medX
+    const lineH = 40 * S
+    const medSize = sysText(24)
+    const medTextOf = (item) => item.med.name + ' \u00d7 ' + (item.amount || '')
+    const linesOf = (item) => wrapText(medTextOf(item), medSize, medW)
     const itemsOf = (entry) => entry.items || []
     const statusHOf = (entry) => (entry._takenTime ? 32 : 0) + (entry._cancelled ? 32 : 0)
-    const blockHOf = (entry) => (44 + itemsOf(entry).length * 40 + statusHOf(entry) + 15) * S
+    const blockHOf = (entry) => {
+      const totalLines = itemsOf(entry).reduce((sum, it) => sum + linesOf(it).length, 0)
+      return (44 + totalLines * 40 + statusHOf(entry) + 15) * S
+    }
 
     let totalH = bounds.top + headerH + headerGap + btnGap + btnH + bottomPad
     if (entries.length === 0) {
@@ -151,26 +161,27 @@ Page({
       })
       y += 44 * S
 
-      const medX = bounds.left + checkColW + checkGap
-      const medW = bounds.right - medX
       const firstMedY = y
 
       for (const item of items) {
         const medColor = entry._cancelled ? 0x555555 : (entry._taken ? 0x888888 : 0xffffff)
         const medDecor = entry._cancelled ? text_style.STRIKETHROUGH : text_style.NONE
-        this.ui.create(widget.TEXT, {
-          x: medX,
-          y: y,
-          w: medW,
-          h: 40 * S,
-          color: medColor,
-          text_size: sysText(24),
-          align_h: align.LEFT,
-          align_v: align.CENTER_V,
-          text_style: medDecor,
-          text: item.med.name + ' \u00d7 ' + (item.amount || ''),
-        })
-        y += 40 * S
+        const lines = linesOf(item)
+        for (let i = 0; i < lines.length; i++) {
+          this.ui.create(widget.TEXT, {
+            x: medX,
+            y: y + i * lineH,
+            w: medW,
+            h: lineH,
+            color: medColor,
+            text_size: medSize,
+            align_h: align.LEFT,
+            align_v: align.CENTER_V,
+            text_style: medDecor,
+            text: lines[i],
+          })
+        }
+        y += lines.length * lineH
       }
 
       if (entry._taken && entry._takenTime) {

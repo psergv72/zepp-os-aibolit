@@ -171,8 +171,12 @@ test('все приёмы отображаются без обрыва при к
     const page = instance()
     page.refreshView()
 
-    const meds = __getRegistry().filter(w => w.type === widget.TEXT && w.props.text && w.props.text.startsWith('Аспирин'))
-    assert.equal(meds.length, 5, 'все 5 приёмов должны быть отрисованы')
+    const S = 40 / 16
+    const medX = 70 + (40 + 16) * S
+    const meds = __getRegistry().filter(
+      w => w.type === widget.TEXT && w.props.x === medX && typeof w.props.text === 'string' && w.props.text.length > 0
+    )
+    assert.ok(meds.length >= 5, 'все 5 приёмов должны быть отрисованы')
 
     assert.ok(calls.length > 0, 'должен быть вызван setScrollView')
     assert.equal(calls[0][0], true, 'скролл включён')
@@ -180,4 +184,19 @@ test('все приёмы отображаются без обрыва при к
   } finally {
     delete globalThis.hmUI
   }
+})
+
+test('длинное название лекарства переносится по словам', () => {
+  storage.__stores().get('aibolit-data.json').set('medications', [{ id: 'm1', name: 'Ацетилсалициловая кислота', enabled: true }])
+
+  const page = instance()
+  page.refreshView()
+
+  const first = __getRegistry().find(w => w.type === widget.TEXT && w.props.text === 'Ацетилсалициловая')
+  const second = __getRegistry().find(w => w.type === widget.TEXT && w.props.text === 'кислота × 1')
+  assert.ok(first && second, 'название переносится на две строки')
+  assert.equal(second.props.y - first.props.y, 40, 'строки идут подряд с высотой 40')
+
+  const ctrl = __getRegistry().find(w => w.type === widget.TEXT && w.props.text === '\u2610')
+  assert.equal(ctrl.props.y, first.props.y, 'контрол по верхнему краю первой строки')
 })

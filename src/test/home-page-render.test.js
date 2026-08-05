@@ -160,8 +160,12 @@ test('приём отображается при крупном шрифте и 
     const page = instance()
     page.refreshView()
 
-    const meds = __getRegistry().filter(w => w.type === widget.TEXT && w.props.text && w.props.text.startsWith('Аспирин'))
-    assert.equal(meds.length, 1, 'приём должен отображаться даже при крупном шрифте')
+    const S = 40 / 16
+    const medX = 70 + (40 + 16) * S
+    const meds = __getRegistry().filter(
+      w => w.type === widget.TEXT && w.props.x === medX && typeof w.props.text === 'string' && w.props.text.length > 0
+    )
+    assert.ok(meds.length >= 1, 'приём должен отображаться даже при крупном шрифте')
 
     assert.ok(calls.length > 0, 'должен быть вызван setScrollView')
     assert.equal(calls[0][0], true, 'скролл включён')
@@ -213,4 +217,19 @@ test('заголовок страницы — «Сегодня»', () => {
 
   const header = __getRegistry().find(w => w.type === widget.TEXT && w.props.text === 'Сегодня')
   assert.ok(header, 'заголовок «Сегодня» должен существовать')
+})
+
+test('длинное название лекарства переносится по словам', () => {
+  storage.__stores().get('aibolit-data.json').set('medications', [{ id: 'm1', name: 'Ацетилсалициловая кислота', enabled: true }])
+
+  const page = instance()
+  page.refreshView()
+
+  const first = __getRegistry().find(w => w.type === widget.TEXT && w.props.text === 'Ацетилсалициловая')
+  const second = __getRegistry().find(w => w.type === widget.TEXT && w.props.text === 'кислота × 1')
+  assert.ok(first && second, 'название переносится на две строки')
+  assert.equal(second.props.y - first.props.y, 40, 'строки идут подряд с высотой 40')
+
+  const check = __getRegistry().find(w => w.type === widget.TEXT && w.props.text === '\u2610')
+  assert.equal(check.props.y, first.props.y, 'чекбокс по верхнему краю первой строки')
 })

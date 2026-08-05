@@ -8,6 +8,7 @@ import { fetchConfigFromSide } from '../../utils/watch-config'
 import { sysText, getUiScale } from '../../utils/ui-scale'
 import { getContentBounds, renderTimeHeader, renderNavButton, enableScroll } from '../../utils/screen-layout'
 import { createViewManager } from '../../utils/view-manager'
+import { wrapText } from '../../utils/text-wrap'
 
 const logger = Logger.getLogger('aibolit-home')
 
@@ -78,8 +79,17 @@ Page({
     const bottomPad = 48 * S
     const checkColW = 40 * S
     const checkGap = 16 * S
+    const medX = bounds.left + checkColW + checkGap
+    const medW = bounds.right - medX
+    const lineH = 40 * S
+    const medSize = sysText(24)
+    const medTextOf = (item) => item.med.name + ' \u00d7 ' + (item.amount || '')
+    const linesOf = (item) => wrapText(medTextOf(item), medSize, medW)
     const itemsOf = (entry) => entry.items || []
-    const blockHOf = (entry) => (44 + itemsOf(entry).length * 40 + 10) * S
+    const blockHOf = (entry) => {
+      const totalLines = itemsOf(entry).reduce((sum, it) => sum + linesOf(it).length, 0)
+      return (44 + totalLines * 40 + 10) * S
+    }
 
     let totalH = bounds.top + headerH + headerGap + btnGap + btnH + bottomPad
     if (entries.length === 0) {
@@ -136,24 +146,25 @@ Page({
       })
       y += 44 * S
 
-      const medX = bounds.left + checkColW + checkGap
-      const medW = bounds.right - medX
       const firstMedY = y
 
       for (const item of items) {
-        this.ui.create(widget.TEXT, {
-          x: medX,
-          y: y,
-          w: medW,
-          h: 40 * S,
-          color: 0xffffff,
-          text_size: sysText(24),
-          align_h: align.LEFT,
-          align_v: align.CENTER_V,
-          text_style: text_style.NONE,
-          text: item.med.name + ' \u00d7 ' + (item.amount || ''),
-        })
-        y += 40 * S
+        const lines = linesOf(item)
+        for (let i = 0; i < lines.length; i++) {
+          this.ui.create(widget.TEXT, {
+            x: medX,
+            y: y + i * lineH,
+            w: medW,
+            h: lineH,
+            color: 0xffffff,
+            text_size: medSize,
+            align_h: align.LEFT,
+            align_v: align.CENTER_V,
+            text_style: text_style.NONE,
+            text: lines[i],
+          })
+        }
+        y += lines.length * lineH
       }
 
       const takeBtn = this.ui.create(widget.TEXT, {
