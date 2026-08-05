@@ -173,9 +173,9 @@ Page({
 
       const takeBtn = this.ui.create(widget.TEXT, {
         x: bounds.left,
-        y: firstMedY,
+        y: firstMedY + (lineH - medGap) / 2,
         w: checkColW,
-        h: 40 * S,
+        h: medGap,
         color: 0x4fc3f7,
         text_size: sysText(36),
         align_h: align.CENTER_H,

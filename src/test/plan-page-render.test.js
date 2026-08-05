@@ -130,7 +130,7 @@ test('время блока — без текстовых тире', () => {
   assert.equal(dashTexts.length, 0, 'не должно быть текстовых тире в заголовках времени')
 })
 
-test('контрол приёма слева и по верхнему краю первой строки', () => {
+test('контрол приёма слева и по центру первой строки', () => {
   const page = instance()
   page.refreshView()
 
@@ -140,7 +140,11 @@ test('контрол приёма слева и по верхнему краю �
 
   const med = __getRegistry().find(w => w.type === widget.TEXT && w.props.text.startsWith('Аспирин'))
   assert.ok(med, 'строка лекарства должна существовать')
-  assert.equal(ctrl.props.y, med.props.y, 'контрол по верхнему краю первой строки')
+  assert.equal(
+    ctrl.props.y + ctrl.props.h / 2,
+    med.props.y + med.props.h / 2,
+    'контрол выровнен по центру первой строки лекарства'
+  )
 })
 
 test('заголовок отменённого приёма перечёркнут', async () => {
@@ -209,6 +213,10 @@ test('длинное название лекарства переносится 
   assert.equal(ibu.props.y - second.props.y, 40, 'между лекарствами сохранён прежний интервал')
 
   const ctrl = __getRegistry().find(w => w.type === widget.TEXT && w.props.text === '\u2610')
-  assert.equal(ctrl.props.y, first.props.y, 'контрол по верхнему краю первой строки')
+  assert.equal(
+    ctrl.props.y + ctrl.props.h / 2,
+    first.props.y + first.props.h / 2,
+    'контрол выровнен по центру первой строки лекарства'
+  )
   assert.equal(first.props.x - (ctrl.props.x + ctrl.props.w), 4, 'отступ между контролом и названием уменьшен')
 })

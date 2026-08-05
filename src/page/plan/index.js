@@ -228,9 +228,9 @@ Page({
         const color = entry._taken ? 0x4caf50 : 0xffffff
         const ctrl = this.ui.create(widget.TEXT, {
           x: bounds.left,
-          y: firstMedY,
+          y: firstMedY + (lineH - medGap) / 2,
           w: checkColW,
-          h: 40 * S,
+          h: medGap,
           color: color,
           text_size: sysText(36),
           align_h: align.CENTER_H,

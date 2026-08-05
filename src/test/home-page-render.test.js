@@ -127,7 +127,7 @@ test('заголовок времени блока рисуется как те�
   assert.ok(line.props.x >= time.props.x + time.props.w, 'линия начинается после времени')
 })
 
-test('чекбокс слева от лекарств и по верхнему краю первой строки', () => {
+test('чекбокс слева от лекарств и по центру первой строки', () => {
   const page = instance()
   page.refreshView()
 
@@ -137,7 +137,11 @@ test('чекбокс слева от лекарств и по верхнему �
 
   const med = __getRegistry().find(w => w.type === widget.TEXT && w.props.text.startsWith('Аспирин'))
   assert.ok(med, 'строка лекарства должна существовать')
-  assert.equal(check.props.y, med.props.y, 'чекбокс по верхнему краю первой строки лекарств')
+  assert.equal(
+    check.props.y + check.props.h / 2,
+    med.props.y + med.props.h / 2,
+    'чекбокс выровнен по центру первой строки лекарства'
+  )
 })
 
 test('круглая форма: все виджеты в пределах безопасной зоны', () => {
@@ -242,6 +246,10 @@ test('длинное название лекарства переносится 
   assert.equal(ibu.props.y - second.props.y, 40, 'между лекарствами сохранён прежний интервал')
 
   const check = __getRegistry().find(w => w.type === widget.TEXT && w.props.text === '\u2610')
-  assert.equal(check.props.y, first.props.y, 'чекбокс по верхнему краю первой строки')
+  assert.equal(
+    check.props.y + check.props.h / 2,
+    first.props.y + first.props.h / 2,
+    'чекбокс выровнен по центру первой строки лекарства'
+  )
   assert.equal(first.props.x - (check.props.x + check.props.w), 4, 'отступ между чекбоксом и названием уменьшен')
 })
