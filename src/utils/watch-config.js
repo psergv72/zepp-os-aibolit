@@ -1,5 +1,5 @@
-import { ZML_METHODS } from './constants'
-import { setMedications, setIntakes, setSettings } from './storage'
+import { ZML_METHODS, STORAGE_KEYS } from './constants'
+import { setMedications, setIntakes, setSettings, getConfigRevision, setConfigRevision } from './storage'
 import { parseSettingsItem } from './config-sync'
 
 export function getMessaging() {
@@ -24,15 +24,23 @@ export function getSettingsStorage() {
 
 export function applyConfigToStorage(config) {
   if (!config) return false
+  if (typeof config.revision !== 'number') return false
+  if (config.revision <= getConfigRevision()) return false
   if (Array.isArray(config.medications)) setMedications(config.medications)
   if (Array.isArray(config.intakes)) setIntakes(config.intakes)
   if (config.settings && typeof config.settings === 'object') setSettings(config.settings)
+  setConfigRevision(config.revision)
   return true
 }
 
 export function applyConfigFromSettings() {
   const storage = getSettingsStorage()
   if (!storage) return false
+
+  const revisionRaw = storage.getItem(STORAGE_KEYS.CONFIG_REVISION)
+  const revision = parseSettingsItem(revisionRaw)
+  if (typeof revision !== 'number') return false
+  if (revision <= getConfigRevision()) return false
 
   let applied = false
 
@@ -62,6 +70,7 @@ export function applyConfigFromSettings() {
     }
   }
 
+  if (applied) setConfigRevision(revision)
   return applied
 }
 
