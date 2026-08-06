@@ -5,7 +5,7 @@ import { register } from 'node:module'
 register(new URL('./helpers/zos-loader.mjs', import.meta.url))
 
 const storage = await import('./helpers/stubs/zos-storage.mjs')
-const { initSync, retrySync, sendTakeLogToPhone, sendCancellationToPhone, fetchTakesFromPhone, mergeTakeRecords } = await import('../utils/sync.js')
+const { initSync, retrySync, sendTakeLogToPhone, sendCancellationToPhone, sendUndoTakeToPhone, fetchTakesFromPhone, mergeTakeRecords } = await import('../utils/sync.js')
 
 function seed() {
   storage.__resetStorage()
@@ -171,6 +171,22 @@ test('mergeTakeRecords добавляет только новые записи t
   assert.ok(!logs.some(i => i.id === 'log_3'))
 })
 
+test('mergeTakeRecords не возвращает taken, если в очереди есть undone для той же пары', () => {
+  const store = storage.__stores().get('aibolit-data.json')
+  store.set('takeLogs', [])
+  store.set('syncQueue', [
+    { id: 'undo_1', intakeId: 'i1', date: '2026-08-05', status: 'undone' },
+  ])
+
+  const changed = mergeTakeRecords([
+    { id: 'log_1', intakeId: 'i1', date: '2026-08-05', status: 'taken' },
+  ])
+
+  assert.equal(changed, false)
+  const logs = store.get('takeLogs')
+  assert.equal(logs.length, 0)
+})
+
 test('mergeTakeRecords не меняет ничего при пустом списке', () => {
   assert.equal(mergeTakeRecords([]), false)
   assert.equal(mergeTakeRecords(null), false)
@@ -195,6 +211,27 @@ test('sendCancellationToPhone встаёт в очередь и уходит ч�
   assert.equal(sent[0].params.records[0].intakeId, 'i1')
   assert.equal(sent[0].params.records[0].date, '2026-08-05')
   assert.equal(sent[0].params.records[0].status, 'cancelled')
+})
+
+test('sendUndoTakeToPhone встаёт в очередь и уходит через sync_intake со status undone', async () => {
+  const sent = []
+  const fakeSide = {
+    request(payload) {
+      sent.push(payload)
+      return Promise.resolve({ success: true, count: payload.params.records.length })
+    },
+  }
+  initSync(fakeSide)
+
+  sendUndoTakeToPhone('i1', '2026-08-05')
+  await new Promise((resolve) => setTimeout(resolve, 0))
+
+  assert.equal(sent.length, 1)
+  assert.equal(sent[0].method, 'sync_intake')
+  assert.equal(sent[0].params.records.length, 1)
+  assert.equal(sent[0].params.records[0].intakeId, 'i1')
+  assert.equal(sent[0].params.records[0].date, '2026-08-05')
+  assert.equal(sent[0].params.records[0].status, 'undone')
 })
 
 test('при неудачной отправке записи остаются в очереди и доезжают при retrySync', async () => {

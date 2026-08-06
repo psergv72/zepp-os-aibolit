@@ -125,3 +125,43 @@ test('onRequest SYNC_INTAKE заменяет предыдущую запись �
   assert.equal(history[0].id, 'cancel_1')
   assert.equal(history[0].status, 'cancelled')
 })
+
+test('onRequest SYNC_INTAKE с status undone удаляет taken-запись пары (intakeId, date)', () => {
+  sideOpts.onRequest({
+    method: 'sync_intake',
+    params: { records: [
+      { id: 'log_1', intakeId: 'i1', date: '2026-08-06', status: 'taken', takenTime: '08:05' },
+    ] },
+  }, () => {})
+
+  sideOpts.onRequest({
+    method: 'sync_intake',
+    params: { records: [
+      { id: 'undo_1', intakeId: 'i1', date: '2026-08-06', status: 'undone' },
+    ] },
+  }, () => {})
+
+  const history = JSON.parse(storageMap.get('history_2026-08-06'))
+  assert.equal(history.length, 0)
+})
+
+test('onRequest SYNC_INTAKE с status undone не затирает записи других пар', () => {
+  sideOpts.onRequest({
+    method: 'sync_intake',
+    params: { records: [
+      { id: 'log_1', intakeId: 'i1', date: '2026-08-06', status: 'taken' },
+      { id: 'log_2', intakeId: 'i2', date: '2026-08-06', status: 'taken' },
+    ] },
+  }, () => {})
+
+  sideOpts.onRequest({
+    method: 'sync_intake',
+    params: { records: [
+      { id: 'undo_1', intakeId: 'i1', date: '2026-08-06', status: 'undone' },
+    ] },
+  }, () => {})
+
+  const history = JSON.parse(storageMap.get('history_2026-08-06'))
+  assert.equal(history.length, 1)
+  assert.equal(history[0].id, 'log_2')
+})

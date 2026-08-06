@@ -43,9 +43,12 @@ export function mergeTakeRecords(records) {
   if (!records || records.length === 0) return false
 
   const takeLogs = getTakeLogs()
+  const queue = getSyncQueue()
+  const hasPendingUndo = (intakeId, date) => queue.some(q => q.intakeId === intakeId && q.date === date && q.status === INTAKE_STATUS.UNDONE)
   let changed = false
   for (const record of records) {
     if (!record || !record.id || record.status !== 'taken') continue
+    if (hasPendingUndo(record.intakeId, record.date)) continue
     if (takeLogs.some(i => i.id === record.id)) continue
     takeLogs.push(record)
     changed = true
@@ -65,6 +68,17 @@ export function sendCancellationToPhone(intakeId, date) {
     intakeId,
     date,
     status: INTAKE_STATUS.CANCELLED,
+  }
+  addToSyncQueue(record)
+  scheduleSync()
+}
+
+export function sendUndoTakeToPhone(intakeId, date) {
+  const record = {
+    id: 'undo_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+    intakeId,
+    date,
+    status: INTAKE_STATUS.UNDONE,
   }
   addToSyncQueue(record)
   scheduleSync()

@@ -1,5 +1,5 @@
 ﻿import { BaseSideService } from '@zeppos/zml/base-side'
-import { ZML_METHODS } from '../utils/constants'
+import { ZML_METHODS, INTAKE_STATUS } from '../utils/constants'
 import { CONFIG_KEYS, parseSettingsItem } from '../utils/config-sync'
 
 AppSideService(
@@ -88,6 +88,13 @@ AppSideService(
             const dateKey = `history_${record.date}`
             const existing = settings.settingsStorage.getItem(dateKey)
             const history = existing ? JSON.parse(existing) : []
+            if (record.status === INTAKE_STATUS.UNDONE) {
+              const filtered = history.filter(r => !(r.intakeId === record.intakeId && r.date === record.date && r.status === INTAKE_STATUS.TAKEN))
+              if (filtered.length !== history.length) {
+                settings.settingsStorage.setItem(dateKey, JSON.stringify(filtered))
+              }
+              continue
+            }
             const idx = history.findIndex(r => r.id === record.id)
             if (idx >= 0) {
               history[idx] = record

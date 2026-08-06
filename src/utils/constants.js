@@ -14,6 +14,7 @@ export const INTAKE_STATUS = {
   SNOOZED: 'snoozed',
   SKIPPED: 'skipped',
   CANCELLED: 'cancelled',
+  UNDONE: 'undone',
 }
 
 export const DEFAULT_SETTINGS = {
