@@ -46,6 +46,18 @@ test('buildConfig включает актуальную ревизию', () => {
   assert.equal(config.medications[0].id, 'm1')
 })
 
+test('onRun инициализирует отсутствующую ревизию и пушит конфиг', () => {
+  storageMap.delete('configRevision')
+  const calls = []
+  sideOpts.call = (payload) => { calls.push(payload) }
+
+  sideOpts.onRun()
+
+  assert.equal(JSON.parse(storageMap.get('configRevision')), 1)
+  assert.equal(calls.length, 1)
+  assert.equal(calls[0].params.config.revision, 1)
+})
+
 test('onSettingsChange для CONFIG_KEYS увеличивает ревизию и пушит конфиг', () => {
   const calls = []
   sideOpts.call = (payload) => { calls.push(payload) }

@@ -10,6 +10,7 @@ AppSideService(
 
     onRun() {
       console.log('Side Service onRun')
+      this.ensureConfigRevision()
       this.pushConfigToWatch()
     },
 
@@ -29,6 +30,13 @@ AppSideService(
       const current = parseSettingsItem(this.settings.getItem('configRevision')) || 0
       const next = (typeof current === 'number' ? current : 0) + 1
       this.settings.setItem('configRevision', next)
+    },
+
+    ensureConfigRevision() {
+      const current = parseSettingsItem(this.settings.getItem('configRevision'))
+      if (current === null || current === undefined) {
+        this.settings.setItem('configRevision', 1)
+      }
     },
 
     buildConfig() {
