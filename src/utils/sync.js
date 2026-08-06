@@ -1,10 +1,12 @@
 import { log as Logger } from '@zos/utils'
-import { ZML_METHODS } from './constants'
+import { ZML_METHODS, INTAKE_STATUS } from './constants'
 import { getSyncQueue, addToSyncQueue, clearSyncedItems, pruneOldTakeLogs, getTakeLogs, setTakeLogs } from './storage'
 
 const logger = Logger.getLogger('aibolit-sync')
 
 let sideService = null
+let syncing = false
+let pendingSync = false
 
 export function initSync(zmlSideService) {
   sideService = zmlSideService
@@ -54,14 +56,42 @@ export function mergeTakeRecords(records) {
 
 export function sendTakeLogToPhone(takeLog) {
   addToSyncQueue(takeLog)
+  scheduleSync()
+}
+
+export function sendCancellationToPhone(intakeId, date) {
+  const record = {
+    id: 'cancel_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+    intakeId,
+    date,
+    status: INTAKE_STATUS.CANCELLED,
+  }
+  addToSyncQueue(record)
+  scheduleSync()
+}
+
+function scheduleSync() {
+  if (syncing) {
+    pendingSync = true
+    return
+  }
+  syncing = true
   trySyncNow()
+    .catch(() => {})
+    .finally(() => {
+      syncing = false
+      if (pendingSync) {
+        pendingSync = false
+        scheduleSync()
+      }
+    })
 }
 
 function trySyncNow() {
   const messaging = getMessaging()
   if (!messaging) return Promise.resolve()
 
-  const queue = getSyncQueue()
+  const queue = getSyncQueue().slice()
   if (queue.length === 0) return Promise.resolve()
 
   const payload = {
@@ -93,26 +123,6 @@ function trySyncNow() {
   }
 }
 
-export function sendCancellationToPhone(intakeId, date) {
-  const messaging = getMessaging()
-  if (!messaging) return
-
-  const payload = {
-    method: ZML_METHODS.SYNC_CANCELLATION,
-    params: {
-      intakeId,
-      date,
-    },
-  }
-
-  try {
-    messaging.request(payload)
-    logger.log(`Cancellation synced for ${intakeId} on ${date}`)
-  } catch (error) {
-    logger.log(`Cancellation sync failed: ${error}`)
-  }
-}
-
 export function retrySync() {
-  trySyncNow()
+  scheduleSync()
 }

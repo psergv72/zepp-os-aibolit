@@ -52,7 +52,27 @@ test('sendTakeLogToPhone убирает из очереди успешно от�
   assert.equal(queue.length, 0)
 })
 
-test('sendTakeLogToPhone не вызывает request до initSync', () => {
+test('два sendTakeLogToPhone подряд не дублируют записи в одном payload', async () => {
+  const sent = []
+  const fakeSide = {
+    request(payload) {
+      sent.push(payload)
+      return Promise.resolve({ success: true, count: payload.params.records.length })
+    },
+  }
+  initSync(fakeSide)
+
+  sendTakeLogToPhone({ id: 'log_1', intakeId: 'i1', status: 'taken' })
+  sendTakeLogToPhone({ id: 'log_2', intakeId: 'i2', status: 'taken' })
+  await new Promise((resolve) => setTimeout(resolve, 0))
+
+  assert.equal(sent.length, 2)
+  const first = sent[0].params.records.map(r => r.id)
+  const second = sent[1].params.records.map(r => r.id)
+  assert.deepEqual([...first, ...second].sort(), ['log_1', 'log_2'])
+})
+
+test('sendTakeLogToPhone не вызывает request до initSync', async () => {
   const sent = []
   const fakeSide = {
     request(payload) {
@@ -62,6 +82,7 @@ test('sendTakeLogToPhone не вызывает request до initSync', () => {
   }
 
   sendTakeLogToPhone({ id: 'log_1', intakeId: 'i1', status: 'taken' })
+  await new Promise((resolve) => setTimeout(resolve, 0))
   assert.equal(sent.length, 0)
 })
 
@@ -155,18 +176,23 @@ test('mergeTakeRecords не меняет ничего при пустом спи
   assert.equal(mergeTakeRecords(null), false)
 })
 
-test('sendCancellationToPhone отправляет отмену через request', () => {  const sent = []
+test('sendCancellationToPhone встаёт в очередь и уходит через sync_intake со status cancelled', async () => {
+  const sent = []
   const fakeSide = {
     request(payload) {
       sent.push(payload)
-      return Promise.resolve({ success: true })
+      return Promise.resolve({ success: true, count: payload.params.records.length })
     },
   }
   initSync(fakeSide)
 
   sendCancellationToPhone('i1', '2026-08-05')
+  await new Promise((resolve) => setTimeout(resolve, 0))
 
   assert.equal(sent.length, 1)
-  assert.equal(sent[0].method, 'sync_cancellation')
-  assert.equal(sent[0].params.intakeId, 'i1')
+  assert.equal(sent[0].method, 'sync_intake')
+  assert.equal(sent[0].params.records.length, 1)
+  assert.equal(sent[0].params.records[0].intakeId, 'i1')
+  assert.equal(sent[0].params.records[0].date, '2026-08-05')
+  assert.equal(sent[0].params.records[0].status, 'cancelled')
 })
