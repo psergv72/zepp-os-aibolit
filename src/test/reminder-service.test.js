@@ -9,6 +9,8 @@ globalThis.AppService = (opts) => { serviceOpts = opts }
 
 const notification = await import('./helpers/stubs/zos-notification.mjs')
 const storage = await import('./helpers/stubs/zos-storage.mjs')
+const alarm = await import('./helpers/stubs/zos-alarm.mjs')
+const syncModule = await import('../utils/sync.js')
 
 await import('../app-service/reminder.js')
 
@@ -27,8 +29,10 @@ function seed() {
 }
 
 beforeEach(() => {
+  delete globalThis.settings
   seed()
   notification.__reset()
+  alarm.__reset()
 })
 
 test('onInit при срабатывании alarm вызывает notify', () => {
@@ -80,7 +84,7 @@ test('onInit игнорирует битый JSON', () => {
   assert.equal(notification.__calls.length, 0)
 })
 
-test('mode sync применяет настройки и не шлёт уведомление', () => {
+test('mode sync применяет настройки, обновляет будильники и ретраит очередь без уведомления', () => {
   const settingsMap = {
     configRevision: JSON.stringify(2),
     medications: JSON.stringify([{ id: 'm2', name: 'Ибупрофен', enabled: true }]),
@@ -94,13 +98,25 @@ test('mode sync применяет настройки и не шлёт увед�
     },
   }
 
+  const sent = []
+  syncModule.initSync({
+    request(payload) {
+      sent.push(payload)
+      return Promise.resolve({ success: true, count: payload.params.records.length })
+    },
+  })
+  const store = storage.__stores().get('aibolit-data.json')
+  store.set('syncQueue', [{ id: 'log_q', intakeId: 'i1', status: 'taken' }])
+
   serviceOpts.onInit(JSON.stringify({ mode: 'sync' }))
 
   delete globalThis.settings
   assert.equal(notification.__calls.length, 0)
-  const store = storage.__stores().get('aibolit-data.json')
   assert.equal(store.get('configRevision'), 2)
   assert.deepEqual(store.get('medications'), [{ id: 'm2', name: 'Ибупрофен', enabled: true }])
+  const syncSet = alarm.__getCalls().filter(c => c.method === 'set' && JSON.parse(c.option.param).mode === 'sync')
+  assert.ok(syncSet.length > 0, 'refreshAlarms пересоздал sync-alarm (режим sync вызван)')
+  assert.ok(sent.some(p => p.method === 'sync_intake'), 'retrySync отправил очередь на телефон')
 })
 
 test('mode sync игнорирует intakeId', () => {
