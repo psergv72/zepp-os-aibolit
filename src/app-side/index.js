@@ -20,8 +20,15 @@ AppSideService(
     onSettingsChange({ key }) {
       console.log(`onSettingsChange key: ${key}`)
       if (CONFIG_KEYS.includes(key)) {
+        this.bumpConfigRevision()
         this.pushConfigToWatch()
       }
+    },
+
+    bumpConfigRevision() {
+      const current = parseSettingsItem(this.settings.getItem('configRevision')) || 0
+      const next = (typeof current === 'number' ? current : 0) + 1
+      this.settings.setItem('configRevision', next)
     },
 
     buildConfig() {
@@ -33,6 +40,8 @@ AppSideService(
           config[key] = value
         }
       }
+      const revision = parseSettingsItem(this.settings.getItem('configRevision')) || 0
+      config.revision = typeof revision === 'number' ? revision : 0
       return config
     },
 
@@ -66,33 +75,31 @@ AppSideService(
       if (req.method === ZML_METHODS.SYNC_INTAKE) {
         const { records } = req.params
         if (records && records.length > 0) {
+          const batchIds = new Set(records.filter(Boolean).map(r => r.id))
           for (const record of records) {
+            if (!record || !record.id) continue
             const dateKey = `history_${record.date}`
             const existing = settings.settingsStorage.getItem(dateKey)
             const history = existing ? JSON.parse(existing) : []
-            history.push(record)
+            const idx = history.findIndex(r => r.id === record.id)
+            if (idx >= 0) {
+              history[idx] = record
+            } else {
+              const conflictIdx = history.findIndex(r =>
+                !batchIds.has(r.id) && r.intakeId === record.intakeId && r.date === record.date
+              )
+              if (conflictIdx >= 0) {
+                history[conflictIdx] = record
+              } else {
+                history.push(record)
+              }
+            }
             settings.settingsStorage.setItem(dateKey, JSON.stringify(history))
           }
           res(null, { success: true, count: records.length })
         } else {
           res(null, { success: true, count: 0 })
         }
-        return
-      }
-
-      if (req.method === ZML_METHODS.SYNC_CANCELLATION) {
-        const { intakeId, date } = req.params
-        const dateKey = `history_${date}`
-        const existing = settings.settingsStorage.getItem(dateKey)
-        const history = existing ? JSON.parse(existing) : []
-        history.push({
-          intakeId,
-          date,
-          status: 'cancelled',
-          syncedAt: new Date().toISOString(),
-        })
-        settings.settingsStorage.setItem(dateKey, JSON.stringify(history))
-        res(null, { success: true })
         return
       }
 
