@@ -79,3 +79,31 @@ test('onInit игнорирует битый JSON', () => {
   serviceOpts.onInit('not-json')
   assert.equal(notification.__calls.length, 0)
 })
+
+test('mode sync применяет настройки и не шлёт уведомление', () => {
+  const settingsMap = {
+    configRevision: JSON.stringify(2),
+    medications: JSON.stringify([{ id: 'm2', name: 'Ибупрофен', enabled: true }]),
+    intakes: JSON.stringify([{ id: 'i2', time: '09:00', weekDays: null, items: [{ medicationId: 'm2', amount: '1' }] }]),
+  }
+  globalThis.settings = {
+    settingsStorage: {
+      getItem(key) {
+        return settingsMap[key] !== undefined ? settingsMap[key] : null
+      },
+    },
+  }
+
+  serviceOpts.onInit(JSON.stringify({ mode: 'sync' }))
+
+  delete globalThis.settings
+  assert.equal(notification.__calls.length, 0)
+  const store = storage.__stores().get('aibolit-data.json')
+  assert.equal(store.get('configRevision'), 2)
+  assert.deepEqual(store.get('medications'), [{ id: 'm2', name: 'Ибупрофен', enabled: true }])
+})
+
+test('mode sync игнорирует intakeId', () => {
+  serviceOpts.onInit(JSON.stringify({ mode: 'sync', intakeId: 'i1' }))
+  assert.equal(notification.__calls.length, 0)
+})

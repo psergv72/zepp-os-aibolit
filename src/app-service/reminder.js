@@ -1,9 +1,11 @@
 import { log as Logger } from '@zos/utils'
 import { notify } from '@zos/notification'
 import { getSettings, getIntakes, getMedications, getTakeLogs, isIntakeCancelled, getTodayDateStr } from '../utils/storage'
-import { createRetryAlarm } from '../utils/schedule'
+import { createRetryAlarm, refreshAlarms } from '../utils/schedule'
 import { ALARM_MODES } from '../utils/constants'
 import { buildItemsSummary } from '../utils/intake-logic.js'
+import { retrySync } from '../utils/sync'
+import { applyConfigFromSettings } from '../utils/watch-config'
 
 const logger = Logger.getLogger('aibolit-reminder')
 
@@ -19,6 +21,15 @@ function handleEvent(e) {
   }
 
   const { mode, intakeId } = params
+
+  if (mode === ALARM_MODES.SYNC) {
+    logger.log('sync tick: apply config, refresh alarms, retry queue')
+    applyConfigFromSettings()
+    refreshAlarms()
+    retrySync()
+    return
+  }
+
   if (!intakeId) return
 
   const intake = getIntakes().find(i => i.id === intakeId)
