@@ -75,7 +75,6 @@ AppSideService(
       if (req.method === ZML_METHODS.SYNC_INTAKE) {
         const { records } = req.params
         if (records && records.length > 0) {
-          const batchIds = new Set(records.filter(Boolean).map(r => r.id))
           for (const record of records) {
             if (!record || !record.id) continue
             const dateKey = `history_${record.date}`
@@ -85,9 +84,7 @@ AppSideService(
             if (idx >= 0) {
               history[idx] = record
             } else {
-              const conflictIdx = history.findIndex(r =>
-                !batchIds.has(r.id) && r.intakeId === record.intakeId && r.date === record.date
-              )
+              const conflictIdx = history.findIndex(r => r.intakeId === record.intakeId && r.date === record.date)
               if (conflictIdx >= 0) {
                 history[conflictIdx] = record
               } else {

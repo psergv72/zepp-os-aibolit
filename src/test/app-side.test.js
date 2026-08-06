@@ -83,7 +83,7 @@ test('onRequest SYNC_INTAKE дедуплицирует записи по id', ()
     method: 'sync_intake',
     params: { records: [
       { id: 'log_1', intakeId: 'i1', date: '2026-08-06', status: 'taken' },
-      { id: 'log_2', intakeId: 'i1', date: '2026-08-06', status: 'snoozed' },
+      { id: 'log_2', intakeId: 'i2', date: '2026-08-06', status: 'snoozed' },
     ] },
   }, () => {})
 
