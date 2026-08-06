@@ -196,3 +196,33 @@ test('sendCancellationToPhone встаёт в очередь и уходит ч�
   assert.equal(sent[0].params.records[0].date, '2026-08-05')
   assert.equal(sent[0].params.records[0].status, 'cancelled')
 })
+
+test('при неудачной отправке записи остаются в очереди и доезжают при retrySync', async () => {
+  let fail = true
+  const sent = []
+  const fakeSide = {
+    request(payload) {
+      sent.push(payload)
+      return fail ? Promise.reject(new Error('ble down')) : Promise.resolve({ success: true, count: payload.params.records.length })
+    },
+  }
+  initSync(fakeSide)
+
+  sendTakeLogToPhone({ id: 'log_1', intakeId: 'i1', status: 'taken' })
+  await new Promise((resolve) => setTimeout(resolve, 0))
+
+  const queueAfterFail = storage.__stores().get('aibolit-data.json').get('syncQueue')
+  assert.ok(queueAfterFail, 'syncQueue существует')
+  assert.equal(queueAfterFail.length, 1, 'записи остаются в очереди после неудачи')
+  assert.equal(sent.length, 1)
+
+  fail = false
+  retrySync()
+  await new Promise((resolve) => setTimeout(resolve, 0))
+
+  assert.equal(sent.length, 2)
+  assert.equal(sent[1].params.records.length, 1)
+  assert.equal(sent[1].params.records[0].id, 'log_1')
+  const queueAfterRetry = storage.__stores().get('aibolit-data.json').get('syncQueue')
+  assert.equal(queueAfterRetry.length, 0, 'очередь очищена после успешного retry')
+})
