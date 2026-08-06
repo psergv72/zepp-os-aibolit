@@ -126,7 +126,8 @@ test('refreshAlarms создаёт sync-alarm с REPEAT_MINUTE и repeat_period 
   assert.ok(syncSet, 'sync-alarm создан')
   assert.equal(syncSet.option.url, 'app-service/reminder')
   assert.equal(syncSet.option.repeat_type, 1)
-  assert.equal(syncSet.option.repeat_period, 30)
+  assert.equal(syncSet.option.repeat_period, 29)
+  assert.equal(syncSet.option.repeat_period + syncSet.option.repeat_duration, 30)
 })
 
 test('createSyncAlarm отменяет предыдущий sync-alarm и сохраняет новый id', () => {

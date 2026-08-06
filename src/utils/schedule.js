@@ -105,7 +105,7 @@ export function createSyncAlarm(syncInterval) {
     url: 'app-service/reminder',
     time: start,
     repeat_type: REPEAT_MINUTE,
-    repeat_period: interval,
+    repeat_period: Math.max(1, interval - 1),
     repeat_duration: 1,
     param: JSON.stringify({ mode: ALARM_MODES.SYNC }),
     store: true,
@@ -113,7 +113,7 @@ export function createSyncAlarm(syncInterval) {
 
   const id = setAlarm(option)
   if (id && id > 0) setSyncAlarmId(id)
-  logger.log(`Created sync alarm id=${id} repeat_period=${interval}min start=${start}`)
+  logger.log(`Created sync alarm id=${id} repeat_period=${option.repeat_period}min start=${start}`)
   return id
 }
 
