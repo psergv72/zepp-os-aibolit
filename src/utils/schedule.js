@@ -1,7 +1,7 @@
-import { set as setAlarm, cancel as cancelAlarm, getAllAlarms, REPEAT_WEEK, REPEAT_ONCE } from '@zos/alarm'
+import { set as setAlarm, cancel as cancelAlarm, getAllAlarms, REPEAT_WEEK, REPEAT_ONCE, REPEAT_MINUTE } from '@zos/alarm'
 import { log as Logger } from '@zos/utils'
-import { ALARM_MODES } from './constants'
-import { getMedications, getIntakes } from './storage'
+import { ALARM_MODES, DEFAULT_SETTINGS } from './constants'
+import { getMedications, getIntakes, getSettings, getSyncAlarmId, setSyncAlarmId } from './storage'
 import { getWeekDaysBitmask, getEnabledMedItems, isIntakeOnDay } from './intake-logic.js'
 
 const logger = Logger.getLogger('aibolit-schedule')
@@ -85,12 +85,40 @@ export function createSnoozeAlarm(intakeId, delayMinutes) {
   return id
 }
 
+export function createSyncAlarm(syncInterval) {
+  const prevId = getSyncAlarmId()
+  if (prevId !== null) {
+    try {
+      cancelAlarm(prevId)
+    } catch (e) {
+      logger.log(`Cancel old sync alarm failed: ${e}`)
+    }
+  }
+
+  const interval = Math.max(1, Math.round(syncInterval || DEFAULT_SETTINGS.syncInterval))
+  const option = {
+    url: 'app-service/reminder',
+    repeat_type: REPEAT_MINUTE,
+    repeat_period: interval,
+    repeat_duration: 1,
+    param: JSON.stringify({ mode: ALARM_MODES.SYNC }),
+    store: true,
+  }
+
+  const id = setAlarm(option)
+  setSyncAlarmId(id)
+  logger.log(`Created sync alarm id=${id} repeat_period=${interval}min`)
+  return id
+}
+
 export function refreshAlarms() {
   const intakes = getIntakes()
+  const syncAlarmId = getSyncAlarmId()
 
   const allAlarms = getAllAlarms()
   if (allAlarms && allAlarms.length > 0) {
     for (const alarmId of allAlarms) {
+      if (alarmId === syncAlarmId) continue
       cancelAlarm(alarmId)
     }
   }
@@ -100,6 +128,9 @@ export function refreshAlarms() {
 
     createIntakeAlarm(intake)
   }
+
+  const settings = getSettings()
+  createSyncAlarm(settings.syncInterval)
 
   logger.log('Alarms refreshed')
 }

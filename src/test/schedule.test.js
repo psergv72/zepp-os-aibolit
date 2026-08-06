@@ -7,7 +7,7 @@ register(new URL('./helpers/zos-loader.mjs', import.meta.url))
 const alarm = await import('./helpers/stubs/zos-alarm.mjs')
 const storage = await import('./helpers/stubs/zos-storage.mjs')
 
-const { refreshAlarms } = await import('../utils/schedule.js')
+const { refreshAlarms, createSyncAlarm } = await import('../utils/schedule.js')
 
 function seed() {
   storage.__resetStorage()
@@ -17,6 +17,10 @@ function seed() {
     { id: 'm2', name: 'Аспирин', enabled: true },
     { id: 'm3', name: 'Отключён', enabled: false },
   ])
+}
+
+function intakeSets() {
+  return alarm.__getCalls().filter(c => c.method === 'set' && JSON.parse(c.option.param).mode === 'reminder')
 }
 
 beforeEach(() => {
@@ -32,7 +36,7 @@ test('refreshAlarms создаёт alarm для каждого активног�
 
   refreshAlarms()
 
-  const sets = alarm.__getCalls().filter(c => c.method === 'set')
+  const sets = intakeSets()
   assert.equal(sets.length, 2)
   const ids = sets.map(c => JSON.parse(c.option.param).intakeId)
   assert.deepEqual(ids.sort(), ['i1', 'i2'])
@@ -45,7 +49,7 @@ test('refreshAlarms не создаёт alarm для приёма без вкл�
 
   refreshAlarms()
 
-  const sets = alarm.__getCalls().filter(c => c.method === 'set')
+  const sets = intakeSets()
   assert.equal(sets.length, 0)
 })
 
@@ -63,7 +67,7 @@ test('refreshAlarms создаёт alarm для уже принятого сег
 
   refreshAlarms()
 
-  const sets = alarm.__getCalls().filter(c => c.method === 'set')
+  const sets = intakeSets()
   assert.equal(sets.length, 1)
 })
 
@@ -74,7 +78,7 @@ test('refreshAlarms создаёт alarm с REPEAT_WEEK и правильным�
 
   refreshAlarms()
 
-  const set = alarm.__getCalls().find(c => c.method === 'set')
+  const set = intakeSets()[0]
   assert.equal(set.option.repeat_type, 4)
   assert.equal(set.option.week_days, 2 | 16)
   assert.equal(set.option.url, 'app-service/reminder')
@@ -93,7 +97,7 @@ test('refreshAlarms всё равно создаёт alarm для отменён
 
   refreshAlarms()
 
-  const sets = alarm.__getCalls().filter(c => c.method === 'set')
+  const sets = intakeSets()
   assert.equal(sets.length, 1)
 })
 
@@ -105,7 +109,34 @@ test('createIntakeAlarm задаёт time строго в будущем, даж
   refreshAlarms()
 
   const nowSeconds = Math.floor(Date.now() / 1000)
-  const sets = alarm.__getCalls().filter(c => c.method === 'set')
+  const sets = intakeSets()
   assert.equal(sets.length, 1)
   assert.ok(sets[0].option.time > nowSeconds, `time ${sets[0].option.time} должен быть в будущем`)
+})
+
+test('refreshAlarms создаёт sync-alarm с REPEAT_MINUTE и repeat_period из настроек', () => {
+  storage.__stores().get('aibolit-data.json').set('intakes', [
+    { id: 'i1', time: '08:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] },
+  ])
+  storage.__stores().get('aibolit-data.json').set('settings', { retryInterval: 60, syncInterval: 30, snoozeOptions: [30, 45, 60, 90], minFontSize: 16 })
+
+  refreshAlarms()
+
+  const syncSet = alarm.__getCalls().find(c => c.method === 'set' && JSON.parse(c.option.param).mode === 'sync')
+  assert.ok(syncSet, 'sync-alarm создан')
+  assert.equal(syncSet.option.url, 'app-service/reminder')
+  assert.equal(syncSet.option.repeat_type, 1)
+  assert.equal(syncSet.option.repeat_period, 30)
+})
+
+test('createSyncAlarm отменяет предыдущий sync-alarm и сохраняет новый id', () => {
+  createSyncAlarm(60)
+  const firstId = storage.__stores().get('aibolit-data.json').get('syncAlarmId')
+  assert.equal(firstId, 1)
+
+  createSyncAlarm(60)
+  const cancels = alarm.__getCalls().filter(c => c.method === 'cancel')
+  assert.ok(cancels.some(c => c.id === firstId), 'старый sync-alarm отменён')
+  const newId = storage.__stores().get('aibolit-data.json').get('syncAlarmId')
+  assert.notEqual(newId, firstId)
 })
