@@ -73,6 +73,28 @@ test('applyConfigFromSettings применяет настройки с боле�
   assert.equal(store.get('configRevision'), 3)
 })
 
+test('applyConfigFromSettings применяет только настройки и продвигает ревизию', () => {
+  globalThis.settings = {
+    settingsStorage: {
+      getItem(key) {
+        const map = {
+          configRevision: '6',
+          settings: JSON.stringify({ minFontSize: 24 }),
+        }
+        return map[key] !== undefined ? map[key] : null
+      },
+    },
+  }
+
+  const result = applyConfigFromSettings()
+
+  delete globalThis.settings
+  assert.equal(result, true)
+  const store = storage.__stores().get('aibolit-data.json')
+  assert.deepEqual(store.get('settings'), { minFontSize: 24 })
+  assert.equal(store.get('configRevision'), 6)
+})
+
 test('applyConfigFromSettings игнорирует настройки, если ревизия не новее', () => {
   applyConfigToStorage({ revision: 5, medications: [{ id: 'm1' }] })
 

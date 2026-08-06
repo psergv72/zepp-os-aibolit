@@ -67,6 +67,7 @@ export function applyConfigFromSettings() {
     const value = parseSettingsItem(settingsRaw)
     if (value && typeof value === 'object') {
       setSettings(value)
+      applied = true
     }
   }
 
