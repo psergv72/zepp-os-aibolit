@@ -148,3 +148,25 @@ export function pruneOldTakeLogs() {
 export function clearAll() {
   clear()
 }
+
+export function getConfigRevision() {
+  const value = getItem(STORAGE_KEYS.CONFIG_REVISION, 0)
+  return typeof value === 'number' && !isNaN(value) ? value : 0
+}
+
+export function setConfigRevision(revision) {
+  setItem(STORAGE_KEYS.CONFIG_REVISION, revision)
+}
+
+export function getSyncAlarmId() {
+  const value = getItem(STORAGE_KEYS.SYNC_ALARM_ID, null)
+  return typeof value === 'number' ? value : null
+}
+
+export function setSyncAlarmId(id) {
+  setItem(STORAGE_KEYS.SYNC_ALARM_ID, id)
+}
+
+export function clearSyncAlarmId() {
+  removeItem(STORAGE_KEYS.SYNC_ALARM_ID)
+}

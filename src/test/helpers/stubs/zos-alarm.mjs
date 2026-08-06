@@ -15,6 +15,7 @@ export function getAllAlarms() {
 
 export const REPEAT_WEEK = 4
 export const REPEAT_ONCE = 0
+export const REPEAT_MINUTE = 1
 
 export function __getCalls() {
   return calls

@@ -5,6 +5,8 @@ export const STORAGE_KEYS = {
   CANCELLATIONS: 'cancellations',
   SETTINGS: 'settings',
   SYNC_QUEUE: 'syncQueue',
+  CONFIG_REVISION: 'configRevision',
+  SYNC_ALARM_ID: 'syncAlarmId',
 }
 
 export const INTAKE_STATUS = {
@@ -55,4 +57,5 @@ export const ALARM_MODES = {
   REMINDER: 'reminder',
   RETRY: 'retry',
   SNOOZE: 'snooze',
+  SYNC: 'sync',
 }
