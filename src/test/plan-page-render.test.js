@@ -160,6 +160,26 @@ test('заголовок отменённого приёма перечёркн�
   assert.equal(time.props.text_style, text_style.STRIKETHROUGH, 'заголовок должен быть перечёркнут')
 })
 
+test('быстрый тап по ☐ не приводит к отмене приёма через 1 секунду', async () => {
+  const page = instance()
+  page.refreshView()
+
+  const ctrl = __getRegistry().find(w => w.type === widget.TEXT && w.props.text === '\u2610')
+  assert.ok(ctrl, 'контрол ☐ должен существовать')
+
+  ctrl.listeners[event.CLICK_DOWN]()
+  ctrl.listeners[event.CLICK_UP]()
+
+  const store = storage.__stores().get('aibolit-data.json')
+  assert.ok((store.get('takeLogs') || []).length > 0, 'приём отмечен как принятый')
+  assert.equal((store.get('cancellations') || []).length, 0, 'отмена ещё не создана')
+
+  await new Promise(resolve => setTimeout(resolve, 1100))
+
+  assert.equal((store.get('cancellations') || []).length, 0, 'таймер отмены не должен сработать после быстрого тапа')
+  assert.equal((store.get('takeLogs') || []).length, 1, 'запись о приёме сохраняется')
+})
+
 test('все приёмы отображаются без обрыва при крупном шрифте и включается скролл', () => {
   storage.__stores().get('aibolit-data.json').set('settings', { minFontSize: 40, snoozeOptions: [30, 45, 60, 90] })
   const store = storage.__stores().get('aibolit-data.json')

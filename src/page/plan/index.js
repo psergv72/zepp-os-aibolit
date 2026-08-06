@@ -248,6 +248,10 @@ Page({
           text: symbol,
         })
         ctrl.addEventListener(event.CLICK_UP, () => {
+          if (this._pressTimer) {
+            clearTimeout(this._pressTimer)
+            this._pressTimer = null
+          }
           if (entry._taken) {
             this.undoIntake(intake)
           } else {
