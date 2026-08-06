@@ -95,9 +95,15 @@ export function createSyncAlarm(syncInterval) {
     }
   }
 
-  const interval = Math.max(1, Math.round(syncInterval || DEFAULT_SETTINGS.syncInterval))
+  const raw = Number(syncInterval)
+  const interval = Number.isFinite(raw) && raw > 0
+    ? Math.max(1, Math.round(raw))
+    : DEFAULT_SETTINGS.syncInterval
+
+  const start = Math.floor(Date.now() / 1000) + interval * 60
   const option = {
     url: 'app-service/reminder',
+    time: start,
     repeat_type: REPEAT_MINUTE,
     repeat_period: interval,
     repeat_duration: 1,
@@ -106,8 +112,8 @@ export function createSyncAlarm(syncInterval) {
   }
 
   const id = setAlarm(option)
-  setSyncAlarmId(id)
-  logger.log(`Created sync alarm id=${id} repeat_period=${interval}min`)
+  if (id && id > 0) setSyncAlarmId(id)
+  logger.log(`Created sync alarm id=${id} repeat_period=${interval}min start=${start}`)
   return id
 }
 

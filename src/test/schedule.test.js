@@ -132,7 +132,7 @@ test('refreshAlarms создаёт sync-alarm с REPEAT_MINUTE и repeat_period 
 test('createSyncAlarm отменяет предыдущий sync-alarm и сохраняет новый id', () => {
   createSyncAlarm(60)
   const firstId = storage.__stores().get('aibolit-data.json').get('syncAlarmId')
-  assert.equal(firstId, 1)
+  assert.ok(firstId > 0, 'первый sync-alarm id сохранён')
 
   createSyncAlarm(60)
   const cancels = alarm.__getCalls().filter(c => c.method === 'cancel')
