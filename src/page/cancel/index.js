@@ -1,9 +1,10 @@
 import { log as Logger } from '@zos/utils'
 import { createWidget, widget, event, align, text_style } from '@zos/ui'
 import { exit as routerExit } from '@zos/router'
-import { getIntakes, getMedications, addCancellation, getTodayDateStr } from '../../utils/storage'
+import { getIntakes, getMedications, getTakeLogs, addCancellation, getTodayDateStr } from '../../utils/storage'
 import { sendCancellationToPhone } from '../../utils/sync'
 import { clearPendingForIntake } from '../../utils/notification-lifecycle'
+import { isIntakeTakenToday } from '../../utils/intake-logic'
 import { sysText, getUiScale } from '../../utils/ui-scale'
 import { getContentBounds } from '../../utils/screen-layout'
 
@@ -106,7 +107,7 @@ Page({
     y += 44 * S
 
     const gap = 20 * S
-    const btnH = 72 * S
+    const btnH = Math.max(0, Math.min(72 * S, bounds.bottom - y))
     const btnW = (bounds.width - gap) / 2
     const gridX = centerX - (btnW * 2 + gap) / 2
 
@@ -151,6 +152,13 @@ Page({
     }
 
     const todayDateStr = getTodayDateStr()
+    const takeLogs = getTakeLogs()
+    if (isIntakeTakenToday(intakeId, todayDateStr, takeLogs)) {
+      logger.log('cancel: already taken today ' + intakeId)
+      routerExit()
+      return
+    }
+
     addCancellation(intakeId, todayDateStr)
     sendCancellationToPhone(intakeId, todayDateStr)
     clearPendingForIntake(intakeId)
