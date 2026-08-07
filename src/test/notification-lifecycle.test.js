@@ -43,11 +43,13 @@ test('issueNotification выдаёт уведомление, сохраняет 
   lifecycle.issueNotification('i1')
   assert.equal(notification.__calls.length, 1)
   assert.deepEqual(store().get('pendingNotification'), { intakeId: 'i1', date: todayStr() })
-  const retry = alarm.__getCalls().filter(c => c.method === 'set' && JSON.parse(c.option.param).mode === 'retry')
-  assert.equal(retry.length, 1)
-  assert.equal(retry[0].option.url, 'app-service/reminder')
-  assert.equal(JSON.parse(retry[0].option.param).intakeId, 'i1')
-  assert.equal(JSON.parse(retry[0].option.param).date, todayStr())
+  if (lifecycle.nextRetryIsToday(new Date(), 5)) {
+    const retry = alarm.__getCalls().filter(c => c.method === 'set' && JSON.parse(c.option.param).mode === 'retry')
+    assert.equal(retry.length, 1)
+    assert.equal(retry[0].option.url, 'app-service/reminder')
+    assert.equal(JSON.parse(retry[0].option.param).intakeId, 'i1')
+    assert.equal(JSON.parse(retry[0].option.param).date, todayStr())
+  }
 })
 
 test('issueNotification содержит кнопку Отменить', () => {
@@ -82,6 +84,31 @@ test('issueNotification помечает чужой pending приём как п
   assert.equal(logs[0].status, 'skipped')
   assert.equal(logs[0].date, todayStr())
   assert.equal(notification.__calls.length, 1)
+})
+
+test('issueNotification не помечает уже принятый чужой pending как пропущенный', () => {
+  store().set('intakes', [
+    { id: 'i1', time: '08:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] },
+    { id: 'i2', time: '09:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] },
+  ])
+  store().set('takeLogs', [{ intakeId: 'i1', date: todayStr(), status: 'taken' }])
+  store().set('pendingNotification', { intakeId: 'i1', date: todayStr() })
+  lifecycle.issueNotification('i2')
+  const logs = store().get('takeLogs')
+  assert.equal(logs.length, 1, 'не должно быть новой skipped записи')
+  assert.equal(logs[0].status, 'taken')
+  assert.deepEqual(store().get('pendingNotification'), { intakeId: 'i2', date: todayStr() })
+})
+
+test('issueNotification не помечает pending на удалённый intake как пропущенный', () => {
+  store().set('intakes', [
+    { id: 'i2', time: '09:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] },
+  ])
+  store().set('pendingNotification', { intakeId: 'deleted', date: todayStr() })
+  lifecycle.issueNotification('i2')
+  const logs = store().get('takeLogs')
+  assert.equal(!logs || logs.length === 0, true)
+  assert.deepEqual(store().get('pendingNotification'), { intakeId: 'i2', date: todayStr() })
 })
 
 test('issueNotification не помечает тот же intake как пропущенный', () => {

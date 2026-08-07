@@ -75,7 +75,10 @@ export function issueNotification(intakeId) {
 
   const pending = getPendingIntake()
   if (pending && pending.date === todayDateStr && pending.intakeId !== intakeId) {
-    markSkipped(pending.intakeId, todayDateStr)
+    const pendingIntake = getIntakes().find(i => i.id === pending.intakeId)
+    if (pendingIntake && !isResolvedToday(pending.intakeId, todayDateStr)) {
+      markSkipped(pending.intakeId, todayDateStr)
+    }
   }
 
   cancelAllNotifications()
