@@ -27,7 +27,8 @@
             "page/home/index",
             "page/plan/index",
             "page/snooze/index",
-            "page/take/index"
+            "page/take/index",
+            "page/cancel/index"
           ]
         },
         "app-side": {

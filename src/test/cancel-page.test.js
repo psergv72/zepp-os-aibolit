@@ -1,0 +1,78 @@
+import { test, beforeEach } from 'node:test'
+import assert from 'node:assert/strict'
+import { register } from 'node:module'
+
+register(new URL('./helpers/zos-loader.mjs', import.meta.url))
+
+let pageOpts = null
+globalThis.Page = (opts) => { pageOpts = opts }
+
+const { __getRegistry, __reset, event } = await import('./helpers/stubs/zos-ui.mjs')
+const storage = await import('./helpers/stubs/zos-storage.mjs')
+const router = await import('./helpers/stubs/zos-router.mjs')
+const device = await import('./helpers/stubs/zos-device.mjs')
+
+await import('../page/cancel/index.js')
+
+function seed() {
+  storage.__resetStorage()
+  new storage.ShareLocalStorage('aibolit-data.json')
+  storage.__stores().get('aibolit-data.json').set('intakes', [{
+    id: 'i1',
+    time: '08:00',
+    weekDays: null,
+    items: [{ medicationId: 'm1', amount: '1 таблетка' }],
+  }])
+}
+
+function todayStr() {
+  const today = new Date()
+  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+}
+
+function instance(params) {
+  const obj = Object.create(pageOpts)
+  obj.state = { intakeId: null, intake: null }
+  obj.onInit(params)
+  return obj
+}
+
+function store() {
+  return storage.__stores().get('aibolit-data.json')
+}
+
+beforeEach(() => {
+  __reset()
+  router.__reset()
+  device.__setShape('round')
+  seed()
+})
+
+test('onInit рисует вопрос и кнопки Да/Нет', () => {
+  instance(JSON.stringify({ intakeId: 'i1' }))
+  const texts = __getRegistry().map(w => w.props.text).filter(Boolean)
+  assert.ok(texts.includes('Отменить приём на сегодня?'), 'должен быть вопрос об отмене')
+  assert.ok(texts.includes('Да'), 'должна быть кнопка Да')
+  assert.ok(texts.includes('Нет'), 'должна быть кнопка Нет')
+})
+
+test('confirmCancel отменяет приём, сбрасывает pending и закрывает приложение', () => {
+  store().set('pendingNotification', { intakeId: 'i1', date: todayStr() })
+  const page = instance(JSON.stringify({ intakeId: 'i1' }))
+  page.confirmCancel()
+  assert.deepEqual(store().get('cancellations'), [{ intakeId: 'i1', date: todayStr() }])
+  assert.equal(store().get('pendingNotification'), undefined)
+  const exits = router.__getCalls().filter(c => c.method === 'exit')
+  assert.equal(exits.length, 1)
+})
+
+test('кнопка Нет закрывает приложение без отмены', () => {
+  const page = instance(JSON.stringify({ intakeId: 'i1' }))
+  const noBtn = __getRegistry().find(w => w.props.text === 'Нет')
+  assert.ok(noBtn, 'должна быть кнопка Нет')
+  noBtn.listeners[event.CLICK_UP]()
+  const cancellations = store().get('cancellations')
+  assert.equal(!cancellations || cancellations.length === 0, true)
+  const exits = router.__getCalls().filter(c => c.method === 'exit')
+  assert.equal(exits.length, 1)
+})
