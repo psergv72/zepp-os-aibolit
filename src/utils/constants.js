@@ -7,6 +7,7 @@ export const STORAGE_KEYS = {
   SYNC_QUEUE: 'syncQueue',
   CONFIG_REVISION: 'configRevision',
   SYNC_ALARM_ID: 'syncAlarmId',
+  PENDING_NOTIFICATION: 'pendingNotification',
 }
 
 export const INTAKE_STATUS = {

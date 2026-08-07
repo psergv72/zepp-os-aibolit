@@ -170,3 +170,16 @@ export function setSyncAlarmId(id) {
 export function clearSyncAlarmId() {
   removeItem(STORAGE_KEYS.SYNC_ALARM_ID)
 }
+
+export function getPendingNotification() {
+  const value = getItem(STORAGE_KEYS.PENDING_NOTIFICATION, null)
+  return value && typeof value === 'object' ? value : null
+}
+
+export function setPendingNotification(pending) {
+  setItem(STORAGE_KEYS.PENDING_NOTIFICATION, pending)
+}
+
+export function clearPendingNotification() {
+  removeItem(STORAGE_KEYS.PENDING_NOTIFICATION)
+}

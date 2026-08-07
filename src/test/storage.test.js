@@ -11,6 +11,9 @@ const {
   getSyncAlarmId,
   setSyncAlarmId,
   clearSyncAlarmId,
+  getPendingNotification,
+  setPendingNotification,
+  clearPendingNotification,
 } = await import('../utils/storage.js')
 
 function seed() {
@@ -40,4 +43,20 @@ test('setSyncAlarmId сохраняет id, clearSyncAlarmId сбрасывае�
   assert.equal(getSyncAlarmId(), 42)
   clearSyncAlarmId()
   assert.equal(getSyncAlarmId(), null)
+})
+
+test('getPendingNotification возвращает null, если pending не задан', () => {
+  assert.equal(getPendingNotification(), null)
+})
+
+test('setPendingNotification сохраняет объект, getPendingNotification его возвращает', () => {
+  const pending = { intakeId: 'i1', date: '2026-08-07' }
+  setPendingNotification(pending)
+  assert.deepEqual(getPendingNotification(), pending)
+})
+
+test('clearPendingNotification сбрасывает pending в null', () => {
+  setPendingNotification({ intakeId: 'i1', date: '2026-08-07' })
+  clearPendingNotification()
+  assert.equal(getPendingNotification(), null)
 })
