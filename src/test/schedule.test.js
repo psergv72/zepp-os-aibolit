@@ -7,7 +7,7 @@ register(new URL('./helpers/zos-loader.mjs', import.meta.url))
 const alarm = await import('./helpers/stubs/zos-alarm.mjs')
 const storage = await import('./helpers/stubs/zos-storage.mjs')
 
-const { refreshAlarms, createSyncAlarm } = await import('../utils/schedule.js')
+const { refreshAlarms, createSyncAlarm, createRetryAlarm, createSnoozeAlarm } = await import('../utils/schedule.js')
 
 function seed() {
   storage.__resetStorage()
@@ -140,4 +140,24 @@ test('createSyncAlarm отменяет предыдущий sync-alarm и сох
   assert.ok(cancels.some(c => c.id === firstId), 'старый sync-alarm отменён')
   const newId = storage.__stores().get('aibolit-data.json').get('syncAlarmId')
   assert.notEqual(newId, firstId)
+})
+
+test('createRetryAlarm передаёт date в параметр будильника', () => {
+  createRetryAlarm('i1', 5, '2026-08-07')
+  const set = alarm.__getCalls().find(c => c.method === 'set')
+  assert.ok(set, 'должен быть создан будильник')
+  const param = JSON.parse(set.option.param)
+  assert.equal(param.mode, 'retry')
+  assert.equal(param.intakeId, 'i1')
+  assert.equal(param.date, '2026-08-07')
+})
+
+test('createSnoozeAlarm передаёт date в параметр будильника', () => {
+  createSnoozeAlarm('i1', 30, '2026-08-07')
+  const set = alarm.__getCalls().find(c => c.method === 'set')
+  assert.ok(set, 'должен быть создан будильник')
+  const param = JSON.parse(set.option.param)
+  assert.equal(param.mode, 'snooze')
+  assert.equal(param.intakeId, 'i1')
+  assert.equal(param.date, '2026-08-07')
 })

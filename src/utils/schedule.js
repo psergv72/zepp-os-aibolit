@@ -45,11 +45,12 @@ export function createIntakeAlarm(intake) {
   return id
 }
 
-export function createRetryAlarm(intakeId, delayMinutes) {
+export function createRetryAlarm(intakeId, delayMinutes, date) {
   const delaySeconds = delayMinutes * 60
   const param = JSON.stringify({
     mode: ALARM_MODES.RETRY,
     intakeId: intakeId,
+    date: date,
   })
 
   const option = {
@@ -65,11 +66,12 @@ export function createRetryAlarm(intakeId, delayMinutes) {
   return id
 }
 
-export function createSnoozeAlarm(intakeId, delayMinutes) {
+export function createSnoozeAlarm(intakeId, delayMinutes, date) {
   const delaySeconds = delayMinutes * 60
   const param = JSON.stringify({
     mode: ALARM_MODES.SNOOZE,
     intakeId: intakeId,
+    date: date,
   })
 
   const option = {
