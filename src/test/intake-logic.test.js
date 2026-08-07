@@ -8,6 +8,7 @@ import {
   getIntakeEntries,
   isIntakeTakenToday,
   isIntakeCancelledToday,
+  isIntakeSkippedToday,
   getIntakeStatus,
   getTakenTime,
   buildItemsSummary,
@@ -115,6 +116,31 @@ test('getIntakeStatus: taken wins over cancelled, else cancelled, else pending',
   assert.equal(getIntakeStatus('i1', 'd', logs, cancellations), 'taken')
   assert.equal(getIntakeStatus('i2', 'd', logs, cancellations), 'cancelled')
   assert.equal(getIntakeStatus('i3', 'd', logs, cancellations), 'pending')
+})
+
+test('isIntakeSkippedToday проверяет пару intakeId+date по статусу skipped', () => {
+  const logs = [
+    { intakeId: 'i1', date: 'd', status: 'skipped' },
+    { intakeId: 'i2', date: 'd', status: 'snoozed' },
+  ]
+  assert.equal(isIntakeSkippedToday('i1', 'd', logs), true)
+  assert.equal(isIntakeSkippedToday('i2', 'd', logs), false)
+  assert.equal(isIntakeSkippedToday('i1', 'd2', logs), false)
+})
+
+test('getIntakeStatus: приоритет taken > cancelled > skipped > pending', () => {
+  const logs = [{ intakeId: 'i1', date: 'd', status: 'skipped' }]
+  assert.equal(getIntakeStatus('i1', 'd', logs, []), 'skipped')
+
+  const logsTaken = [
+    { intakeId: 'i2', date: 'd', status: 'skipped' },
+    { intakeId: 'i2', date: 'd', status: 'taken' },
+  ]
+  assert.equal(getIntakeStatus('i2', 'd', logsTaken, []), 'taken')
+
+  const cancellations = [{ intakeId: 'i3', date: 'd' }]
+  const logsCancelled = [{ intakeId: 'i3', date: 'd', status: 'skipped' }]
+  assert.equal(getIntakeStatus('i3', 'd', logsCancelled, cancellations), 'cancelled')
 })
 
 test('getTakenTime returns takenTime of taken log or null', () => {

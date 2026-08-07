@@ -49,9 +49,14 @@ export function isIntakeCancelledToday(intakeId, date, cancellations) {
   return (cancellations || []).some(c => c.intakeId === intakeId && c.date === date)
 }
 
+export function isIntakeSkippedToday(intakeId, date, takeLogs) {
+  return (takeLogs || []).some(i => i.intakeId === intakeId && i.date === date && i.status === 'skipped')
+}
+
 export function getIntakeStatus(intakeId, date, takeLogs, cancellations) {
   if (isIntakeTakenToday(intakeId, date, takeLogs)) return 'taken'
   if (isIntakeCancelledToday(intakeId, date, cancellations)) return 'cancelled'
+  if (isIntakeSkippedToday(intakeId, date, takeLogs)) return 'skipped'
   return 'pending'
 }
 
