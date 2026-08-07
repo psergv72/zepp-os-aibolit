@@ -13,6 +13,7 @@ const alarm = await import('./helpers/stubs/zos-alarm.mjs')
 const syncModule = await import('../utils/sync.js')
 
 await import('../app-service/reminder.js')
+const lifecycle = await import('../utils/notification-lifecycle.js')
 
 function seed() {
   storage.__resetStorage()
@@ -121,5 +122,64 @@ test('mode sync применяет настройки, обновляет буд
 
 test('mode sync игнорирует intakeId', () => {
   serviceOpts.onInit(JSON.stringify({ mode: 'sync', intakeId: 'i1' }))
+  assert.equal(notification.__calls.length, 0)
+})
+
+test('уведомление содержит кнопку Отменить', () => {
+  serviceOpts.onInit(JSON.stringify({ mode: 'reminder', intakeId: 'i1' }))
+  assert.equal(notification.__calls.length, 1)
+  const cancelAction = notification.__calls[0].actions.find(a => a.text === 'Отменить')
+  assert.ok(cancelAction, 'в уведомлении есть кнопка Отменить')
+  assert.equal(cancelAction.file, 'page/cancel/index')
+  assert.equal(cancelAction.param, JSON.stringify({ intakeId: 'i1' }))
+})
+
+test('REMINDER планирует ретрай-будильник с датой сегодня', () => {
+  serviceOpts.onInit(JSON.stringify({ mode: 'reminder', intakeId: 'i1' }))
+  if (lifecycle.nextRetryIsToday(new Date(), 5)) {
+    const retry = alarm.__getCalls().filter(c => c.method === 'set' && JSON.parse(c.option.param).mode === 'retry')
+    assert.equal(retry.length, 1)
+    const today = new Date()
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+    assert.equal(JSON.parse(retry[0].option.param).date, todayStr)
+  }
+})
+
+test('чужой pending помечается пропущенным при выдаче нового уведомления', () => {
+  const today = new Date()
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  const store = storage.__stores().get('aibolit-data.json')
+  store.set('intakes', [
+    { id: 'i1', time: '08:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] },
+    { id: 'i2', time: '09:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] },
+  ])
+  store.set('pendingNotification', { intakeId: 'i1', date: todayStr })
+  serviceOpts.onInit(JSON.stringify({ mode: 'reminder', intakeId: 'i2' }))
+  const logs = store.get('takeLogs')
+  assert.equal(logs.length, 1)
+  assert.equal(logs[0].intakeId, 'i1')
+  assert.equal(logs[0].status, 'skipped')
+})
+
+test('тот же intake не помечается пропущенным', () => {
+  const today = new Date()
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  const store = storage.__stores().get('aibolit-data.json')
+  store.set('pendingNotification', { intakeId: 'i1', date: todayStr })
+  serviceOpts.onInit(JSON.stringify({ mode: 'reminder', intakeId: 'i1' }))
+  const logs = store.get('takeLogs')
+  assert.equal(!logs || logs.length === 0, true)
+})
+
+test('onInit пропускает пропущенный intake', () => {
+  const today = new Date()
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  storage.__stores().get('aibolit-data.json').set('takeLogs', [{ intakeId: 'i1', date: todayStr, status: 'skipped' }])
+  serviceOpts.onInit(JSON.stringify({ mode: 'reminder', intakeId: 'i1' }))
+  assert.equal(notification.__calls.length, 0)
+})
+
+test('RETRY с датой прошлого дня игнорируется', () => {
+  serviceOpts.onInit(JSON.stringify({ mode: 'retry', intakeId: 'i1', date: '2000-01-01' }))
   assert.equal(notification.__calls.length, 0)
 })

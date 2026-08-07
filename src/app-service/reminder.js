@@ -1,11 +1,10 @@
 import { log as Logger } from '@zos/utils'
-import { notify } from '@zos/notification'
-import { getSettings, getIntakes, getMedications, getTakeLogs, isIntakeCancelled, getTodayDateStr } from '../utils/storage'
-import { createRetryAlarm, refreshAlarms } from '../utils/schedule'
-import { ALARM_MODES } from '../utils/constants'
-import { buildItemsSummary } from '../utils/intake-logic.js'
-import { retrySync } from '../utils/sync'
 import { applyConfigFromSettings } from '../utils/watch-config'
+import { refreshAlarms } from '../utils/schedule'
+import { retrySync } from '../utils/sync'
+import { ALARM_MODES } from '../utils/constants'
+import { getTodayDateStr } from '../utils/storage'
+import { issueNotification } from '../utils/notification-lifecycle'
 
 const logger = Logger.getLogger('aibolit-reminder')
 
@@ -20,7 +19,7 @@ function handleEvent(e) {
     return
   }
 
-  const { mode, intakeId } = params
+  const { mode, intakeId, date } = params
 
   if (mode === ALARM_MODES.SYNC) {
     logger.log('sync tick: apply config, refresh alarms, retry queue')
@@ -32,44 +31,12 @@ function handleEvent(e) {
 
   if (!intakeId) return
 
-  const intake = getIntakes().find(i => i.id === intakeId)
-  if (!intake) return
-
-  const todayDateStr = getTodayDateStr()
-
-  if (isIntakeCancelled(intakeId, todayDateStr)) return
-
-  const takeLogs = getTakeLogs()
-  const alreadyTaken = takeLogs.some(i => i.intakeId === intakeId && i.date === todayDateStr && i.status === 'taken')
-  if (alreadyTaken) return
-
-  const title = 'Пора принимать лекарства'
-  const content = buildItemsSummary(intake.items || [], getMedications()) || 'Примите лекарство'
-
-  notify({
-    title: title,
-    content: content,
-    vibrate: 1,
-    actions: [
-      {
-        text: 'Принял',
-        file: 'page/take/index',
-        param: JSON.stringify({ intakeId }),
-      },
-      {
-        text: 'Отложить',
-        file: 'page/snooze/index',
-        param: JSON.stringify({ intakeId }),
-      },
-    ],
-  })
-
-  if (mode === ALARM_MODES.REMINDER) {
-    const settings = getSettings()
-    createRetryAlarm(intakeId, settings.retryInterval)
+  if ((mode === ALARM_MODES.RETRY || mode === ALARM_MODES.SNOOZE) && date && date !== getTodayDateStr()) {
+    logger.log('stale ' + mode + ' event for a past day, skip')
+    return
   }
 
-  logger.log('Notification sent for ' + title)
+  issueNotification(intakeId)
 }
 
 AppService({
