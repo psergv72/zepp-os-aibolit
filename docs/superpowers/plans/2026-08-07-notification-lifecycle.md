@@ -1142,6 +1142,28 @@ test('кнопка Нет закрывает приложение без отм�
   const exits = router.__getCalls().filter(c => c.method === 'exit')
   assert.equal(exits.length, 1)
 })
+
+test('confirmCancel не отменяет уже принятый приём', () => {
+  store().set('takeLogs', [{ intakeId: 'i1', date: todayStr(), status: 'taken' }])
+  const page = instance(JSON.stringify({ intakeId: 'i1' }))
+  page.confirmCancel()
+  const cancellations = store().get('cancellations')
+  assert.equal(!cancellations || cancellations.length === 0, true, 'не должно быть отмены принятого приёма')
+  const exits = router.__getCalls().filter(c => c.method === 'exit')
+  assert.equal(exits.length, 1)
+})
+
+test('кнопки остаются в пределах безопасной зоны при minFontSize 40', () => {
+  store().set('settings', { minFontSize: 40, retryInterval: 5, syncInterval: 60, snoozeOptions: [30, 45, 60, 90] })
+  store().set('medications', [{ id: 'm1', name: 'Аспирин', enabled: true }])
+  instance(JSON.stringify({ intakeId: 'i1' }))
+  const btns = __getRegistry().filter(w => w.props.text === 'Да' || w.props.text === 'Нет')
+  assert.equal(btns.length, 2)
+  for (const b of btns) {
+    assert.ok(b.props.x >= 70 && b.props.x + b.props.w <= 410, 'кнопка в пределах горизонтальной безопасной зоны')
+    assert.ok(b.props.y >= 70 && b.props.y + b.props.h <= 410, 'кнопка в пределах вертикальной безопасной зоны')
+  }
+})
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -1157,9 +1179,10 @@ Create `src/page/cancel/index.js`:
 import { log as Logger } from '@zos/utils'
 import { createWidget, widget, event, align, text_style } from '@zos/ui'
 import { exit as routerExit } from '@zos/router'
-import { getIntakes, getMedications, addCancellation, getTodayDateStr } from '../../utils/storage'
+import { getIntakes, getMedications, getTakeLogs, addCancellation, getTodayDateStr } from '../../utils/storage'
 import { sendCancellationToPhone } from '../../utils/sync'
 import { clearPendingForIntake } from '../../utils/notification-lifecycle'
+import { isIntakeTakenToday } from '../../utils/intake-logic'
 import { sysText, getUiScale } from '../../utils/ui-scale'
 import { getContentBounds } from '../../utils/screen-layout'
 
@@ -1262,7 +1285,7 @@ Page({
     y += 44 * S
 
     const gap = 20 * S
-    const btnH = 72 * S
+    const btnH = Math.max(0, Math.min(72 * S, bounds.bottom - y))
     const btnW = (bounds.width - gap) / 2
     const gridX = centerX - (btnW * 2 + gap) / 2
 
@@ -1307,6 +1330,13 @@ Page({
     }
 
     const todayDateStr = getTodayDateStr()
+    const takeLogs = getTakeLogs()
+    if (isIntakeTakenToday(intakeId, todayDateStr, takeLogs)) {
+      logger.log('cancel: already taken today ' + intakeId)
+      routerExit()
+      return
+    }
+
     addCancellation(intakeId, todayDateStr)
     sendCancellationToPhone(intakeId, todayDateStr)
     clearPendingForIntake(intakeId)
