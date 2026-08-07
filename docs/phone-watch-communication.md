@@ -189,7 +189,7 @@ this.call({ method: 'config_synced', params: { config } })
 
 Настройки:
 ```json
-{ "retryInterval": 60, "syncInterval": 60, "snoozeOptions": [30,45,60,90], "minFontSize": 16 }
+{ "retryInterval": 5, "syncInterval": 60, "snoozeOptions": [30,45,60,90], "minFontSize": 16 }
 ```
 
 Запись о приёме (take log, на часах и в истории телефона):
