@@ -504,13 +504,16 @@ beforeEach(() => {
 test('issueNotification выдаёт уведомление, сохраняет pending и планирует ретрай', () => {
   lifecycle.issueNotification('i1')
   assert.equal(notification.__calls.length, 1)
-  assert.deepEqual(store().get('pendingNotification'), { intakeId: 'i1', date: todayStr() })
+  const pending = store().get('pendingNotification')
+  assert.equal(pending.intakeId, 'i1')
+  assert.equal(pending.date, todayStr())
   if (lifecycle.nextRetryIsToday(new Date(), 5)) {
     const retry = alarm.__getCalls().filter(c => c.method === 'set' && JSON.parse(c.option.param).mode === 'retry')
     assert.equal(retry.length, 1)
     assert.equal(retry[0].option.url, 'app-service/reminder')
     assert.equal(JSON.parse(retry[0].option.param).intakeId, 'i1')
     assert.equal(JSON.parse(retry[0].option.param).date, todayStr())
+    assert.ok(typeof pending.retryAlarmId === 'number', 'ретрай-будильник сохранён в pending')
   }
 })
 
@@ -565,7 +568,9 @@ test('issueNotification сбрасывает stale pending другого дня
   lifecycle.issueNotification('i2')
   const logs = store().get('takeLogs')
   assert.equal(!logs || logs.length === 0, true)
-  assert.deepEqual(store().get('pendingNotification'), { intakeId: 'i2', date: todayStr() })
+  const pending = store().get('pendingNotification')
+  assert.equal(pending.intakeId, 'i2')
+  assert.equal(pending.date, todayStr())
 })
 
 test('issueNotification не помечает уже принятый чужой pending как пропущенный', () => {
@@ -579,7 +584,9 @@ test('issueNotification не помечает уже принятый чужой
   const logs = store().get('takeLogs')
   assert.equal(logs.length, 1, 'не должно быть новой skipped записи')
   assert.equal(logs[0].status, 'taken')
-  assert.deepEqual(store().get('pendingNotification'), { intakeId: 'i2', date: todayStr() })
+  const pending = store().get('pendingNotification')
+  assert.equal(pending.intakeId, 'i2')
+  assert.equal(pending.date, todayStr())
 })
 
 test('issueNotification не помечает pending на удалённый intake как пропущенный', () => {
@@ -590,7 +597,9 @@ test('issueNotification не помечает pending на удалённый in
   lifecycle.issueNotification('i2')
   const logs = store().get('takeLogs')
   assert.equal(!logs || logs.length === 0, true)
-  assert.deepEqual(store().get('pendingNotification'), { intakeId: 'i2', date: todayStr() })
+  const pending = store().get('pendingNotification')
+  assert.equal(pending.intakeId, 'i2')
+  assert.equal(pending.date, todayStr())
 })
 
 test('clearPendingForIntake отменяет уведомления и сбрасывает pending для своего intake', () => {
@@ -605,7 +614,31 @@ test('clearPendingForIntake игнорирует чужой pending', () => {
   store().set('pendingNotification', { intakeId: 'i1', date: todayStr() })
   lifecycle.clearPendingForIntake('i2')
   assert.equal(notification.__cancelCalls.length, 0)
-  assert.deepEqual(lifecycle.getPendingIntake(), { intakeId: 'i1', date: todayStr() })
+  const pending = lifecycle.getPendingIntake()
+  assert.equal(pending.intakeId, 'i1')
+  assert.equal(pending.date, todayStr())
+})
+
+test('после резолва ретрай-будильник отменяется', () => {
+  lifecycle.issueNotification('i1')
+  const pending = store().get('pendingNotification')
+  if (lifecycle.nextRetryIsToday(new Date(), 5)) {
+    assert.ok(typeof pending.retryAlarmId === 'number', 'ретрай-будильник сохранён в pending')
+    lifecycle.clearPendingForIntake('i1')
+    const cancels = alarm.__getCalls().filter(c => c.method === 'cancel')
+    assert.ok(cancels.some(c => c.id === pending.retryAlarmId), 'ретрай-будильник должен быть отменён')
+  }
+})
+
+test('замена pending отменяет ретрай-будильник старого приёма', () => {
+  store().set('intakes', [
+    { id: 'i1', time: '08:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] },
+    { id: 'i2', time: '09:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] },
+  ])
+  store().set('pendingNotification', { intakeId: 'i1', date: todayStr(), retryAlarmId: 42 })
+  lifecycle.issueNotification('i2')
+  const cancels = alarm.__getCalls().filter(c => c.method === 'cancel')
+  assert.ok(cancels.some(c => c.id === 42), 'ретрай-будильник старого pending должен быть отменён')
 })
 
 test('markSkipped добавляет запись skipped и кладёт её в очередь синхронизации', () => {
@@ -653,8 +686,8 @@ import {
   clearPendingNotification,
   addTakeLog,
 } from './storage'
-import { createRetryAlarm } from './schedule'
-import { INTAKE_STATUS } from './constants'
+import { createRetryAlarm, cancelAlarmById } from './schedule'
+import { INTAKE_STATUS, DEFAULT_SETTINGS } from './constants'
 import { buildItemsSummary, isIntakeTakenToday, isIntakeCancelledToday, isIntakeSkippedToday } from './intake-logic.js'
 import { sendTakeLogToPhone } from './sync'
 
@@ -672,7 +705,7 @@ export function cancelAllNotifications() {
 export function getPendingIntake() {
   const pending = getPendingNotification()
   if (!pending || typeof pending !== 'object') return null
-  return { intakeId: pending.intakeId, date: pending.date }
+  return { intakeId: pending.intakeId, date: pending.date, retryAlarmId: pending.retryAlarmId }
 }
 
 function isResolvedToday(intakeId, date) {
@@ -702,6 +735,13 @@ export function markSkipped(intakeId, date) {
 export function clearPendingForIntake(intakeId) {
   const pending = getPendingIntake()
   if (!pending || pending.intakeId !== intakeId) return
+  if (pending.retryAlarmId) {
+    try {
+      cancelAlarmById(pending.retryAlarmId)
+    } catch (e) {
+      logger.log('Cancel retry alarm failed: ' + e)
+    }
+  }
   cancelAllNotifications()
   clearPendingNotification()
   logger.log('Cleared pending notification for ' + intakeId)
@@ -715,10 +755,19 @@ export function issueNotification(intakeId) {
   if (isResolvedToday(intakeId, todayDateStr)) return
 
   const pending = getPendingIntake()
-  if (pending && pending.date === todayDateStr && pending.intakeId !== intakeId) {
-    const pendingIntake = getIntakes().find(i => i.id === pending.intakeId)
-    if (pendingIntake && !isResolvedToday(pending.intakeId, todayDateStr)) {
-      markSkipped(pending.intakeId, todayDateStr)
+  if (pending) {
+    if (pending.retryAlarmId) {
+      try {
+        cancelAlarmById(pending.retryAlarmId)
+      } catch (e) {
+        logger.log('Cancel retry alarm failed: ' + e)
+      }
+    }
+    if (pending.date === todayDateStr && pending.intakeId !== intakeId) {
+      const pendingIntake = getIntakes().find(i => i.id === pending.intakeId)
+      if (pendingIntake && !isResolvedToday(pending.intakeId, todayDateStr)) {
+        markSkipped(pending.intakeId, todayDateStr)
+      }
     }
   }
 
@@ -738,8 +787,8 @@ export function issueNotification(intakeId) {
     ],
   })
 
-  setPendingNotification({ intakeId: intakeId, date: todayDateStr })
-  scheduleRetry(intakeId)
+  const retryAlarmId = scheduleRetry(intakeId)
+  setPendingNotification({ intakeId: intakeId, date: todayDateStr, retryAlarmId: retryAlarmId })
 
   logger.log('Notification issued for ' + intakeId + ' id=' + id)
 }
@@ -758,13 +807,14 @@ export function nextRetryIsToday(now, delayMinutes) {
 
 function scheduleRetry(intakeId) {
   const settings = getSettings()
-  const delay = Number(settings && settings.retryInterval)
-  if (!Number.isFinite(delay) || delay <= 0) return
+  const raw = settings && settings.retryInterval
+  const delay = Number(raw !== undefined && raw !== null ? raw : DEFAULT_SETTINGS.retryInterval)
+  if (!Number.isFinite(delay) || delay <= 0) return null
   if (!nextRetryIsToday(new Date(), delay)) {
     logger.log('Retry would cross midnight, skipping')
-    return
+    return null
   }
-  createRetryAlarm(intakeId, delay, getTodayDateStr())
+  return createRetryAlarm(intakeId, delay, getTodayDateStr())
 }
 ```
 

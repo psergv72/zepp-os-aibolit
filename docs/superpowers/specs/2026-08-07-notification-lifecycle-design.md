@@ -68,19 +68,22 @@
 
 Единственный владелец жизненного цикла уведомлений. Экспорты:
 
-- `getPendingIntake()` — возвращает `{ intakeId, date }` текущего
+- `getPendingIntake()` — возвращает `{ intakeId, date, retryAlarmId }` текущего
   pending-уведомления из storage или `null`.
 - `issueNotification(intakeId)` — центральная функция:
   1. intake найден и не `taken`/`cancelled`/`skipped` за сегодня, иначе no-op.
-  2. Если pending есть, `pending.date === today` и `pending.intakeId !== intakeId`
-     — `markSkipped(pending.intakeId, today)`.
+  2. Если pending есть — его ретрай-будильник отменяется (`cancelAlarmById`).
+     Если `pending.date === today` и `pending.intakeId !== intakeId` —
+     `markSkipped(pending.intakeId, today)`.
   3. `cancelAllNotifications()`.
   4. `notify()` с кнопками «Принял» (`page/take`), «Отложить»
      (`page/snooze`), «Отменить» (`page/cancel`).
-  5. `setPending(intakeId, today)`.
-  6. `scheduleRetry(intakeId)`.
+  5. `setPending(intakeId, today, retryAlarmId)`.
+  6. `scheduleRetry(intakeId)` возвращает id ретрай-будильника, который
+     сохраняется в pending-записи.
 - `clearPendingForIntake(intakeId)` — если pending принадлежит этому intake:
-  `cancelAllNotifications()` + сброс pending. Вызывается при резолве приёма.
+  отмена его ретрай-будильника (`cancelAlarmById`), `cancelAllNotifications()`
+  и сброс pending. Вызывается при резолве приёма (принято/отменено/отложено).
 - `markSkipped(intakeId, date)` — добавить takeLog `{ status: 'skipped' }`
   и `sendTakeLogToPhone`.
 - `cancelAllNotifications()` — `getAllNotifications()` → `cancel(ids)`, в
@@ -90,8 +93,14 @@
 
 - `isIntakeResolvedToday(intakeId, date)` — `taken`/`cancelled`/`skipped`.
 - `scheduleRetry(intakeId)` — создаёт ретрай-будильник на `retryInterval` минут
-  с параметром `date` (день, для которого актуален приём). Если время
-  следующего ретрая попадает на новый день — не планировать.
+  с параметром `date` (день, для которого актуален приём), возвращает его id
+  (или `null`, если не запланирован). Если время следующего ретрая попадает
+  на новый день — не планировать. Если в настройках нет `retryInterval` —
+  используется `DEFAULT_SETTINGS.retryInterval`.
+
+> Отслеживание ретрай-будильника необходимо: без него неотменённый ретрай
+> продолжал бы выдавать уведомления каждые `retryInterval` минут даже после
+> «Отложить»/«Принято»/«Отменено», игнорируя выбранную задержку.
 
 ### Изменения в существующих файлах
 
