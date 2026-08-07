@@ -4,6 +4,7 @@ import { exit as routerExit } from '@zos/router'
 import { getIntakes, getTakeLogs, addTakeLog, getTodayDateStr } from '../../utils/storage'
 import { sendTakeLogToPhone } from '../../utils/sync'
 import { isIntakeTakenToday } from '../../utils/intake-logic'
+import { clearPendingForIntake } from '../../utils/notification-lifecycle'
 import { getRandomPraiseMessage } from '../../utils/praise-messages'
 import { sysText, getUiScale } from '../../utils/ui-scale'
 import { getContentBounds, renderNavButton } from '../../utils/screen-layout'
@@ -65,6 +66,7 @@ Page({
 
     addTakeLog(takeLog)
     sendTakeLogToPhone(takeLog)
+    clearPendingForIntake(intakeId)
     logger.log('Intake ' + intakeId + ' taken at ' + takenTime)
   },
 

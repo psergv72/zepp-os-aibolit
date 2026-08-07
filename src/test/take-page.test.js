@@ -96,6 +96,12 @@ test('onInit задаёт случайное сообщение из списк�
   assert.ok(PRAISE_MESSAGES.includes(page.state.message), 'сообщение должно быть из списка похвалы')
 })
 
+test('onInit снимает pending-уведомление для принятого приёма', () => {
+  storage.__stores().get('aibolit-data.json').set('pendingNotification', { intakeId: 'i1', date: todayStr() })
+  instance(JSON.stringify({ intakeId: 'i1' }))
+  assert.equal(storage.__stores().get('aibolit-data.json').get('pendingNotification'), undefined)
+})
+
 test('build рисует заголовок, сообщение и кнопку «Готово»', () => {
   const page = instance(JSON.stringify({ intakeId: 'i1' }))
   page.build()
