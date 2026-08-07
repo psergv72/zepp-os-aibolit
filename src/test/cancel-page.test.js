@@ -96,5 +96,6 @@ test('кнопки остаются в пределах безопасной з�
   for (const b of btns) {
     assert.ok(b.props.x >= 70 && b.props.x + b.props.w <= 410, 'кнопка в пределах горизонтальной безопасной зоны')
     assert.ok(b.props.y >= 70 && b.props.y + b.props.h <= 410, 'кнопка в пределах вертикальной безопасной зоны')
+    assert.ok(b.props.text_size <= b.props.h, 'текст кнопки влезает по высоте')
   }
 })

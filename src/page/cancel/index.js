@@ -46,7 +46,6 @@ Page({
     const S = getUiScale()
     const bounds = getContentBounds()
     const centerX = 480 / 2
-    let y = bounds.top
 
     const intake = this.state.intake
 
@@ -62,11 +61,21 @@ Page({
       .filter(Boolean)
       .join(', ')
 
+    const gap = 20 * S
+    const titleH = 40 * S
+    const itemsH = 28 * S
+    const questionH = 32 * S
+
+    const itemsBottom = bounds.top + titleH + gap + itemsH + gap + questionH + gap
+    const showItems = itemsText && itemsBottom <= bounds.bottom - 72 * S
+
+    let y = bounds.top
+
     createWidget(widget.TEXT, {
       x: bounds.left,
       y: y,
       w: bounds.width,
-      h: 40 * S,
+      h: titleH,
       color: 0xffffff,
       text_size: sysText(28),
       align_h: align.CENTER_H,
@@ -74,14 +83,14 @@ Page({
       text_style: text_style.NONE,
       text: intake ? (intake.label || intake.time) : '',
     })
-    y += 48 * S
+    y += titleH + gap
 
-    if (itemsText) {
+    if (showItems) {
       createWidget(widget.TEXT, {
         x: bounds.left,
         y: y,
         w: bounds.width,
-        h: 28 * S,
+        h: itemsH,
         color: 0x888888,
         text_size: sysText(22),
         align_h: align.CENTER_H,
@@ -89,14 +98,14 @@ Page({
         text_style: text_style.NONE,
         text: itemsText,
       })
-      y += 30 * S
+      y += itemsH + gap
     }
 
     createWidget(widget.TEXT, {
       x: bounds.left,
       y: y,
       w: bounds.width,
-      h: 32 * S,
+      h: questionH,
       color: 0xffffff,
       text_size: sysText(26),
       align_h: align.CENTER_H,
@@ -104,10 +113,10 @@ Page({
       text_style: text_style.NONE,
       text: 'Отменить приём на сегодня?',
     })
-    y += 44 * S
+    y += questionH + gap
 
-    const gap = 20 * S
     const btnH = Math.max(0, Math.min(72 * S, bounds.bottom - y))
+    const btnTextSp = Math.max(16, Math.min(32, Math.floor(btnH / S)))
     const btnW = (bounds.width - gap) / 2
     const gridX = centerX - (btnW * 2 + gap) / 2
 
@@ -117,7 +126,7 @@ Page({
       w: btnW,
       h: btnH,
       color: 0x4fc3f7,
-      text_size: sysText(32),
+      text_size: sysText(btnTextSp),
       align_h: align.CENTER_H,
       align_v: align.CENTER_V,
       text_style: text_style.NONE,
@@ -133,7 +142,7 @@ Page({
       w: btnW,
       h: btnH,
       color: 0xff6b6b,
-      text_size: sysText(32),
+      text_size: sysText(btnTextSp),
       align_h: align.CENTER_H,
       align_v: align.CENTER_V,
       text_style: text_style.NONE,
