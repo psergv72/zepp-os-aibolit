@@ -4,7 +4,7 @@ const STORAGE_KEYS = {
   settings: 'settings',
 }
 
-const DEFAULT_SETTINGS = { retryInterval: 60, syncInterval: 60, snoozeOptions: [30, 45, 60, 90], minFontSize: 16 }
+const DEFAULT_SETTINGS = { retryInterval: 5, syncInterval: 60, snoozeOptions: [30, 45, 60, 90], minFontSize: 16 }
 
 const DAY_NAMES = [
   { name: 'Пн', value: '1' },
@@ -595,7 +595,7 @@ AppSettingsPage({
       backLink(() => this.navigateTo('list')),
       Text({ style: S.groupTitle }, ['Напоминания']),
       View({ style: S.card }, [
-        textField('Интервал повтора (мин)', String(draft.retryInterval), v => { draft.retryInterval = parseInt(v, 10) || 60; this.forceRender() }),
+        textField('Интервал повтора (мин)', String(draft.retryInterval), v => { draft.retryInterval = parseInt(v, 10) || 5; this.forceRender() }),
         textField('Интервал синхронизации (мин)', String(draft.syncInterval), v => { draft.syncInterval = parseInt(v, 10) || 60; this.forceRender() }),
         textField('Варианты отложки (мин, через запятую)', draft.snoozeOptions.join(', '), v => { draft.snoozeOptions = v.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n)); this.forceRender() }, true),
       ]),

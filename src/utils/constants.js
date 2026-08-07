@@ -18,7 +18,7 @@ export const INTAKE_STATUS = {
 }
 
 export const DEFAULT_SETTINGS = {
-  retryInterval: 60,
+  retryInterval: 5,
   syncInterval: 60,
   snoozeOptions: [30, 45, 60, 90],
   minFontSize: 16,
