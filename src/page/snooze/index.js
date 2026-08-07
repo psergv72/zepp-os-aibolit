@@ -5,6 +5,7 @@ import { getSettings, getIntakes, getMedications, getTakeLogs, addTakeLog, getTo
 import { sendTakeLogToPhone } from '../../utils/sync'
 import { isIntakeTakenToday } from '../../utils/intake-logic'
 import { createSnoozeAlarm } from '../../utils/schedule'
+import { clearPendingForIntake } from '../../utils/notification-lifecycle'
 import { INTAKE_STATUS } from '../../utils/constants'
 import { sysText, getUiScale } from '../../utils/ui-scale'
 import { getContentBounds } from '../../utils/screen-layout'
@@ -187,7 +188,8 @@ Page({
       return
     }
 
-    createSnoozeAlarm(intakeId, delayMinutes)
+    createSnoozeAlarm(intakeId, delayMinutes, todayDateStr)
+    clearPendingForIntake(intakeId)
 
     const now = new Date()
     const snoozeRecord = {

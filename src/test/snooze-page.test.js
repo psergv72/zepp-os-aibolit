@@ -85,6 +85,16 @@ test('confirmSnooze не дублирует отложку уже принято
   assert.equal(logs.length, 1, 'не должен дублировать запись')
 })
 
+test('confirmSnooze снимает pending-уведомление и передаёт дату в будильник', () => {
+  storage.__stores().get('aibolit-data.json').set('pendingNotification', { intakeId: 'i1', date: todayStr() })
+  const page = instance()
+  page.confirmSnooze(30)
+  const set = alarm.__getCalls().find(c => c.method === 'set')
+  assert.ok(set, 'должен быть создан будильник')
+  assert.equal(JSON.parse(set.option.param).date, todayStr())
+  assert.equal(storage.__stores().get('aibolit-data.json').get('pendingNotification'), undefined)
+})
+
 test('confirmSnooze без intakeId просто закрывает приложение', () => {
   const page = instance()
   page.state.intakeId = null
