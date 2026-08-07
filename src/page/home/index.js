@@ -3,7 +3,7 @@ import { createWidget, deleteWidget, widget, event, align, text_style, redraw } 
 import { replace as routerReplace } from '@zos/router'
 import { getMedications, getIntakes, getTakeLogs, getCancellations, addTakeLog, getTodayDateStr } from '../../utils/storage'
 import { sendTakeLogToPhone, fetchTakesFromPhone, mergeTakeRecords } from '../../utils/sync'
-import { getIntakeEntries, isIntakeOnDay, isIntakeTakenToday, isIntakeCancelledToday, medItemText } from '../../utils/intake-logic.js'
+import { getIntakeEntries, isIntakeOnDay, isIntakeTakenToday, isIntakeCancelledToday, isIntakeSkippedToday, medItemText } from '../../utils/intake-logic.js'
 import { fetchConfigFromSide } from '../../utils/watch-config'
 import { sysText, getUiScale } from '../../utils/ui-scale'
 import { getContentBounds, renderTimeHeader, renderNavButton, enableScroll } from '../../utils/screen-layout'
@@ -71,6 +71,7 @@ Page({
       .filter(({ intake }) => isIntakeOnDay(intake, dayOfWeek))
       .filter(({ intake }) => !isIntakeTakenToday(intake.id, todayDateStr, takeLogs))
       .filter(({ intake }) => !isIntakeCancelledToday(intake.id, todayDateStr, cancellations))
+      .filter(({ intake }) => !isIntakeSkippedToday(intake.id, todayDateStr, takeLogs))
       .sort((a, b) => a.intake.time.localeCompare(b.intake.time))
 
     this.state.intakes = relevant

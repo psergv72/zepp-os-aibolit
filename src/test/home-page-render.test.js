@@ -253,3 +253,14 @@ test('длинное название лекарства переносится 
   )
   assert.equal(first.props.x - (check.props.x + check.props.w), 4, 'отступ между чекбоксом и названием уменьшен')
 })
+
+test('пропущенный приём не показывается на домашней странице', () => {
+  const today = new Date()
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  storage.__stores().get('aibolit-data.json').set('takeLogs', [{ intakeId: 'i1', date: todayStr, status: 'skipped' }])
+  const page = instance()
+  page.refreshView()
+  const texts = __getRegistry().map(w => w.props.text).filter(Boolean)
+  assert.ok(!texts.includes('23:59'), 'пропущенный приём не должен отображаться')
+  assert.ok(texts.includes('Нет предстоящих приёмов'), 'должен быть пустой список')
+})
