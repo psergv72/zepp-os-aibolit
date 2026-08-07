@@ -240,3 +240,36 @@ test('длинное название лекарства переносится 
   )
   assert.equal(first.props.x - (ctrl.props.x + ctrl.props.w), 4, 'отступ между контролом и названием уменьшен')
 })
+
+test('пропущенный приём отображается с отметкой ☒ и текстом «пропущено»', () => {
+  const today = new Date()
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  storage.__stores().get('aibolit-data.json').set('takeLogs', [{ intakeId: 'i1', date: todayStr, status: 'skipped' }])
+  const page = instance()
+  page.refreshView()
+  const texts = __getRegistry().map(w => w.props.text).filter(Boolean)
+  assert.ok(texts.includes('пропущено'), 'должен быть текст «пропущено»')
+  assert.ok(texts.some(t => t.includes('\u2612')), 'должна быть отметка ☒')
+})
+
+test('тап по пропущенному приёму помечает его принятым', () => {
+  const today = new Date()
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  storage.__stores().get('aibolit-data.json').set('takeLogs', [{ intakeId: 'i1', date: todayStr, status: 'skipped' }])
+  const page = instance()
+  page.refreshView()
+  const ctrl = __getRegistry().find(w => w.props.text === '\u2612')
+  assert.ok(ctrl, 'должна быть тапабельная отметка ☒')
+  ctrl.listeners[event.CLICK_UP]()
+  const logs = storage.__stores().get('aibolit-data.json').get('takeLogs')
+  assert.ok(logs.some(l => l.intakeId === 'i1' && l.status === 'taken'), 'приём должен стать принятым')
+})
+
+test('takeIntake сбрасывает pending-уведомление', () => {
+  const today = new Date()
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  storage.__stores().get('aibolit-data.json').set('pendingNotification', { intakeId: 'i1', date: todayStr })
+  const page = instance()
+  page.takeIntake({ id: 'i1', time: '23:59', items: [{ medicationId: 'm1', amount: '1' }] })
+  assert.equal(storage.__stores().get('aibolit-data.json').get('pendingNotification'), undefined)
+})

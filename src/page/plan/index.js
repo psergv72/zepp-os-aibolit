@@ -13,6 +13,7 @@ import {
   removeTakeLog,
 } from '../../utils/storage'
 import { sendTakeLogToPhone, sendCancellationToPhone, sendUndoTakeToPhone, fetchTakesFromPhone, mergeTakeRecords } from '../../utils/sync'
+import { clearPendingForIntake } from '../../utils/notification-lifecycle'
 import { getIntakeEntries, isIntakeOnDay, getIntakeStatus, getTakenTime, medItemText } from '../../utils/intake-logic.js'
 import { fetchConfigFromSide } from '../../utils/watch-config'
 import { sysText, getUiScale } from '../../utils/ui-scale'
@@ -81,6 +82,7 @@ Page({
       entry._taken = status === 'taken'
       entry._takenTime = getTakenTime(intake.id, todayDateStr, takeLogs)
       entry._cancelled = status === 'cancelled'
+      entry._skipped = status === 'skipped'
     }
 
     this.state.intakes = today
@@ -107,7 +109,7 @@ Page({
     const medSize = sysText(24)
     const linesOf = (item) => wrapText(medItemText(item), medSize, medW)
     const itemsOf = (entry) => entry.items || []
-    const statusHOf = (entry) => (entry._takenTime ? 32 : 0) + (entry._cancelled ? 32 : 0)
+    const statusHOf = (entry) => (entry._takenTime ? 32 : 0) + (entry._cancelled ? 32 : 0) + (entry._skipped ? 32 : 0)
     const blockHOf = (entry) => {
       const items = itemsOf(entry)
       const totalLines = items.reduce((sum, it) => sum + linesOf(it).length, 0)
@@ -158,8 +160,8 @@ Page({
     for (const entry of entries) {
       const items = itemsOf(entry)
       const intake = entry.intake
-      const textColor = entry._cancelled ? 0x666666 : (entry._taken ? 0x4caf50 : 0xffffff)
-      const statusIcon = entry._taken ? ' \u2713' : ''
+      const textColor = entry._cancelled ? 0x666666 : (entry._taken ? 0x4caf50 : (entry._skipped ? 0x999999 : 0xffffff))
+      const statusIcon = entry._taken ? ' \u2713' : (entry._skipped ? ' \u2612' : '')
       const headerText = intake.time + statusIcon
 
       renderTimeHeader(this.ui, {
@@ -177,7 +179,7 @@ Page({
       const firstMedY = y
 
       for (const item of items) {
-        const medColor = entry._cancelled ? 0x555555 : (entry._taken ? 0x888888 : 0xffffff)
+        const medColor = entry._cancelled ? 0x555555 : (entry._taken ? 0x888888 : (entry._skipped ? 0x777777 : 0xffffff))
         const medDecor = entry._cancelled ? text_style.STRIKETHROUGH : text_style.NONE
         const lines = linesOf(item)
         for (let i = 0; i < lines.length; i++) {
@@ -232,9 +234,25 @@ Page({
         y += 32 * S
       }
 
+      if (entry._skipped) {
+        this.ui.create(widget.TEXT, {
+          x: medX,
+          y: y,
+          w: medW,
+          h: 32 * S,
+          color: 0x666666,
+          text_size: sysText(20),
+          align_h: align.LEFT,
+          align_v: align.CENTER_V,
+          text_style: text_style.NONE,
+          text: 'пропущено',
+        })
+        y += 32 * S
+      }
+
       if (!entry._cancelled) {
-        const symbol = entry._taken ? '\u2713' : '\u2610'
-        const color = entry._taken ? 0x4caf50 : 0xffffff
+        const symbol = entry._taken ? '\u2713' : (entry._skipped ? '\u2612' : '\u2610')
+        const color = entry._taken ? 0x4caf50 : (entry._skipped ? 0x888888 : 0xffffff)
         const ctrl = this.ui.create(widget.TEXT, {
           x: bounds.left,
           y: firstMedY + (lineH - medGap) / 2,
@@ -258,7 +276,7 @@ Page({
             this.takeIntake(intake)
           }
         })
-        if (!entry._taken) {
+        if (!entry._taken && !entry._skipped) {
           ctrl.addEventListener(event.CLICK_DOWN, () => {
             this._pressTimer = setTimeout(() => {
               this.cancelIntake(intake)
@@ -310,6 +328,7 @@ Page({
     }
     addTakeLog(takeLog)
     sendTakeLogToPhone(takeLog)
+    clearPendingForIntake(intake.id)
 
     this.refreshView()
   },
@@ -329,6 +348,7 @@ Page({
     const todayDateStr = getTodayDateStr()
     addCancellation(intake.id, todayDateStr)
     sendCancellationToPhone(intake.id, todayDateStr)
+    clearPendingForIntake(intake.id)
     this.refreshView()
   },
 
