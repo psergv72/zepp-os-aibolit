@@ -6,6 +6,7 @@ register(new URL('./helpers/zos-loader.mjs', import.meta.url))
 
 const notification = await import('./helpers/stubs/zos-notification.mjs')
 const storage = await import('./helpers/stubs/zos-storage.mjs')
+const fs = await import('./helpers/stubs/zos-fs.mjs')
 const alarm = await import('./helpers/stubs/zos-alarm.mjs')
 
 const lifecycle = await import('../utils/notification-lifecycle.js')
@@ -37,22 +38,18 @@ beforeEach(() => {
   seed()
   notification.__reset()
   alarm.__reset()
+  fs.__resetFs()
 })
 
-test('issueNotification выдаёт уведомление, сохраняет pending и планирует ретрай', () => {
+test('issueNotification выдаёт уведомление и сохраняет pending без ретрай-будильника', () => {
   lifecycle.issueNotification('i1')
   assert.equal(notification.__calls.length, 1)
   const pending = store().get('pendingNotification')
   assert.equal(pending.intakeId, 'i1')
   assert.equal(pending.date, todayStr())
-  if (lifecycle.nextRetryIsToday(new Date(), 5)) {
-    const retry = alarm.__getCalls().filter(c => c.method === 'set' && JSON.parse(c.option.param).mode === 'retry')
-    assert.equal(retry.length, 1)
-    assert.equal(retry[0].option.url, 'app-service/reminder')
-    assert.equal(JSON.parse(retry[0].option.param).intakeId, 'i1')
-    assert.equal(JSON.parse(retry[0].option.param).date, todayStr())
-    assert.ok(typeof pending.retryAlarmId === 'number', 'ретрай-будильник сохранён в pending')
-  }
+  assert.equal(pending.retryAlarmId, undefined, 'ретрай-будильник не создаётся из AppService')
+  const retry = alarm.__getCalls().filter(c => c.method === 'set' && JSON.parse(c.option.param).mode === 'retry')
+  assert.equal(retry.length, 0)
 })
 
 test('issueNotification содержит кнопку Отменить', () => {
@@ -157,15 +154,12 @@ test('clearPendingForIntake игнорирует чужой pending', () => {
   assert.equal(pending.date, todayStr())
 })
 
-test('после резолва ретрай-будильник отменяется', () => {
-  lifecycle.issueNotification('i1')
-  const pending = store().get('pendingNotification')
-  if (lifecycle.nextRetryIsToday(new Date(), 5)) {
-    assert.ok(typeof pending.retryAlarmId === 'number', 'ретрай-будильник сохранён в pending')
-    lifecycle.clearPendingForIntake('i1')
-    const cancels = alarm.__getCalls().filter(c => c.method === 'cancel')
-    assert.ok(cancels.some(c => c.id === pending.retryAlarmId), 'ретрай-будильник должен быть отменён')
-  }
+test('clearPendingForIntake при наличии старого retryAlarmId отменяет его', () => {
+  store().set('pendingNotification', { intakeId: 'i1', date: todayStr(), retryAlarmId: 42 })
+  lifecycle.clearPendingForIntake('i1')
+  const cancels = alarm.__getCalls().filter(c => c.method === 'cancel')
+  assert.ok(cancels.some(c => c.id === 42), 'старый ретрай-будильник отменяется при резолве')
+  assert.equal(lifecycle.getPendingIntake(), null)
 })
 
 test('замена pending отменяет ретрай-будильник старого приёма', () => {
@@ -197,4 +191,40 @@ test('nextRetryIsToday учитывает пересечение полуноч�
   assert.equal(lifecycle.nextRetryIsToday(nearMidnight, 5), false)
   const beforeMidnight = new Date(2026, 7, 7, 23, 0, 0)
   assert.equal(lifecycle.nextRetryIsToday(beforeMidnight, 60), false)
+})
+
+test('issueNotification сохраняет issuedAt в pending', () => {
+  lifecycle.issueNotification('i1')
+  const pending = store().get('pendingNotification')
+  assert.ok(typeof pending.issuedAt === 'number', 'pending содержит issuedAt')
+  assert.ok(pending.issuedAt <= Date.now())
+})
+
+test('maybeRetryPending не выдаёт повтор, если интервал ещё не прошёл', () => {
+  store().set('settings', { retryInterval: 2, syncInterval: 60, snoozeOptions: [30], minFontSize: 16 })
+  store().set('pendingNotification', { intakeId: 'i1', date: todayStr(), issuedAt: Date.now() - 60 * 1000 })
+  lifecycle.maybeRetryPending()
+  assert.equal(notification.__calls.length, 0)
+})
+
+test('maybeRetryPending выдаёт повтор, если интервал прошёл', () => {
+  store().set('settings', { retryInterval: 2, syncInterval: 60, snoozeOptions: [30], minFontSize: 16 })
+  store().set('pendingNotification', { intakeId: 'i1', date: todayStr(), issuedAt: Date.now() - 3 * 60 * 1000 })
+  lifecycle.maybeRetryPending()
+  assert.equal(notification.__calls.length, 1)
+  const pending = store().get('pendingNotification')
+  assert.ok(pending.issuedAt >= Date.now() - 1000, 'issuedAt обновлён после повтора')
+})
+
+test('maybeRetryPending игнорирует отсутствующий pending', () => {
+  lifecycle.maybeRetryPending()
+  assert.equal(notification.__calls.length, 0)
+})
+
+test('maybeRetryPending игнорирует уже обработанный приём', () => {
+  store().set('settings', { retryInterval: 2, syncInterval: 60, snoozeOptions: [30], minFontSize: 16 })
+  store().set('takeLogs', [{ intakeId: 'i1', date: todayStr(), status: 'taken' }])
+  store().set('pendingNotification', { intakeId: 'i1', date: todayStr(), issuedAt: Date.now() - 3 * 60 * 1000 })
+  lifecycle.maybeRetryPending()
+  assert.equal(notification.__calls.length, 0)
 })

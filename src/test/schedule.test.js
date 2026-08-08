@@ -7,7 +7,7 @@ register(new URL('./helpers/zos-loader.mjs', import.meta.url))
 const alarm = await import('./helpers/stubs/zos-alarm.mjs')
 const storage = await import('./helpers/stubs/zos-storage.mjs')
 
-const { refreshAlarms, createSyncAlarm, createRetryAlarm, createSnoozeAlarm } = await import('../utils/schedule.js')
+const { refreshAlarms, createSyncAlarm, createSnoozeAlarm, createRetryTickAlarm } = await import('../utils/schedule.js')
 
 function seed() {
   storage.__resetStorage()
@@ -142,14 +142,55 @@ test('createSyncAlarm отменяет предыдущий sync-alarm и сох
   assert.notEqual(newId, firstId)
 })
 
-test('createRetryAlarm передаёт date в параметр будильника', () => {
-  createRetryAlarm('i1', 5, '2026-08-07')
+test('refreshAlarms не отменяет активный snooze-будильник', () => {
+  storage.__stores().get('aibolit-data.json').set('intakes', [
+    { id: 'i1', time: '08:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] },
+  ])
+  const snoozeId = createSnoozeAlarm('i1', 30, '2026-08-08')
+
+  refreshAlarms()
+
+  const cancels = alarm.__getCalls().filter(c => c.method === 'cancel')
+  assert.ok(!cancels.some(c => c.id === snoozeId), 'snooze-будильник не должен быть отменён refreshAlarms')
+})
+
+test('createSnoozeAlarm сохраняет id будильника в storage', () => {
+  const id = createSnoozeAlarm('i1', 30, '2026-08-08')
+  assert.equal(storage.__stores().get('aibolit-data.json').get('snoozeAlarmId'), id)
+})
+
+test('createSnoozeAlarm планирует по абсолютному времени time = now + delay', () => {
+  const before = Math.floor(Date.now() / 1000)
+  createSnoozeAlarm('i1', 2, '2026-08-08')
   const set = alarm.__getCalls().find(c => c.method === 'set')
   assert.ok(set, 'должен быть создан будильник')
-  const param = JSON.parse(set.option.param)
-  assert.equal(param.mode, 'retry')
-  assert.equal(param.intakeId, 'i1')
-  assert.equal(param.date, '2026-08-07')
+  assert.equal(set.option.delay, undefined, 'delay не должен использоваться')
+  assert.ok(set.option.time >= before + 110 && set.option.time <= before + 130, `time ${set.option.time} должен быть ≈ now + 120 сек`)
+})
+
+test('createRetryTickAlarm создаёт периодический будильник REPEAT_MINUTE и сохраняет id', () => {
+  createRetryTickAlarm()
+  const sets = alarm.__getCalls().filter(c => c.method === 'set')
+  const tick = sets.find(c => JSON.parse(c.option.param).mode === 'retry_tick')
+  assert.ok(tick, 'тик-будильник создан')
+  assert.equal(tick.option.url, 'app-service/reminder')
+  assert.equal(tick.option.repeat_type, 1, 'REPEAT_MINUTE')
+  assert.equal(tick.option.repeat_period + tick.option.repeat_duration, 2, 'период тика 2 мин')
+  const storedId = storage.__stores().get('aibolit-data.json').get('retryTickAlarmId')
+  assert.ok(storedId > 0, 'id тик-будильника сохранён в storage')
+})
+
+test('refreshAlarms создаёт тик-будильник один раз и не отменяет его', () => {
+  storage.__stores().get('aibolit-data.json').set('intakes', [
+    { id: 'i1', time: '08:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] },
+  ])
+  refreshAlarms()
+  refreshAlarms()
+  const tickSets = alarm.__getCalls().filter(c => c.method === 'set' && JSON.parse(c.option.param).mode === 'retry_tick')
+  assert.equal(tickSets.length, 1, 'тик-будильник создаётся один раз')
+  const tickId = tickSets[0].id
+  const cancels = alarm.__getCalls().filter(c => c.method === 'cancel')
+  assert.ok(!cancels.some(c => c.id === tickId), 'тик-будильник не должен быть отменён')
 })
 
 test('createSnoozeAlarm передаёт date в параметр будильника', () => {

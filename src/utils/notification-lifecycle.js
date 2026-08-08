@@ -12,7 +12,7 @@ import {
   clearPendingNotification,
   addTakeLog,
 } from './storage'
-import { createRetryAlarm, cancelAlarmById } from './schedule'
+import { cancelAlarmById } from './schedule'
 import { INTAKE_STATUS, DEFAULT_SETTINGS } from './constants'
 import { buildItemsSummary, isIntakeTakenToday, isIntakeCancelledToday, isIntakeSkippedToday } from './intake-logic.js'
 import { sendTakeLogToPhone } from './sync'
@@ -74,11 +74,18 @@ export function clearPendingForIntake(intakeId) {
 }
 
 export function issueNotification(intakeId) {
+  logger.log('issueNotification(' + intakeId + ') start')
   const intake = getIntakes().find(i => i.id === intakeId)
-  if (!intake) return
+  if (!intake) {
+    logger.log('issueNotification: intake not found ' + intakeId)
+    return
+  }
 
   const todayDateStr = getTodayDateStr()
-  if (isResolvedToday(intakeId, todayDateStr)) return
+  if (isResolvedToday(intakeId, todayDateStr)) {
+    logger.log('issueNotification: intake already resolved today ' + intakeId)
+    return
+  }
 
   const pending = getPendingIntake()
   if (pending) {
@@ -99,11 +106,12 @@ export function issueNotification(intakeId) {
 
   cancelAllNotifications()
 
-  const title = 'Пора принимать лекарства'
+  setPendingNotification({ intakeId: intakeId, date: todayDateStr, issuedAt: Date.now() })
+
   const content = buildItemsSummary(intake.items || [], getMedications()) || 'Примите лекарство'
 
   const id = notify({
-    title: title,
+    title: 'Пора принимать лекарства',
     content: content,
     vibrate: 1,
     actions: [
@@ -113,10 +121,50 @@ export function issueNotification(intakeId) {
     ],
   })
 
-  const retryAlarmId = scheduleRetry(intakeId)
-  setPendingNotification({ intakeId: intakeId, date: todayDateStr, retryAlarmId: retryAlarmId })
-
   logger.log('Notification issued for ' + intakeId + ' id=' + id)
+}
+
+export function maybeRetryPending() {
+  const pending = getPendingNotification()
+  if (!pending || typeof pending !== 'object') return
+  const intakeId = pending.intakeId
+  if (!intakeId || !pending.issuedAt) return
+
+  const todayDateStr = getTodayDateStr()
+  if (pending.date !== todayDateStr) {
+    logger.log('maybeRetryPending: stale pending for a past day, skip')
+    return
+  }
+
+  const intake = getIntakes().find(i => i.id === intakeId)
+  if (!intake) {
+    logger.log('maybeRetryPending: intake not found ' + intakeId)
+    return
+  }
+
+  if (isResolvedToday(intakeId, todayDateStr)) {
+    logger.log('maybeRetryPending: intake already resolved, skip')
+    return
+  }
+
+  const settings = getSettings()
+  const raw = settings && settings.retryInterval
+  const delay = Number(raw !== undefined && raw !== null ? raw : DEFAULT_SETTINGS.retryInterval)
+  if (!Number.isFinite(delay) || delay <= 0) return
+
+  if (!nextRetryIsToday(new Date(), delay)) {
+    logger.log('maybeRetryPending: retry would cross midnight, skip')
+    return
+  }
+
+  const elapsed = Date.now() - pending.issuedAt
+  if (elapsed < delay * 60 * 1000) {
+    logger.log('maybeRetryPending: interval not elapsed yet, skip')
+    return
+  }
+
+  logger.log('maybeRetryPending: issuing retry for ' + intakeId)
+  issueNotification(intakeId)
 }
 
 function dateStrOf(d) {
@@ -129,16 +177,4 @@ function dateStrOf(d) {
 export function nextRetryIsToday(now, delayMinutes) {
   const next = new Date(now.getTime() + delayMinutes * 60 * 1000)
   return dateStrOf(next) === dateStrOf(now)
-}
-
-function scheduleRetry(intakeId) {
-  const settings = getSettings()
-  const raw = settings && settings.retryInterval
-  const delay = Number(raw !== undefined && raw !== null ? raw : DEFAULT_SETTINGS.retryInterval)
-  if (!Number.isFinite(delay) || delay <= 0) return null
-  if (!nextRetryIsToday(new Date(), delay)) {
-    logger.log('Retry would cross midnight, skipping')
-    return null
-  }
-  return createRetryAlarm(intakeId, delay, getTodayDateStr())
 }

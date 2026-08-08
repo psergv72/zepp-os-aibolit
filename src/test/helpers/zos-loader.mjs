@@ -9,6 +9,7 @@ const ZOS_STUBS = {
   '@zos/alarm': './stubs/zos-alarm.mjs',
   '@zos/device': './stubs/zos-device.mjs',
   '@zos/notification': './stubs/zos-notification.mjs',
+  '@zos/fs': './stubs/zos-fs.mjs',
   '@zeppos/zml/base-side': './stubs/zml-base-side.mjs',
 }
 

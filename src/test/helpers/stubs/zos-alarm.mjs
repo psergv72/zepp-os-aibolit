@@ -1,16 +1,21 @@
 const calls = []
+const activeIds = new Set()
 
 export function set(option) {
-  calls.push({ method: 'set', option })
-  return calls.length
+  const id = calls.length + 1
+  calls.push({ method: 'set', option, id })
+  activeIds.add(id)
+  return id
 }
 
 export function cancel(id) {
+  const list = Array.isArray(id) ? id : [id]
+  for (const x of list) activeIds.delete(x)
   calls.push({ method: 'cancel', id })
 }
 
 export function getAllAlarms() {
-  return []
+  return Array.from(activeIds)
 }
 
 export const REPEAT_WEEK = 4
@@ -23,4 +28,5 @@ export function __getCalls() {
 
 export function __reset() {
   calls.length = 0
+  activeIds.clear()
 }

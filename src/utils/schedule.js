@@ -1,7 +1,7 @@
 import { set as setAlarm, cancel as cancelAlarm, getAllAlarms, REPEAT_WEEK, REPEAT_ONCE, REPEAT_MINUTE } from '@zos/alarm'
 import { log as Logger } from '@zos/utils'
 import { ALARM_MODES, DEFAULT_SETTINGS } from './constants'
-import { getMedications, getIntakes, getSettings, getSyncAlarmId, setSyncAlarmId } from './storage'
+import { getMedications, getIntakes, getSettings, getSyncAlarmId, setSyncAlarmId, getSnoozeAlarmId, setSnoozeAlarmId, getPendingNotification, getRetryTickAlarmId, setRetryTickAlarmId } from './storage'
 import { getWeekDaysBitmask, getEnabledMedItems, isIntakeOnDay } from './intake-logic.js'
 
 const logger = Logger.getLogger('aibolit-schedule')
@@ -45,29 +45,8 @@ export function createIntakeAlarm(intake) {
   return id
 }
 
-export function createRetryAlarm(intakeId, delayMinutes, date) {
-  const delaySeconds = delayMinutes * 60
-  const param = JSON.stringify({
-    mode: ALARM_MODES.RETRY,
-    intakeId: intakeId,
-    date: date,
-  })
-
-  const option = {
-    url: 'app-service/reminder',
-    delay: delaySeconds,
-    repeat_type: REPEAT_ONCE,
-    param: param,
-    store: false,
-  }
-
-  const id = setAlarm(option)
-  logger.log(`Created retry alarm id=${id} for intake ${intakeId} in ${delayMinutes}min`)
-  return id
-}
-
 export function createSnoozeAlarm(intakeId, delayMinutes, date) {
-  const delaySeconds = delayMinutes * 60
+  const time = Math.floor(Date.now() / 1000) + delayMinutes * 60
   const param = JSON.stringify({
     mode: ALARM_MODES.SNOOZE,
     intakeId: intakeId,
@@ -76,14 +55,38 @@ export function createSnoozeAlarm(intakeId, delayMinutes, date) {
 
   const option = {
     url: 'app-service/reminder',
-    delay: delaySeconds,
+    time: time,
     repeat_type: REPEAT_ONCE,
     param: param,
     store: false,
   }
 
   const id = setAlarm(option)
-  logger.log(`Created snooze alarm id=${id} for intake ${intakeId} in ${delayMinutes}min`)
+  if (id && id > 0) setSnoozeAlarmId(id)
+  logger.log(`Created snooze alarm id=${id} for intake ${intakeId} in ${delayMinutes}min at ${time}`)
+  return id
+}
+
+export function createRetryTickAlarm() {
+  const prevId = getRetryTickAlarmId()
+  if (prevId !== null) {
+    logger.log(`Retry tick alarm already exists id=${prevId}, keep it`)
+    return prevId
+  }
+
+  const option = {
+    url: 'app-service/reminder',
+    time: Math.floor(Date.now() / 1000) + 120,
+    repeat_type: REPEAT_MINUTE,
+    repeat_period: 1,
+    repeat_duration: 1,
+    param: JSON.stringify({ mode: ALARM_MODES.RETRY_TICK }),
+    store: true,
+  }
+
+  const id = setAlarm(option)
+  if (id && id > 0) setRetryTickAlarmId(id)
+  logger.log(`Created retry tick alarm id=${id}`)
   return id
 }
 
@@ -122,11 +125,20 @@ export function createSyncAlarm(syncInterval) {
 export function refreshAlarms() {
   const intakes = getIntakes()
   const syncAlarmId = getSyncAlarmId()
+  const retryTickAlarmId = getRetryTickAlarmId()
+
+  const transientIds = []
+  const pending = getPendingNotification()
+  if (pending && pending.retryAlarmId) transientIds.push(pending.retryAlarmId)
+  const snoozeAlarmId = getSnoozeAlarmId()
+  if (snoozeAlarmId) transientIds.push(snoozeAlarmId)
 
   const allAlarms = getAllAlarms()
   if (allAlarms && allAlarms.length > 0) {
     for (const alarmId of allAlarms) {
       if (alarmId === syncAlarmId) continue
+      if (alarmId === retryTickAlarmId) continue
+      if (transientIds.includes(alarmId)) continue
       cancelAlarm(alarmId)
     }
   }
@@ -139,6 +151,7 @@ export function refreshAlarms() {
 
   const settings = getSettings()
   createSyncAlarm(settings.syncInterval)
+  createRetryTickAlarm()
 
   logger.log('Alarms refreshed')
 }

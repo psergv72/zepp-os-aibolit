@@ -1,7 +1,9 @@
 import { ShareLocalStorage } from '@zos/storage'
+import { readFileSync, writeFileSync, rmSync } from '@zos/fs'
 import { STORAGE_KEYS, DEFAULT_SETTINGS } from './constants'
 
 const storage = new ShareLocalStorage('aibolit-data.json')
+const PENDING_FILE = 'aibolit-pending.json'
 
 function getItem(key, defaultValue = null) {
   const value = storage.getItem(key)
@@ -171,15 +173,77 @@ export function clearSyncAlarmId() {
   removeItem(STORAGE_KEYS.SYNC_ALARM_ID)
 }
 
+export function getSnoozeAlarmId() {
+  const value = getItem(STORAGE_KEYS.SNOOZE_ALARM_ID, null)
+  return typeof value === 'number' ? value : null
+}
+
+export function setSnoozeAlarmId(id) {
+  setItem(STORAGE_KEYS.SNOOZE_ALARM_ID, id)
+}
+
+export function clearSnoozeAlarmId() {
+  removeItem(STORAGE_KEYS.SNOOZE_ALARM_ID)
+}
+
+export function getRetryTickAlarmId() {
+  const value = getItem(STORAGE_KEYS.RETRY_TICK_ALARM_ID, null)
+  return typeof value === 'number' ? value : null
+}
+
+export function setRetryTickAlarmId(id) {
+  setItem(STORAGE_KEYS.RETRY_TICK_ALARM_ID, id)
+}
+
+export function getRetryTickCount() {
+  const value = getItem('retryTickCount', 0)
+  return typeof value === 'number' ? value : 0
+}
+
+export function setRetryTickCount(count) {
+  setItem('retryTickCount', count)
+}
+
+function readPendingFile() {
+  try {
+    const content = readFileSync({ path: PENDING_FILE, options: { encoding: 'utf8' } })
+    if (content === undefined || content === null || content === '') return null
+    const parsed = JSON.parse(content)
+    return parsed && typeof parsed === 'object' ? parsed : null
+  } catch (e) {
+    return null
+  }
+}
+
+function writePendingFile(pending) {
+  try {
+    writeFileSync({ path: PENDING_FILE, data: JSON.stringify(pending), options: { encoding: 'utf8' } })
+  } catch (e) {
+    // ignore
+  }
+}
+
+function removePendingFile() {
+  try {
+    rmSync({ path: PENDING_FILE })
+  } catch (e) {
+    // ignore
+  }
+}
+
 export function getPendingNotification() {
+  const fromFile = readPendingFile()
+  if (fromFile) return fromFile
   const value = getItem(STORAGE_KEYS.PENDING_NOTIFICATION, null)
   return value && typeof value === 'object' ? value : null
 }
 
 export function setPendingNotification(pending) {
+  writePendingFile(pending)
   setItem(STORAGE_KEYS.PENDING_NOTIFICATION, pending)
 }
 
 export function clearPendingNotification() {
+  removePendingFile()
   removeItem(STORAGE_KEYS.PENDING_NOTIFICATION)
 }

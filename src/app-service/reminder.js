@@ -3,8 +3,8 @@ import { applyConfigFromSettings } from '../utils/watch-config'
 import { refreshAlarms } from '../utils/schedule'
 import { retrySync } from '../utils/sync'
 import { ALARM_MODES } from '../utils/constants'
-import { getTodayDateStr } from '../utils/storage'
-import { issueNotification } from '../utils/notification-lifecycle'
+import { getTodayDateStr, clearSnoozeAlarmId } from '../utils/storage'
+import { issueNotification, maybeRetryPending } from '../utils/notification-lifecycle'
 
 const logger = Logger.getLogger('aibolit-reminder')
 
@@ -29,13 +29,27 @@ function handleEvent(e) {
     return
   }
 
-  if (!intakeId) return
+  if (mode === ALARM_MODES.RETRY_TICK) {
+    logger.log('retry tick: maybe retry pending')
+    maybeRetryPending()
+    return
+  }
+
+  if (!intakeId) {
+    logger.log('reminder: no intakeId in ' + e)
+    return
+  }
+
+  if (mode === ALARM_MODES.SNOOZE) {
+    clearSnoozeAlarmId()
+  }
 
   if ((mode === ALARM_MODES.RETRY || mode === ALARM_MODES.SNOOZE) && date && date !== getTodayDateStr()) {
     logger.log('stale ' + mode + ' event for a past day, skip')
     return
   }
 
+  logger.log('reminder: issue notification for mode=' + mode + ' intakeId=' + intakeId + ' date=' + date)
   issueNotification(intakeId)
 }
 

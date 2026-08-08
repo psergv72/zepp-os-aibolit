@@ -9,6 +9,7 @@ globalThis.AppService = (opts) => { serviceOpts = opts }
 
 const notification = await import('./helpers/stubs/zos-notification.mjs')
 const storage = await import('./helpers/stubs/zos-storage.mjs')
+const fs = await import('./helpers/stubs/zos-fs.mjs')
 const alarm = await import('./helpers/stubs/zos-alarm.mjs')
 const syncModule = await import('../utils/sync.js')
 
@@ -34,6 +35,7 @@ beforeEach(() => {
   seed()
   notification.__reset()
   alarm.__reset()
+  fs.__resetFs()
 })
 
 test('onInit при срабатывании alarm вызывает notify', () => {
@@ -125,6 +127,22 @@ test('mode sync игнорирует intakeId', () => {
   assert.equal(notification.__calls.length, 0)
 })
 
+test('RETRY_TICK не шлёт уведомление без pending и перевыдаёт после интервала', () => {
+  serviceOpts.onInit(JSON.stringify({ mode: 'retry_tick' }))
+  assert.equal(notification.__calls.length, 0)
+
+  const today = new Date()
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  const store = storage.__stores().get('aibolit-data.json')
+  store.set('settings', { retryInterval: 2, syncInterval: 60, snoozeOptions: [30], minFontSize: 16 })
+  store.set('pendingNotification', { intakeId: 'i1', date: todayStr, issuedAt: Date.now() - 3 * 60 * 1000 })
+
+  serviceOpts.onInit(JSON.stringify({ mode: 'retry_tick' }))
+
+  assert.equal(notification.__calls.length, 1, 'тик перевыдаёт уведомление после интервала')
+  assert.equal(notification.__calls[0].title, 'Пора принимать лекарства')
+})
+
 test('уведомление содержит кнопку Отменить', () => {
   serviceOpts.onInit(JSON.stringify({ mode: 'reminder', intakeId: 'i1' }))
   assert.equal(notification.__calls.length, 1)
@@ -134,15 +152,14 @@ test('уведомление содержит кнопку Отменить', ()
   assert.equal(cancelAction.param, JSON.stringify({ intakeId: 'i1' }))
 })
 
-test('REMINDER планирует ретрай-будильник с датой сегодня', () => {
+test('REMINDER не создаёт ретрай-будильник из AppService, pending сохраняется с issuedAt', () => {
   serviceOpts.onInit(JSON.stringify({ mode: 'reminder', intakeId: 'i1' }))
-  if (lifecycle.nextRetryIsToday(new Date(), 5)) {
-    const retry = alarm.__getCalls().filter(c => c.method === 'set' && JSON.parse(c.option.param).mode === 'retry')
-    assert.equal(retry.length, 1)
-    const today = new Date()
-    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-    assert.equal(JSON.parse(retry[0].option.param).date, todayStr)
-  }
+  assert.equal(notification.__calls.length, 1)
+  const retry = alarm.__getCalls().filter(c => c.method === 'set' && JSON.parse(c.option.param).mode === 'retry')
+  assert.equal(retry.length, 0, 'ретрай-будильник не должен создаваться из AppService')
+  const pending = storage.__stores().get('aibolit-data.json').get('pendingNotification')
+  assert.equal(pending.intakeId, 'i1')
+  assert.ok(typeof pending.issuedAt === 'number')
 })
 
 test('чужой pending помечается пропущенным при выдаче нового уведомления', () => {
@@ -182,4 +199,16 @@ test('onInit пропускает пропущенный intake', () => {
 test('RETRY с датой прошлого дня игнорируется', () => {
   serviceOpts.onInit(JSON.stringify({ mode: 'retry', intakeId: 'i1', date: '2000-01-01' }))
   assert.equal(notification.__calls.length, 0)
+})
+
+test('срабатывание snooze-будильника очищает сохранённый snoozeAlarmId', () => {
+  const today = new Date()
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  const store = storage.__stores().get('aibolit-data.json')
+  store.set('snoozeAlarmId', 42)
+
+  serviceOpts.onInit(JSON.stringify({ mode: 'snooze', intakeId: 'i1', date: todayStr }))
+
+  assert.equal(store.get('snoozeAlarmId'), undefined, 'snoozeAlarmId должен быть очищен после срабатывания')
+  assert.equal(notification.__calls.length, 1)
 })

@@ -7,6 +7,8 @@ export const STORAGE_KEYS = {
   SYNC_QUEUE: 'syncQueue',
   CONFIG_REVISION: 'configRevision',
   SYNC_ALARM_ID: 'syncAlarmId',
+  SNOOZE_ALARM_ID: 'snoozeAlarmId',
+  RETRY_TICK_ALARM_ID: 'retryTickAlarmId',
   PENDING_NOTIFICATION: 'pendingNotification',
 }
 
@@ -60,4 +62,5 @@ export const ALARM_MODES = {
   RETRY: 'retry',
   SNOOZE: 'snooze',
   SYNC: 'sync',
+  RETRY_TICK: 'retry_tick',
 }
