@@ -182,6 +182,7 @@ test('timeToMinutes парсит HH:MM и H:MM в минуты', () => {
   assert.equal(timeToMinutes('00:00'), 0)
   assert.equal(timeToMinutes(''), 0)
   assert.equal(timeToMinutes('abc'), 0)
+  assert.equal(timeToMinutes(' 8:00 '), 480)
 })
 
 test('sortIntakeEntriesByTime сортирует по времени, устойчив к формату без нуля', () => {

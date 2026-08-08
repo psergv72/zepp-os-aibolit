@@ -3,7 +3,7 @@ import { createWidget, deleteWidget, widget, event, align, text_style, redraw } 
 import { replace as routerReplace } from '@zos/router'
 import { getMedications, getIntakes, getTakeLogs, getCancellations, addTakeLog, getTodayDateStr } from '../../utils/storage'
 import { sendTakeLogToPhone, fetchTakesFromPhone, mergeTakeRecords } from '../../utils/sync'
-import { getIntakeEntries, isIntakeOnDay, isIntakeTakenToday, isIntakeCancelledToday, isIntakeSkippedToday, medItemText, sortIntakeEntriesByTime } from '../../utils/intake-logic.js'
+import { getIntakeEntries, isIntakeOnDay, isIntakeTakenToday, isIntakeCancelledToday, isIntakeSkippedToday, medItemText, timeToMinutes, sortIntakeEntriesByTime } from '../../utils/intake-logic.js'
 import { fetchConfigFromSide } from '../../utils/watch-config'
 import { sysText, getUiScale } from '../../utils/ui-scale'
 import { getContentBounds, renderTimeHeader, renderNavButton, enableScroll } from '../../utils/screen-layout'
@@ -64,11 +64,7 @@ Page({
 
     const relevant = sortIntakeEntriesByTime(
       getIntakeEntries(intakes, medications)
-        .filter(({ intake }) => {
-          const [h, m] = intake.time.split(':').map(Number)
-          const intakeMinutes = h * 60 + m
-          return intakeMinutes >= currentMinutes
-        })
+        .filter(({ intake }) => timeToMinutes(intake.time) >= currentMinutes)
         .filter(({ intake }) => isIntakeOnDay(intake, dayOfWeek))
         .filter(({ intake }) => !isIntakeTakenToday(intake.id, todayDateStr, takeLogs))
         .filter(({ intake }) => !isIntakeCancelledToday(intake.id, todayDateStr, cancellations))

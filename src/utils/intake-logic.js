@@ -88,7 +88,7 @@ export function medItemText(item) {
 }
 
 export function timeToMinutes(time) {
-  const m = /^(\d{1,2}):(\d{2})$/.exec(time || '')
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(time || '').trim())
   return m ? Number(m[1]) * 60 + Number(m[2]) : 0
 }
 
