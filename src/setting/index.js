@@ -86,6 +86,13 @@ function timeMinutes(str) {
   return m ? Number(m[1]) * 60 + Number(m[2]) : 0
 }
 
+function normalizeTime(str) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec((str || '').trim())
+  return m
+    ? String(Number(m[1])).padStart(2, '0') + ':' + m[2]
+    : (str || '').trim()
+}
+
 function daySortKey(intake) {
   const days = intake.weekDays && intake.weekDays.length ? intake.weekDays.slice().sort((a, b) => a - b) : null
   return days ? days[0] : 0
@@ -435,6 +442,7 @@ AppSettingsPage({
           style: S.btnHalfPrimary,
           onClick: () => {
             if (!draft.time.trim() || draft.items.length === 0) return
+            draft.time = normalizeTime(draft.time)
             const intakes = this.getIntakes()
             if (isNew) {
               draft.id = generateId()

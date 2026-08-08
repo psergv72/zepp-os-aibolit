@@ -290,3 +290,32 @@ test('в списке лекарств показываются времена �
   assert.ok(texts.includes('• 08:00 Пн, Пт, 1 таблетка'), 'дни должны быть отсортированы по порядку')
   assert.ok(texts.includes('• 09:00, 2 таблетки'), 'для каждого дня дни не пишутся, но количество есть')
 })
+
+test('сохранение приёма со временем «8:00» сохраняет «08:00»', () => {
+  const storage = createStorage()
+  storage.setItem('medications', JSON.stringify([{ id: 'm1', name: 'Аспирин', dosage: '100 мг', comments: '', enabled: true }]))
+  setup(storage)
+  options.navigateTo('intakeEdit', { intake: null })
+  let tree = options.build({ settingsStorage: storage })
+
+  const timeInput = findByPlaceholder(tree, 'TextInput', 'Время')
+  timeInput.props.onChange('8:00')
+
+  const addBtn = findByLink(tree, '+ Добавить лекарство')
+  addBtn.props.onClick()
+  tree = options.build({ settingsStorage: storage })
+  const select = findByRowControl(tree, 'Лекарство')
+  select.props.onChange(['m1'])
+
+  tree = options.build({ settingsStorage: storage })
+  const saveItem = findByButton(tree, 'Сохранить')
+  saveItem.props.onClick()
+
+  tree = options.build({ settingsStorage: storage })
+  const saveIntake = findByButton(tree, 'Сохранить')
+  saveIntake.props.onClick()
+
+  const saved = JSON.parse(storage.getItem('intakes'))
+  assert.equal(saved.length, 1, 'приём должен сохраниться')
+  assert.equal(saved[0].time, '08:00', 'время должно быть нормализовано к HH:MM')
+})
