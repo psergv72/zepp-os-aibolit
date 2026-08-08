@@ -264,3 +264,17 @@ test('пропущенный приём не показывается на до�
   assert.ok(!texts.includes('23:59'), 'пропущенный приём не должен отображаться')
   assert.ok(texts.includes('Нет предстоящих приёмов'), 'должен быть пустой список')
 })
+
+test('приёмы на странице «Сегодня» отсортированы по времени (23:59 после 23:50)', () => {
+  storage.__stores().get('aibolit-data.json').set('intakes', [
+    { id: 'i1', time: '23:59', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] },
+    { id: 'i2', time: '23:50', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] },
+  ])
+  const page = instance()
+  page.refreshView()
+
+  const time1 = __getRegistry().find(w => w.type === widget.TEXT && w.props.text === '23:50')
+  const time2 = __getRegistry().find(w => w.type === widget.TEXT && w.props.text === '23:59')
+  assert.ok(time1 && time2, 'оба приёма должны отображаться')
+  assert.ok(time1.props.y < time2.props.y, '23:50 должен идти раньше 23:59')
+})
