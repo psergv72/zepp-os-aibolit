@@ -273,3 +273,17 @@ test('takeIntake сбрасывает pending-уведомление', () => {
   page.takeIntake({ id: 'i1', time: '23:59', items: [{ medicationId: 'm1', amount: '1' }] })
   assert.equal(storage.__stores().get('aibolit-data.json').get('pendingNotification'), undefined)
 })
+
+test('приёмы на плане отсортированы по времени: 8:00 раньше 10:00', () => {
+  storage.__stores().get('aibolit-data.json').set('intakes', [
+    { id: 'i1', time: '10:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] },
+    { id: 'i2', time: '8:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] },
+  ])
+  const page = instance()
+  page.refreshView()
+
+  const time8 = __getRegistry().find(w => w.type === widget.TEXT && w.props.text === '8:00')
+  const time10 = __getRegistry().find(w => w.type === widget.TEXT && w.props.text === '10:00')
+  assert.ok(time8 && time10, 'оба приёма должны отображаться')
+  assert.ok(time8.props.y < time10.props.y, '8:00 должен идти раньше 10:00')
+})

@@ -14,7 +14,7 @@ import {
 } from '../../utils/storage'
 import { sendTakeLogToPhone, sendCancellationToPhone, sendUndoTakeToPhone, fetchTakesFromPhone, mergeTakeRecords } from '../../utils/sync'
 import { clearPendingForIntake } from '../../utils/notification-lifecycle'
-import { getIntakeEntries, isIntakeOnDay, getIntakeStatus, getTakenTime, medItemText } from '../../utils/intake-logic.js'
+import { getIntakeEntries, isIntakeOnDay, getIntakeStatus, getTakenTime, medItemText, sortIntakeEntriesByTime } from '../../utils/intake-logic.js'
 import { fetchConfigFromSide } from '../../utils/watch-config'
 import { sysText, getUiScale } from '../../utils/ui-scale'
 import { getContentBounds, renderTimeHeader, renderNavButton, enableScroll } from '../../utils/screen-layout'
@@ -71,9 +71,10 @@ Page({
 
     const dayOfWeek = new Date().getDay() === 0 ? 7 : new Date().getDay()
 
-    const today = getIntakeEntries(intakes, medications)
-      .filter(({ intake }) => isIntakeOnDay(intake, dayOfWeek))
-      .sort((a, b) => a.intake.time.localeCompare(b.intake.time))
+    const today = sortIntakeEntriesByTime(
+      getIntakeEntries(intakes, medications)
+        .filter(({ intake }) => isIntakeOnDay(intake, dayOfWeek))
+    )
 
     for (const entry of today) {
       const intake = entry.intake
