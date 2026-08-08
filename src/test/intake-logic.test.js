@@ -13,6 +13,8 @@ import {
   getTakenTime,
   buildItemsSummary,
   medItemText,
+  timeToMinutes,
+  sortIntakeEntriesByTime,
 } from '../utils/intake-logic.js'
 
 const MEDS = [
@@ -171,4 +173,19 @@ test('medItemText formats name (dosage), amount', () => {
   )
   assert.equal(medItemText({ med: { name: 'Аспирин', dosage: '' }, amount: '2' }), 'Аспирин, 2')
   assert.equal(medItemText({ med: { name: 'Аспирин', dosage: '100 мг' }, amount: '' }), 'Аспирин (100 мг)')
+})
+
+test('timeToMinutes парсит HH:MM и H:MM в минуты', () => {
+  assert.equal(timeToMinutes('08:00'), 480)
+  assert.equal(timeToMinutes('8:00'), 480)
+  assert.equal(timeToMinutes('23:59'), 1439)
+  assert.equal(timeToMinutes('00:00'), 0)
+  assert.equal(timeToMinutes(''), 0)
+  assert.equal(timeToMinutes('abc'), 0)
+})
+
+test('sortIntakeEntriesByTime сортирует по времени, устойчив к формату без нуля', () => {
+  const mk = (time) => ({ intake: { time } })
+  const result = sortIntakeEntriesByTime([mk('10:00'), mk('8:00'), mk('09:30')])
+  assert.deepEqual(result.map(e => e.intake.time), ['8:00', '09:30', '10:00'])
 })

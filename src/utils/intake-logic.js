@@ -86,3 +86,12 @@ export function medItemText(item) {
   const med = (item && item.med) || {}
   return medItemLine(med, item.amount)
 }
+
+export function timeToMinutes(time) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(time || '')
+  return m ? Number(m[1]) * 60 + Number(m[2]) : 0
+}
+
+export function sortIntakeEntriesByTime(entries) {
+  return entries.slice().sort((a, b) => timeToMinutes(a.intake.time) - timeToMinutes(b.intake.time))
+}
