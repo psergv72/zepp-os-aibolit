@@ -4,6 +4,7 @@ const STORAGE_KEYS = {
   settings: 'settings',
   debugInfo: 'debugInfo',
   debugRefresh: 'debugRefresh',
+  debugClear: 'debugClear',
 }
 
 const DEFAULT_SETTINGS = { retryInterval: 5, syncInterval: 60, snoozeOptions: [30, 45, 60, 90], minFontSize: 16, debugMode: false }
@@ -638,6 +639,16 @@ AppSettingsPage({
     this.forceRender()
   },
 
+  clearDebug() {
+    this.storage().removeItem(STORAGE_KEYS.debugInfo)
+    this.state.debugWaiting = false
+    this.state.debugTimedOut = false
+    const prev = this.storage().getItem(STORAGE_KEYS.debugClear)
+    const next = (prev ? Number(prev) : Date.now()) + 1
+    this.storage().setItem(STORAGE_KEYS.debugClear, String(next))
+    this.forceRender()
+  },
+
   startDebugPolling() {
     if (this.state.debugPollTimer) return
     this.state.debugLastRaw = this.storage().getItem(STORAGE_KEYS.debugInfo) || null
@@ -739,6 +750,12 @@ AppSettingsPage({
           color: 'primary',
           style: S.btnHalfPrimary,
           onClick: () => this.requestDebugRefresh(),
+        }),
+        Button({
+          label: 'Очистить',
+          color: 'default',
+          style: S.btnHalfDefault,
+          onClick: () => this.clearDebug(),
         }),
       ]),
       Text({ style: S.debugStatus }, [this.debugStatusText(info)]),

@@ -425,6 +425,32 @@ test('кнопка «Обновить» на странице Отладка з�
   assert.equal(options.state.debugWaiting, true, 'после нажатия ожидается ответ часов')
 })
 
+test('кнопка «Очистить» присутствует на странице Отладка', () => {
+  const storage = createStorage()
+  setup(storage)
+  options.navigateTo('debug')
+  const tree = options.build({ settingsStorage: storage })
+  const btn = findByButton(tree, 'Очистить')
+  assert.ok(btn, 'должна быть кнопка Очистить')
+})
+
+test('клик по «Очистить» очищает снимок, пишет debugClear и не ждёт ответа часов', () => {
+  const storage = createStorage()
+  setup(storage)
+  storage.setItem('debugInfo', JSON.stringify({ ts: 1, timers: [], log: [{ ts: 2, message: 'x' }] }))
+  options.navigateTo('debug')
+  assert.equal(options.state.debugWaiting, true, 'после входа в отладку идёт запрос')
+  const tree = options.build({ settingsStorage: storage })
+  const btn = findByButton(tree, 'Очистить')
+  assert.ok(btn)
+
+  btn.props.onClick()
+
+  assert.equal(storage.getItem('debugInfo'), null, 'снимок очищен на телефоне')
+  assert.ok(storage.getItem('debugClear'), 'записан debugClear для side service')
+  assert.equal(options.state.debugWaiting, false, 'очистка не запускает ожидание ответа часов')
+})
+
 test('страница Отладка показывает статус ожидания ответа часов', () => {
   const storage = createStorage()
   setup(storage)
