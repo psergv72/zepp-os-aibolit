@@ -165,3 +165,41 @@ test('onRequest SYNC_INTAKE с status undone не затирает записи 
   assert.equal(history.length, 1)
   assert.equal(history[0].id, 'log_2')
 })
+
+test('onSettingsChange для debugRefresh просит часы прислать debug-снимок', () => {
+  const calls = []
+  sideOpts.call = (payload) => { calls.push(payload) }
+
+  sideOpts.onSettingsChange({ key: 'debugRefresh' })
+
+  assert.equal(calls.length, 1)
+  assert.equal(calls[0].method, 'request_debug')
+})
+
+test('onSettingsChange для debugRefresh не трогает ревизию конфига', () => {
+  const calls = []
+  sideOpts.call = (payload) => { calls.push(payload) }
+
+  sideOpts.onSettingsChange({ key: 'debugRefresh' })
+
+  assert.equal(JSON.parse(storageMap.get('configRevision')), 2)
+})
+
+test('onRequest DEBUG_SYNC сохраняет snapshot в settingsStorage как debugInfo', () => {
+  let res = null
+  sideOpts.onRequest({
+    method: 'debug_sync',
+    params: { snapshot: { timers: [1, 2], log: [{ ts: 123, message: 'таймер добавлен' }] } },
+  }, (err, data) => { res = data })
+
+  assert.deepEqual(res, { success: true })
+  assert.deepEqual(JSON.parse(storageMap.get('debugInfo')), {
+    timers: [1, 2],
+    log: [{ ts: 123, message: 'таймер добавлен' }],
+  })
+})
+
+test('onRequest DEBUG_SYNC без snapshot сохраняет пустой объект', () => {
+  sideOpts.onRequest({ method: 'debug_sync', params: {} }, () => {})
+  assert.deepEqual(JSON.parse(storageMap.get('debugInfo')), {})
+})

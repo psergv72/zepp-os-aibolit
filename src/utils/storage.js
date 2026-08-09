@@ -204,6 +204,15 @@ export function setRetryTickCount(count) {
   setItem('retryTickCount', count)
 }
 
+export function getDebugLog() {
+  const value = getItem(STORAGE_KEYS.DEBUG_LOG, [])
+  return Array.isArray(value) ? value : []
+}
+
+export function setDebugLog(log) {
+  setItem(STORAGE_KEYS.DEBUG_LOG, Array.isArray(log) ? log : [])
+}
+
 function readPendingFile() {
   try {
     const content = readFileSync({ path: PENDING_FILE, options: { encoding: 'utf8' } })

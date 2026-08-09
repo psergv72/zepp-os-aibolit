@@ -2,9 +2,11 @@ const STORAGE_KEYS = {
   medications: 'medications',
   intakes: 'intakes',
   settings: 'settings',
+  debugInfo: 'debugInfo',
+  debugRefresh: 'debugRefresh',
 }
 
-const DEFAULT_SETTINGS = { retryInterval: 5, syncInterval: 60, snoozeOptions: [30, 45, 60, 90], minFontSize: 16 }
+const DEFAULT_SETTINGS = { retryInterval: 5, syncInterval: 60, snoozeOptions: [30, 45, 60, 90], minFontSize: 16, debugMode: false }
 
 const DAY_NAMES = [
   { name: 'Пн', value: '1' },
@@ -145,7 +147,8 @@ AppSettingsPage({
   },
 
   getAppSettings() {
-    return this.getItem(STORAGE_KEYS.settings, { ...DEFAULT_SETTINGS })
+    const stored = this.getItem(STORAGE_KEYS.settings, null)
+    return { ...DEFAULT_SETTINGS, ...(stored || {}) }
   },
 
   setAppSettings(s) {
@@ -183,6 +186,8 @@ AppSettingsPage({
       if (params && params.date !== undefined) this.state.viewHistoryDate = params.date
     } else if (page === 'settings') {
       this.state.settingsDraft = this.getAppSettings()
+    } else if (page === 'debug') {
+      this.requestDebugRefresh()
     }
     this.forceRender()
   },
@@ -202,6 +207,8 @@ AppSettingsPage({
         return this.renderHistory()
       case 'settings':
         return this.renderSettingsPage()
+      case 'debug':
+        return this.renderDebugPage()
       case 'medications':
         return this.renderMedicationList()
       default:
@@ -212,12 +219,16 @@ AppSettingsPage({
   // ── Home (Navigation) Page ──
 
   renderHomePage() {
+    const appSettings = this.getAppSettings()
     const navItems = [
       { label: 'Лекарства', page: 'medications' },
       { label: 'Режим приема лекарств', page: 'intakes' },
       { label: 'История', page: 'history' },
       { label: 'Настройки', page: 'settings' },
     ]
+    if (appSettings.debugMode) {
+      navItems.push({ label: 'Отладка', page: 'debug' })
+    }
 
     const navRows = navItems.map((item, i) => rowNode(
       [
@@ -594,6 +605,63 @@ AppSettingsPage({
     ])
   },
 
+  // ── Debug Page ──
+
+  getDebugInfo() {
+    const data = this.storage().getItem(STORAGE_KEYS.debugInfo)
+    return data ? JSON.parse(data) : null
+  },
+
+  requestDebugRefresh() {
+    const prev = this.storage().getItem(STORAGE_KEYS.debugRefresh)
+    const next = (prev ? Number(prev) : Date.now()) + 1
+    this.storage().setItem(STORAGE_KEYS.debugRefresh, String(next))
+  },
+
+  formatDebugTime(ts) {
+    if (!ts) return ''
+    const d = new Date(ts)
+    return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ':' + String(d.getSeconds()).padStart(2, '0')
+  },
+
+  renderDebugPage() {
+    const info = this.getDebugInfo()
+    const timers = (info && info.timers) || []
+    const log = (info && info.log) || []
+
+    const timerRows = timers.length
+      ? timers.map((id, i) => rowNode(
+        [Text({ style: S.rowSub }, [String(id)])],
+        null,
+        i === timers.length - 1,
+      ))
+      : [rowNode([Text({ style: S.hint }, ['Нет активных таймеров'])], null, true)]
+
+    const logRows = log.length
+      ? log.slice().reverse().map((entry, i) => rowNode(
+        [Text({ style: S.rowSub }, [(entry.ts ? this.formatDebugTime(entry.ts) + ' ' : '') + (entry.message || '')])],
+        null,
+        i === log.length - 1,
+      ))
+      : [rowNode([Text({ style: S.hint }, ['Нет отладочных сообщений'])], null, true)]
+
+    return View({ style: S.page }, [
+      backLink(() => this.navigateTo('list')),
+      Text({ style: S.groupTitle }, ['Таймеры на часах']),
+      View({ style: S.card }, timerRows),
+      Text({ style: S.groupTitle }, ['Отладочные сообщения']),
+      View({ style: S.card }, logRows),
+      View({ style: S.btnRow }, [
+        Button({
+          label: 'Обновить',
+          color: 'primary',
+          style: S.btnHalfPrimary,
+          onClick: () => this.requestDebugRefresh(),
+        }),
+      ]),
+    ])
+  },
+
   // ── Settings Page ──
 
   renderSettingsPage() {
@@ -610,6 +678,10 @@ AppSettingsPage({
       Text({ style: S.groupTitle }, ['Отображение']),
       View({ style: S.card }, [
         textField('Минимальный размер шрифта (16-40)', String(draft.minFontSize || 16), v => { draft.minFontSize = Math.max(16, parseInt(v, 10) || 16); this.forceRender() }, true),
+      ]),
+      Text({ style: S.groupTitle }, ['Отладка']),
+      View({ style: S.card }, [
+        fieldRow('Отладочный режим', Toggle({ value: !!draft.debugMode, onChange: v => { draft.debugMode = v; this.forceRender() } }), true),
       ]),
       View({ style: S.btnRow }, [
         Button({

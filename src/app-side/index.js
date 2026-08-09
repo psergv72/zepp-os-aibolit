@@ -20,10 +20,23 @@ AppSideService(
 
     onSettingsChange({ key }) {
       console.log(`onSettingsChange key: ${key}`)
+      if (key === 'debugRefresh') {
+        this.requestDebugSnapshot()
+        return
+      }
       if (CONFIG_KEYS.includes(key)) {
         this.bumpConfigRevision()
         this.pushConfigToWatch()
       }
+    },
+
+    requestDebugSnapshot() {
+      try {
+        this.call({ method: ZML_METHODS.REQUEST_DEBUG })
+      } catch (error) {
+        console.log(`Debug request failed: ${error}`)
+      }
+      console.log('Debug snapshot requested')
     },
 
     bumpConfigRevision() {
@@ -77,6 +90,13 @@ AppSideService(
         const existing = settings.settingsStorage.getItem(dateKey)
         const records = existing ? JSON.parse(existing) : []
         res(null, { records })
+        return
+      }
+
+      if (req.method === ZML_METHODS.DEBUG_SYNC) {
+        const { snapshot } = req.params || {}
+        this.settings.setItem('debugInfo', JSON.stringify(snapshot || {}))
+        res(null, { success: true })
         return
       }
 

@@ -319,3 +319,91 @@ test('сохранение приёма со временем «8:00» сохр�
   assert.equal(saved.length, 1, 'приём должен сохраниться')
   assert.equal(saved[0].time, '08:00', 'время должно быть нормализовано к HH:MM')
 })
+
+// ── Отладка ──
+
+test('страница Настройки содержит переключатель «Отладочный режим»', () => {
+  const storage = createStorage()
+  setup(storage)
+  options.navigateTo('settings')
+  const tree = options.build({ settingsStorage: storage })
+  const toggle = findByRowControl(tree, 'Отладочный режим')
+  assert.ok(toggle, 'должен быть переключатель Отладочный режим')
+  assertRefresh(storage, () => toggle.props.onChange(true))
+})
+
+test('отладочный режим выключен по умолчанию', () => {
+  const storage = createStorage()
+  setup(storage)
+  options.navigateTo('settings')
+  const tree = options.build({ settingsStorage: storage })
+  const toggle = findByRowControl(tree, 'Отладочный режим')
+  assert.equal(toggle.props.value, false, 'по умолчанию отладочный режим выключен')
+})
+
+test('при выключенной отладке пункт «Отладка» скрыт в управлении', () => {
+  const storage = createStorage()
+  setup(storage)
+  const tree = options.build({ settingsStorage: storage })
+  assert.equal(findByTextContent(tree, 'Отладка'), null, 'пункт Отладка не должен быть виден без отладочного режима')
+})
+
+test('при включённой отладке пункт «Отладка» появляется в управлении', () => {
+  const storage = createStorage()
+  storage.setItem('settings', JSON.stringify({ debugMode: true }))
+  setup(storage)
+  const tree = options.build({ settingsStorage: storage })
+  assert.ok(findByTextContent(tree, 'Отладка'), 'пункт Отладка должен быть виден при включённой отладке')
+})
+
+test('страница Отладка показывает список таймеров на часах', () => {
+  const storage = createStorage()
+  storage.setItem('debugInfo', JSON.stringify({ timers: [1, 2, 3], log: [] }))
+  setup(storage)
+  options.navigateTo('debug')
+  const tree = options.build({ settingsStorage: storage })
+  assert.ok(findByTextContent(tree, 'Таймеры на часах'), 'должен быть заголовок Таймеры на часах')
+  const texts = collectTexts(tree)
+  assert.ok(texts.includes('1'), 'таймер 1 должен отображаться')
+  assert.ok(texts.includes('3'), 'таймер 3 должен отображаться')
+})
+
+test('страница Отладка показывает отладочные сообщения из лога', () => {
+  const storage = createStorage()
+  storage.setItem('debugInfo', JSON.stringify({
+    timers: [],
+    log: [
+      { ts: 1700000000000, message: 'добавлен таймер id=1 приёма i1 на 08:00' },
+      { ts: 1700000060000, message: 'удалён таймер id=1 при перестройке расписания' },
+    ],
+  }))
+  setup(storage)
+  options.navigateTo('debug')
+  const tree = options.build({ settingsStorage: storage })
+  assert.ok(findByTextContent(tree, 'Отладочные сообщения'), 'должен быть заголовок Отладочные сообщения')
+  const texts = collectTexts(tree)
+  assert.ok(texts.some(t => t.includes('добавлен таймер id=1 приёма i1 на 08:00')), 'сообщение о добавлении таймера должно отображаться')
+  assert.ok(texts.some(t => t.includes('удалён таймер id=1 при перестройке расписания')), 'сообщение об удалении таймера должно отображаться')
+})
+
+test('страница Отладка показывает заглушку при отсутствии данных', () => {
+  const storage = createStorage()
+  setup(storage)
+  options.navigateTo('debug')
+  const tree = options.build({ settingsStorage: storage })
+  assert.ok(findByTextContent(tree, 'Нет активных таймеров'), 'заглушка таймеров')
+  assert.ok(findByTextContent(tree, 'Нет отладочных сообщений'), 'заглушка лога')
+})
+
+test('кнопка «Обновить» на странице Отладка запрашивает свежие данные', () => {
+  const storage = createStorage()
+  setup(storage)
+  options.navigateTo('debug')
+  const tree = options.build({ settingsStorage: storage })
+  const before = storage.getItem('debugRefresh')
+  const btn = findByButton(tree, 'Обновить')
+  assert.ok(btn, 'должна быть кнопка Обновить')
+  btn.props.onClick()
+  const after = storage.getItem('debugRefresh')
+  assert.ok(after && after !== before, 'должен обновиться debugRefresh')
+})

@@ -10,6 +10,7 @@ export const STORAGE_KEYS = {
   SNOOZE_ALARM_ID: 'snoozeAlarmId',
   RETRY_TICK_ALARM_ID: 'retryTickAlarmId',
   PENDING_NOTIFICATION: 'pendingNotification',
+  DEBUG_LOG: 'debugLog',
 }
 
 export const INTAKE_STATUS = {
@@ -25,6 +26,7 @@ export const DEFAULT_SETTINGS = {
   syncInterval: 60,
   snoozeOptions: [30, 45, 60, 90],
   minFontSize: 16,
+  debugMode: false,
 }
 
 export const WEEK_DAYS = {
@@ -55,6 +57,8 @@ export const ZML_METHODS = {
   CONFIG_SYNCED: 'config_synced',
   GET_CONFIG: 'get_config',
   GET_TAKE_LOGS: 'get_take_logs',
+  DEBUG_SYNC: 'debug_sync',
+  REQUEST_DEBUG: 'request_debug',
 }
 
 export const ALARM_MODES = {

@@ -15,6 +15,8 @@ const {
   getPendingNotification,
   setPendingNotification,
   clearPendingNotification,
+  getDebugLog,
+  setDebugLog,
 } = await import('../utils/storage.js')
 
 function seed() {
@@ -61,4 +63,18 @@ test('clearPendingNotification сбрасывает pending в null', () => {
   setPendingNotification({ intakeId: 'i1', date: '2026-08-07' })
   clearPendingNotification()
   assert.equal(getPendingNotification(), null)
+})
+
+test('getDebugLog возвращает пустой массив, если лог не задан', () => {
+  assert.deepEqual(getDebugLog(), [])
+})
+
+test('setDebugLog сохраняет массив, getDebugLog его возвращает', () => {
+  setDebugLog([{ ts: 1, message: 'x' }])
+  assert.deepEqual(getDebugLog(), [{ ts: 1, message: 'x' }])
+})
+
+test('setDebugLog игнорирует не-массив и сбрасывает в пустой', () => {
+  setDebugLog('oops')
+  assert.deepEqual(getDebugLog(), [])
 })

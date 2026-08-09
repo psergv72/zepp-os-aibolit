@@ -202,3 +202,29 @@ test('createSnoozeAlarm передаёт date в параметр будильн
   assert.equal(param.intakeId, 'i1')
   assert.equal(param.date, '2026-08-07')
 })
+
+test('createIntakeAlarm пишет отладочное сообщение при включённой отладке', () => {
+  storage.__stores().get('aibolit-data.json').set('settings', { debugMode: true, syncInterval: 60 })
+  storage.__stores().get('aibolit-data.json').set('intakes', [
+    { id: 'i1', time: '08:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] },
+  ])
+
+  refreshAlarms()
+
+  const log = storage.__stores().get('aibolit-data.json').get('debugLog')
+  assert.ok(Array.isArray(log) && log.length > 0, 'debugLog должен быть заполнен')
+  assert.ok(log.some(e => /добавлен таймер/.test(e.message)), 'есть запись о добавлении таймера')
+  assert.ok(log.some(e => /sync-таймер/.test(e.message)), 'есть запись о sync-таймере')
+})
+
+test('createIntakeAlarm не пишет в debugLog при выключенной отладке', () => {
+  storage.__stores().get('aibolit-data.json').set('settings', { debugMode: false, syncInterval: 60 })
+  storage.__stores().get('aibolit-data.json').set('intakes', [
+    { id: 'i1', time: '08:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] },
+  ])
+
+  refreshAlarms()
+
+  const log = storage.__stores().get('aibolit-data.json').get('debugLog')
+  assert.equal(log, undefined, 'debugLog не должен заполняться без отладки')
+})
