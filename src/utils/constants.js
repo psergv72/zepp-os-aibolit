@@ -60,6 +60,7 @@ export const ZML_METHODS = {
   GET_TAKE_LOGS: 'get_take_logs',
   DEBUG_SYNC: 'debug_sync',
   REQUEST_DEBUG: 'request_debug',
+  CLEAR_DEBUG: 'clear_debug',
 }
 
 export const ALARM_MODES = {
