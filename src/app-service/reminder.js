@@ -1,5 +1,5 @@
 import { log as Logger } from '@zos/utils'
-import { applyConfigFromSettings } from '../utils/watch-config'
+import { fetchConfigFromSide } from '../utils/watch-config'
 import { refreshAlarms } from '../utils/schedule'
 import { retrySync } from '../utils/sync'
 import { ALARM_MODES } from '../utils/constants'
@@ -23,7 +23,7 @@ function handleEvent(e) {
 
   if (mode === ALARM_MODES.SYNC) {
     logger.log('sync tick: apply config, refresh alarms, retry queue')
-    applyConfigFromSettings()
+    fetchConfigFromSide()
     refreshAlarms()
     retrySync()
     return

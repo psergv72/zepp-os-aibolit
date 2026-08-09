@@ -1,15 +1,8 @@
 import { ZML_METHODS, STORAGE_KEYS } from './constants'
 import { setMedications, setIntakes, setSettings, getConfigRevision, setConfigRevision } from './storage'
 import { parseSettingsItem } from './config-sync'
-
-export function getMessaging() {
-  try {
-    const app = getApp()
-    return app && app._options && app._options.globalData && app._options.globalData.messaging
-  } catch (e) {
-    return null
-  }
-}
+import { addDebugEntry } from './debug-log'
+import { getMessaging } from './sync'
 
 export function getSettingsStorage() {
   try {
@@ -25,11 +18,15 @@ export function getSettingsStorage() {
 export function applyConfigToStorage(config) {
   if (!config) return false
   if (typeof config.revision !== 'number') return false
-  if (config.revision <= getConfigRevision()) return false
+  if (config.revision <= getConfigRevision()) {
+    addDebugEntry(`настройки с телефона пропущены: ревизия ${config.revision} не новее текущей`)
+    return false
+  }
   if (Array.isArray(config.medications)) setMedications(config.medications)
   if (Array.isArray(config.intakes)) setIntakes(config.intakes)
   if (config.settings && typeof config.settings === 'object') setSettings(config.settings)
   setConfigRevision(config.revision)
+  addDebugEntry(`настройки с телефона применены (ревизия ${config.revision})`)
   return true
 }
 
@@ -40,7 +37,10 @@ export function applyConfigFromSettings() {
   const revisionRaw = storage.getItem(STORAGE_KEYS.CONFIG_REVISION)
   const revision = parseSettingsItem(revisionRaw)
   if (typeof revision !== 'number') return false
-  if (revision <= getConfigRevision()) return false
+  if (revision <= getConfigRevision()) {
+    addDebugEntry(`настройки из settingsStorage пропущены: ревизия ${revision} не новее текущей`)
+    return false
+  }
 
   let applied = false
 
@@ -71,7 +71,10 @@ export function applyConfigFromSettings() {
     }
   }
 
-  if (applied) setConfigRevision(revision)
+  if (applied) {
+    setConfigRevision(revision)
+    addDebugEntry(`настройки из settingsStorage применены (ревизия ${revision})`)
+  }
   return applied
 }
 
@@ -89,9 +92,11 @@ export function fetchConfigFromSide(maxAttempts = 6, delayMs = 1000) {
           setTimeout(() => attempt(n - 1), delayMs)
           return
         }
+        addDebugEntry('не удалось получить настройки с телефона: нет соединения')
         resolve(false)
         return
       }
+      addDebugEntry(`запрос настроек с телефона (попытка ${maxAttempts - n + 1})`)
       messaging.request({ method: ZML_METHODS.GET_CONFIG })
         .then((result) => {
           applyConfigToStorage(result && result.config)
@@ -99,9 +104,11 @@ export function fetchConfigFromSide(maxAttempts = 6, delayMs = 1000) {
         })
         .catch(() => {
           if (n > 0) {
+            addDebugEntry(`не удалось получить настройки с телефона (осталось попыток: ${n})`)
             setTimeout(() => attempt(n - 1), delayMs)
             return
           }
+          addDebugEntry('не удалось получить настройки с телефона: попытки исчерпаны')
           resolve(false)
         })
     }

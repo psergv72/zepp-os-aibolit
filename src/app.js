@@ -5,7 +5,7 @@ import { refreshAlarms } from './utils/schedule'
 import { applyConfigToStorage, applyConfigFromSettings } from './utils/watch-config'
 import { ZML_METHODS } from './utils/constants'
 import { initSync, retrySync } from './utils/sync'
-import { pushDebugSnapshot } from './utils/debug-log'
+import { pushDebugSnapshot, addDebugEntry } from './utils/debug-log'
 
 const logger = Logger.getLogger('aibolit-app')
 
@@ -27,6 +27,7 @@ App(
     onCall(data) {
       logger.log(`app onCall method: ${data && data.method}`)
       if (data && data.method === ZML_METHODS.CONFIG_SYNCED) {
+        addDebugEntry('получено уведомление об изменении настроек с телефона')
         this.syncConfig()
       }
       if (data && data.method === ZML_METHODS.REQUEST_DEBUG) {
@@ -34,6 +35,7 @@ App(
       }
     },
     syncConfig(attempt = 0) {
+      addDebugEntry(`запрос настроек с телефона (попытка ${attempt + 1})`)
       this.request({ method: ZML_METHODS.GET_CONFIG })
         .then((result) => {
           logger.log('app syncConfig result received')
@@ -43,7 +45,10 @@ App(
         .catch((error) => {
           logger.log(`app syncConfig failed: ${error}`)
           if (attempt < 5) {
+            addDebugEntry(`не удалось получить настройки с телефона: ${error}, повтор через 1 с`)
             setTimeout(() => this.syncConfig(attempt + 1), 1000)
+          } else {
+            addDebugEntry('не удалось получить настройки с телефона: попытки исчерпаны')
           }
         })
     },

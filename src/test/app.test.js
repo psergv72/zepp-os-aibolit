@@ -35,6 +35,17 @@ test('onCall CONFIG_SYNCED запрашивает свежий конфиг с �
   assert.equal(store.get('configRevision'), undefined, 'payload не применяется напрямую')
 })
 
+test('onCall CONFIG_SYNCED пишет в отладочный лог при включённой отладке', () => {
+  const store = storage.__stores().get('aibolit-data.json')
+  store.set('settings', { debugMode: true })
+  appOpts.syncConfig = () => {}
+
+  appOpts.onCall({ method: 'config_synced' })
+
+  const log = store.get('debugLog')
+  assert.ok(log.some(e => e.message.includes('получено уведомление об изменении настроек с телефона')))
+})
+
 test('syncConfig применяет конфиг с телефона при успешном ответе', async () => {
   const requests = []
   appOpts.request = (payload) => {

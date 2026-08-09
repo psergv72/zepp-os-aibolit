@@ -5,7 +5,11 @@ import { register } from 'node:module'
 register(new URL('./helpers/zos-loader.mjs', import.meta.url))
 
 const storage = await import('./helpers/stubs/zos-storage.mjs')
-const { applyConfigToStorage, applyConfigFromSettings } = await import('../utils/watch-config.js')
+const { applyConfigToStorage, applyConfigFromSettings, fetchConfigFromSide } = await import('../utils/watch-config.js')
+
+function store() {
+  return storage.__stores().get('aibolit-data.json')
+}
 
 function seed() {
   storage.__resetStorage()
@@ -116,4 +120,91 @@ test('applyConfigFromSettings игнорирует настройки, если 
   assert.equal(result, false)
   const store = storage.__stores().get('aibolit-data.json')
   assert.deepEqual(store.get('medications'), [{ id: 'm1' }])
+})
+
+test('applyConfigToStorage пишет в лог применение и пропуск ревизии при включённой отладке', () => {
+  store().set('settings', { debugMode: true })
+
+  assert.equal(applyConfigToStorage({ revision: 5, medications: [{ id: 'm1' }] }), true)
+  applyConfigToStorage({ revision: 4, medications: [{ id: 'm2' }] })
+
+  const log = store().get('debugLog')
+  assert.ok(log.some(e => e.message.includes('настройки с телефона применены (ревизия 5)')))
+  assert.ok(log.some(e => e.message.includes('пропущены: ревизия 4 не новее текущей')))
+})
+
+test('applyConfigToStorage не пишет в лог, когда отладка выключена', () => {
+  assert.equal(applyConfigToStorage({ revision: 5, medications: [{ id: 'm1' }] }), true)
+  assert.deepEqual(store().get('debugLog') || [], [])
+})
+
+test('applyConfigFromSettings пишет в лог применение и пропуск ревизии при включённой отладке', () => {
+  store().set('settings', { debugMode: true })
+  globalThis.settings = {
+    settingsStorage: {
+      getItem(key) {
+        const map = { configRevision: '3', medications: JSON.stringify([{ id: 'm1' }]) }
+        return map[key] !== undefined ? map[key] : null
+      },
+    },
+  }
+
+  const result = applyConfigFromSettings()
+
+  assert.equal(result, true)
+  const log = store().get('debugLog')
+  assert.ok(log.some(e => e.message.includes('настройки из settingsStorage применены (ревизия 3)')))
+
+  applyConfigFromSettings()
+  assert.ok(store().get('debugLog').some(e => e.message.includes('настройки из settingsStorage пропущены')))
+
+  delete globalThis.settings
+})
+
+test('fetchConfigFromSide пишет в лог неудачную попытку получения настроек', async () => {
+  store().set('settings', { debugMode: true })
+  globalThis.getApp = () => ({
+    _options: {
+      globalData: {
+        messaging: {
+          request() {
+            return Promise.reject(new Error('offline'))
+          },
+        },
+      },
+    },
+  })
+
+  const result = await fetchConfigFromSide(1, 1)
+
+  delete globalThis.getApp
+  assert.equal(result, false)
+  const log = store().get('debugLog')
+  assert.ok(log.some(e => e.message.includes('не удалось получить настройки с телефона')))
+})
+
+test('fetchConfigFromSide пишет в лог запрос настроек при обращении к телефону', async () => {
+  store().set('settings', { debugMode: true })
+  const requests = []
+  globalThis.getApp = () => ({
+    _options: {
+      globalData: {
+        messaging: {
+          request(payload) {
+            requests.push(payload)
+            return Promise.resolve({ config: { revision: 9, medications: [{ id: 'm9' }] } })
+          },
+        },
+      },
+    },
+  })
+
+  const result = await fetchConfigFromSide(1, 1)
+
+  delete globalThis.getApp
+  assert.equal(result, true)
+  assert.equal(requests.length, 1)
+  assert.equal(requests[0].method, 'get_config')
+  const log = store().get('debugLog')
+  assert.ok(log.some(e => e.message.includes('запрос настроек с телефона')))
 })

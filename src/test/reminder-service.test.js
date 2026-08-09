@@ -33,6 +33,7 @@ function seed() {
 beforeEach(() => {
   delete globalThis.settings
   seed()
+  syncModule.initSync(null)
   notification.__reset()
   alarm.__reset()
   fs.__resetFs()
@@ -125,6 +126,35 @@ test('mode sync применяет настройки, обновляет буд
 test('mode sync игнорирует intakeId', () => {
   serviceOpts.onInit(JSON.stringify({ mode: 'sync', intakeId: 'i1' }))
   assert.equal(notification.__calls.length, 0)
+})
+
+test('mode sync запрашивает конфиг с телефона, когда локальные настройки не новее', async () => {
+  const sent = []
+  syncModule.initSync({
+    request(payload) {
+      sent.push(payload)
+      if (payload.method === 'get_config') {
+        return Promise.resolve({
+          config: {
+            revision: 7,
+            medications: [{ id: 'm7', name: 'Новое лекарство', enabled: true }],
+            intakes: [],
+            settings: { syncInterval: 1, minFontSize: 16 },
+          },
+        })
+      }
+      return Promise.resolve({ success: true, count: 0 })
+    },
+  })
+  const store = storage.__stores().get('aibolit-data.json')
+  store.set('configRevision', 3)
+
+  serviceOpts.onInit(JSON.stringify({ mode: 'sync' }))
+  await new Promise((resolve) => setTimeout(resolve, 0))
+
+  assert.ok(sent.some(p => p.method === 'get_config'), 'sync-tick запрашивает конфиг с телефона')
+  assert.equal(store.get('configRevision'), 7)
+  assert.deepEqual(store.get('medications'), [{ id: 'm7', name: 'Новое лекарство', enabled: true }])
 })
 
 test('RETRY_TICK не шлёт уведомление без pending и перевыдаёт после интервала', () => {
