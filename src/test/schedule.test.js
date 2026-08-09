@@ -8,6 +8,7 @@ const alarm = await import('./helpers/stubs/zos-alarm.mjs')
 const storage = await import('./helpers/stubs/zos-storage.mjs')
 
 const { refreshAlarms, createSyncAlarm, createSnoozeAlarm, createRetryTickAlarm } = await import('../utils/schedule.js')
+const syncModule = await import('../utils/sync.js')
 
 function seed() {
   storage.__resetStorage()
@@ -227,4 +228,25 @@ test('createIntakeAlarm не пишет в debugLog при выключенно�
 
   const log = storage.__stores().get('aibolit-data.json').get('debugLog')
   assert.equal(log, undefined, 'debugLog не должен заполняться без отладки')
+})
+
+test('refreshAlarms при включённой отладке отправляет снимок на телефон', async () => {
+  const sent = []
+  syncModule.initSync({
+    request(payload) {
+      sent.push(payload)
+      return Promise.resolve({ success: true })
+    },
+  })
+  storage.__stores().get('aibolit-data.json').set('settings', { debugMode: true, syncInterval: 60 })
+  storage.__stores().get('aibolit-data.json').set('intakes', [
+    { id: 'i1', time: '08:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] },
+  ])
+
+  refreshAlarms()
+  await new Promise((resolve) => setTimeout(resolve, 0))
+
+  assert.ok(sent.some(p => p.method === 'debug_sync'), 'при отладке отправляется debug_sync')
+  assert.ok(sent.some(p => p.method === 'debug_sync' && Array.isArray(p.params.snapshot.timers)), 'снимок содержит список таймеров')
+  syncModule.initSync(null)
 })

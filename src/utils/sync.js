@@ -13,7 +13,7 @@ export function initSync(zmlSideService) {
   logger.log('Sync module initialized')
 }
 
-function getMessaging() {
+export function getMessaging() {
   if (sideService && typeof sideService.request === 'function') return sideService
   try {
     const app = getApp()

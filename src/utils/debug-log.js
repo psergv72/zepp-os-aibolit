@@ -2,6 +2,7 @@ import { log as Logger } from '@zos/utils'
 import { getAllAlarms } from '@zos/alarm'
 import { ZML_METHODS } from './constants'
 import { getSettings, getDebugLog, setDebugLog } from './storage'
+import { getMessaging } from './sync'
 
 const logger = Logger.getLogger('aibolit-debug')
 
@@ -38,15 +39,6 @@ export function buildDebugSnapshot() {
   return {
     timers: getCurrentAlarmIds(),
     log: getDebugLog(),
-  }
-}
-
-function getMessaging() {
-  try {
-    const app = getApp()
-    return app && app._options && app._options.globalData && app._options.globalData.messaging
-  } catch (e) {
-    return null
   }
 }
 

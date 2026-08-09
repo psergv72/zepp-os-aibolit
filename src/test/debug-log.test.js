@@ -6,6 +6,7 @@ register(new URL('./helpers/zos-loader.mjs', import.meta.url))
 
 const storage = await import('./helpers/stubs/zos-storage.mjs')
 const alarm = await import('./helpers/stubs/zos-alarm.mjs')
+const syncModule = await import('../utils/sync.js')
 
 const {
   isDebugModeEnabled,
@@ -122,4 +123,26 @@ test('pushDebugSnapshot отправляет snapshot на телефон чер
 
 test('pushDebugSnapshot не делает ничего без messaging', () => {
   assert.doesNotThrow(() => pushDebugSnapshot())
+})
+
+test('pushDebugSnapshot использует messaging, переданный через initSync', async () => {
+  store().set('settings', { debugMode: true })
+  alarm.set({ url: 'app-service/reminder' })
+
+  const sent = []
+  syncModule.initSync({
+    request(payload) {
+      sent.push(payload)
+      return Promise.resolve({ success: true })
+    },
+  })
+
+  pushDebugSnapshot()
+  await new Promise((resolve) => setTimeout(resolve, 0))
+
+  assert.equal(sent.length, 1, 'снимок отправлен через sideService из initSync')
+  assert.equal(sent[0].method, 'debug_sync')
+  assert.deepEqual(sent[0].params.snapshot.timers, [1])
+
+  syncModule.initSync(null)
 })

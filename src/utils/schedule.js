@@ -3,7 +3,7 @@ import { log as Logger } from '@zos/utils'
 import { ALARM_MODES, DEFAULT_SETTINGS } from './constants'
 import { getMedications, getIntakes, getSettings, getSyncAlarmId, setSyncAlarmId, getSnoozeAlarmId, setSnoozeAlarmId, getPendingNotification, getRetryTickAlarmId, setRetryTickAlarmId } from './storage'
 import { getWeekDaysBitmask, getEnabledMedItems, isIntakeOnDay } from './intake-logic.js'
-import { addDebugEntry, isDebugModeEnabled } from './debug-log'
+import { addDebugEntry, isDebugModeEnabled, pushDebugSnapshot } from './debug-log'
 
 const logger = Logger.getLogger('aibolit-schedule')
 
@@ -163,6 +163,7 @@ export function refreshAlarms() {
   logger.log('Alarms refreshed')
   if (isDebugModeEnabled()) {
     addDebugEntry('расписание таймеров перестроено')
+    pushDebugSnapshot()
   }
 }
 
