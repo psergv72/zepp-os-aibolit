@@ -27,8 +27,7 @@ App(
     onCall(data) {
       logger.log(`app onCall method: ${data && data.method}`)
       if (data && data.method === ZML_METHODS.CONFIG_SYNCED) {
-        applyConfigToStorage(data.params && data.params.config)
-        refreshAlarms()
+        this.syncConfig()
       }
       if (data && data.method === ZML_METHODS.REQUEST_DEBUG) {
         pushDebugSnapshot()

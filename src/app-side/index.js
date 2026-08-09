@@ -11,7 +11,7 @@ AppSideService(
     onRun() {
       console.log('Side Service onRun')
       this.ensureConfigRevision()
-      this.pushConfigToWatch()
+      this.notifyConfigChanged()
     },
 
     onDestroy() {
@@ -26,7 +26,7 @@ AppSideService(
       }
       if (CONFIG_KEYS.includes(key)) {
         this.bumpConfigRevision()
-        this.pushConfigToWatch()
+        this.notifyConfigChanged()
       }
     },
 
@@ -66,14 +66,13 @@ AppSideService(
       return config
     },
 
-    pushConfigToWatch() {
-      const config = this.buildConfig()
+    notifyConfigChanged() {
       try {
-        this.call({ method: ZML_METHODS.CONFIG_SYNCED, params: { config } })
+        this.call({ method: ZML_METHODS.CONFIG_SYNCED })
       } catch (error) {
         console.log(`Config sync notify failed: ${error}`)
       }
-      console.log('Config pushed to watch')
+      console.log('Config change notified to watch')
     },
 
     onRequest(req, res) {

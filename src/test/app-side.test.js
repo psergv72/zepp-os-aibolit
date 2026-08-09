@@ -46,7 +46,7 @@ test('buildConfig включает актуальную ревизию', () => {
   assert.equal(config.medications[0].id, 'm1')
 })
 
-test('onRun инициализирует отсутствующую ревизию и пушит конфиг', () => {
+test('onRun инициализирует отсутствующую ревизию и уведомляет часы', () => {
   storageMap.delete('configRevision')
   const calls = []
   sideOpts.call = (payload) => { calls.push(payload) }
@@ -55,10 +55,10 @@ test('onRun инициализирует отсутствующую ревизи
 
   assert.equal(JSON.parse(storageMap.get('configRevision')), 1)
   assert.equal(calls.length, 1)
-  assert.equal(calls[0].params.config.revision, 1)
+  assert.equal(calls[0].method, 'config_synced')
 })
 
-test('onSettingsChange для CONFIG_KEYS увеличивает ревизию и пушит конфиг', () => {
+test('onSettingsChange для CONFIG_KEYS увеличивает ревизию и уведомляет часы', () => {
   const calls = []
   sideOpts.call = (payload) => { calls.push(payload) }
 
@@ -67,7 +67,6 @@ test('onSettingsChange для CONFIG_KEYS увеличивает ревизию 
   assert.equal(JSON.parse(storageMap.get('configRevision')), 3)
   assert.equal(calls.length, 1)
   assert.equal(calls[0].method, 'config_synced')
-  assert.equal(calls[0].params.config.revision, 3)
 })
 
 test('onSettingsChange для прочих ключей не трогает ревизию и не пушит', () => {

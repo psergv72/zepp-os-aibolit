@@ -11,6 +11,8 @@ const ZOS_STUBS = {
   '@zos/notification': './stubs/zos-notification.mjs',
   '@zos/fs': './stubs/zos-fs.mjs',
   '@zeppos/zml/base-side': './stubs/zml-base-side.mjs',
+  '@zeppos/zml/base-app': './stubs/zml-base-app.mjs',
+  '@zeppos/zml/3.0/module/messaging/plugin/app': './stubs/zml-app-plugin.mjs',
 }
 
 export async function resolve(specifier, context, nextResolve) {
