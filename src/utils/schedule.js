@@ -142,8 +142,8 @@ export function createSyncAlarm(syncInterval) {
     url: 'app-service/reminder',
     time: start,
     repeat_type: REPEAT_MINUTE,
-    repeat_period: 1,
-    repeat_duration: interval,
+    repeat_period: interval,
+    repeat_duration: 1,
     param: JSON.stringify({ mode: ALARM_MODES.SYNC }),
     store: true,
   }

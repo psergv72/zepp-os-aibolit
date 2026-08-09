@@ -115,7 +115,7 @@ test('createIntakeAlarm задаёт time строго в будущем, даж
   assert.ok(sets[0].option.time > nowSeconds, `time ${sets[0].option.time} должен быть в будущем`)
 })
 
-test('refreshAlarms создаёт sync-alarm с REPEAT_MINUTE и repeat_duration из настроек', () => {
+test('refreshAlarms создаёт sync-alarm с REPEAT_MINUTE и repeat_period из настроек', () => {
   storage.__stores().get('aibolit-data.json').set('intakes', [
     { id: 'i1', time: '08:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] },
   ])
@@ -127,8 +127,8 @@ test('refreshAlarms создаёт sync-alarm с REPEAT_MINUTE и repeat_duratio
   assert.ok(syncSet, 'sync-alarm создан')
   assert.equal(syncSet.option.url, 'app-service/reminder')
   assert.equal(syncSet.option.repeat_type, 1)
-  assert.equal(syncSet.option.repeat_period, 1)
-  assert.equal(syncSet.option.repeat_duration, 30)
+  assert.equal(syncSet.option.repeat_period, 30)
+  assert.equal(syncSet.option.repeat_duration, 1)
 })
 
 test('createSyncAlarm отменяет предыдущий sync-alarm и сохраняет новый id', () => {
@@ -239,17 +239,17 @@ test('sync-таймер с интервалом 1 мин отражает инт
   assert.ok(log.some(e => /sync-таймер.*период 1 мин/.test(e.message)), 'в логе интервал 1 мин')
 })
 
-test('sync-таймер задаёт repeat_duration равный настроенному интервалу', () => {
+test('sync-таймер задаёт repeat_period равный настроенному интервалу', () => {
   storage.__stores().get('aibolit-data.json').set('settings', { syncInterval: 1, minFontSize: 16 })
   refreshAlarms()
   let syncSet = alarm.__getCalls().find(c => c.method === 'set' && JSON.parse(c.option.param).mode === 'sync')
-  assert.equal(syncSet.option.repeat_duration, 1, 'интервал 1 мин → repeat_duration 1')
+  assert.equal(syncSet.option.repeat_period, 1, 'интервал 1 мин → repeat_period 1')
 
   alarm.__reset()
   storage.__stores().get('aibolit-data.json').set('settings', { syncInterval: 2, minFontSize: 16 })
   refreshAlarms()
   syncSet = alarm.__getCalls().find(c => c.method === 'set' && JSON.parse(c.option.param).mode === 'sync')
-  assert.equal(syncSet.option.repeat_duration, 2, 'интервал 2 мин → repeat_duration 2')
+  assert.equal(syncSet.option.repeat_period, 2, 'интервал 2 мин → repeat_period 2')
 })
 
 test('createIntakeAlarm не пишет в debugLog при выключенной отладке', () => {
