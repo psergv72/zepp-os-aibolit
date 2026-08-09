@@ -184,6 +184,25 @@ test('onSettingsChange для debugRefresh не трогает ревизию к
   assert.equal(JSON.parse(storageMap.get('configRevision')), 2)
 })
 
+test('onSettingsChange для debugClear просит часы очистить отладочный лог', () => {
+  const calls = []
+  sideOpts.call = (payload) => { calls.push(payload) }
+
+  sideOpts.onSettingsChange({ key: 'debugClear' })
+
+  assert.equal(calls.length, 1)
+  assert.equal(calls[0].method, 'clear_debug')
+})
+
+test('onSettingsChange для debugClear не трогает ревизию конфига', () => {
+  const calls = []
+  sideOpts.call = (payload) => { calls.push(payload) }
+
+  sideOpts.onSettingsChange({ key: 'debugClear' })
+
+  assert.equal(JSON.parse(storageMap.get('configRevision')), 2)
+})
+
 test('onRequest DEBUG_SYNC сохраняет snapshot в settingsStorage как debugInfo', () => {
   let res = null
   sideOpts.onRequest({

@@ -24,6 +24,14 @@ AppSideService(
         this.requestDebugSnapshot()
         return
       }
+      if (key === 'debugClear') {
+        try {
+          this.call({ method: ZML_METHODS.CLEAR_DEBUG })
+        } catch (error) {
+          console.log(`Debug clear request failed: ${error}`)
+        }
+        return
+      }
       if (CONFIG_KEYS.includes(key)) {
         this.bumpConfigRevision()
         this.notifyConfigChanged()
