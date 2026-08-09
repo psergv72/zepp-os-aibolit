@@ -213,6 +213,31 @@ export function setDebugLog(log) {
   setItem(STORAGE_KEYS.DEBUG_LOG, Array.isArray(log) ? log : [])
 }
 
+export function getAlarmRegistry() {
+  const value = getItem(STORAGE_KEYS.ALARM_REGISTRY, {})
+  return value && typeof value === 'object' ? value : {}
+}
+
+export function setAlarmRegistry(registry) {
+  setItem(STORAGE_KEYS.ALARM_REGISTRY, registry && typeof registry === 'object' ? registry : {})
+}
+
+export function registerAlarm(id, info) {
+  if (id === null || id === undefined) return
+  const registry = getAlarmRegistry()
+  registry[id] = info
+  setAlarmRegistry(registry)
+}
+
+export function unregisterAlarm(id) {
+  if (id === null || id === undefined) return
+  const registry = getAlarmRegistry()
+  if (registry[id] !== undefined) {
+    delete registry[id]
+    setAlarmRegistry(registry)
+  }
+}
+
 function readPendingFile() {
   try {
     const content = readFileSync({ path: PENDING_FILE, options: { encoding: 'utf8' } })

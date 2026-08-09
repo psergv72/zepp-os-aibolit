@@ -1,7 +1,7 @@
 import { set as setAlarm, cancel as cancelAlarm, getAllAlarms, REPEAT_WEEK, REPEAT_ONCE, REPEAT_MINUTE } from '@zos/alarm'
 import { log as Logger } from '@zos/utils'
 import { ALARM_MODES, DEFAULT_SETTINGS } from './constants'
-import { getMedications, getIntakes, getSettings, getSyncAlarmId, setSyncAlarmId, getSnoozeAlarmId, setSnoozeAlarmId, getPendingNotification, getRetryTickAlarmId, setRetryTickAlarmId } from './storage'
+import { getMedications, getIntakes, getSettings, getSyncAlarmId, setSyncAlarmId, getSnoozeAlarmId, setSnoozeAlarmId, getPendingNotification, getRetryTickAlarmId, setRetryTickAlarmId, registerAlarm, unregisterAlarm } from './storage'
 import { getWeekDaysBitmask, getEnabledMedItems, isIntakeOnDay } from './intake-logic.js'
 import { addDebugEntry, isDebugModeEnabled, pushDebugSnapshot } from './debug-log'
 
@@ -44,6 +44,14 @@ export function createIntakeAlarm(intake) {
   const id = setAlarm(option)
   logger.log(`Created alarm id=${id} for intake ${intake.id} at ${intake.time} next=${nextTime} week_days=${weekDaysMask} repeat=${REPEAT_WEEK}`)
   addDebugEntry(`добавлен таймер id=${id} приёма ${intake.id} на ${intake.time}`)
+  registerAlarm(id, {
+    type: 'intake',
+    intakeId: intake.id,
+    time: intake.time,
+    weekDays: intake.weekDays || null,
+    label: intake.label || '',
+    next: nextTime,
+  })
   return id
 }
 
@@ -67,6 +75,7 @@ export function createSnoozeAlarm(intakeId, delayMinutes, date) {
   if (id && id > 0) setSnoozeAlarmId(id)
   logger.log(`Created snooze alarm id=${id} for intake ${intakeId} in ${delayMinutes}min at ${time}`)
   addDebugEntry(`добавлен snooze-таймер id=${id} приёма ${intakeId} через ${delayMinutes} мин`)
+  registerAlarm(id, { type: 'snooze', intakeId, delayMinutes, next: time })
   return id
 }
 
@@ -91,6 +100,7 @@ export function createRetryTickAlarm() {
   if (id && id > 0) setRetryTickAlarmId(id)
   logger.log(`Created retry tick alarm id=${id}`)
   addDebugEntry(`добавлен retry-tick таймер id=${id}`)
+  registerAlarm(id, { type: 'retryTick' })
   return id
 }
 
@@ -99,6 +109,7 @@ export function createSyncAlarm(syncInterval) {
   if (prevId !== null) {
     try {
       cancelAlarm(prevId)
+      unregisterAlarm(prevId)
       addDebugEntry(`изменён sync-таймер: отменён id=${prevId}`)
     } catch (e) {
       logger.log(`Cancel old sync alarm failed: ${e}`)
@@ -125,6 +136,7 @@ export function createSyncAlarm(syncInterval) {
   if (id && id > 0) setSyncAlarmId(id)
   logger.log(`Created sync alarm id=${id} repeat_period=${option.repeat_period}min start=${start}`)
   addDebugEntry(`добавлен sync-таймер id=${id} период ${option.repeat_period} мин`)
+  registerAlarm(id, { type: 'sync', interval: option.repeat_period, next: start })
   return id
 }
 
@@ -146,6 +158,7 @@ export function refreshAlarms() {
       if (alarmId === retryTickAlarmId) continue
       if (transientIds.includes(alarmId)) continue
       cancelAlarm(alarmId)
+      unregisterAlarm(alarmId)
       addDebugEntry(`удалён таймер id=${alarmId} при перестройке расписания`)
     }
   }
@@ -169,5 +182,6 @@ export function refreshAlarms() {
 
 export function cancelAlarmById(alarmId) {
   cancelAlarm(alarmId)
+  unregisterAlarm(alarmId)
   addDebugEntry(`удалён таймер id=${alarmId}`)
 }

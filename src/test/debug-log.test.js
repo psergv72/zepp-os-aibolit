@@ -14,6 +14,7 @@ const {
   clearDebugLog,
   getCurrentAlarmIds,
   buildDebugSnapshot,
+  buildTimerList,
   pushDebugSnapshot,
 } = await import('../utils/debug-log.js')
 
@@ -83,14 +84,32 @@ test('getCurrentAlarmIds возвращает активные таймеры с
   assert.deepEqual(getCurrentAlarmIds(), [1, 2])
 })
 
-test('buildDebugSnapshot возвращает таймеры и лог', () => {
+test('buildDebugSnapshot возвращает подробные сведения о таймерах и лог', () => {
   store().set('settings', { debugMode: true })
   alarm.set({ url: 'app-service/reminder' })
   addDebugEntry('добавлен таймер id=1')
 
   const snapshot = buildDebugSnapshot()
-  assert.deepEqual(snapshot.timers, [1])
+  assert.equal(snapshot.timers.length, 1)
+  assert.equal(snapshot.timers[0].id, 1)
+  assert.equal(snapshot.timers[0].type, 'unknown')
   assert.equal(snapshot.log.length, 1)
+})
+
+test('buildDebugSnapshot описывает intake-таймер с названием лекарства', () => {
+  store().set('settings', { debugMode: true })
+  store().set('medications', [{ id: 'm1', name: 'Парацетамол', dosage: '500 мг', enabled: true }])
+  store().set('intakes', [{ id: 'i1', time: '08:00', weekDays: [1, 3, 5], label: 'Утро', items: [{ medicationId: 'm1', amount: '1 таб' }] }])
+  alarm.set({ url: 'app-service/reminder' })
+  store().set('alarmRegistry', {
+    1: { type: 'intake', intakeId: 'i1', time: '08:00', weekDays: [1, 3, 5], label: 'Утро', next: 1000 },
+  })
+
+  const timers = buildTimerList()
+  assert.equal(timers.length, 1)
+  assert.equal(timers[0].type, 'intake')
+  assert.equal(timers[0].time, '08:00')
+  assert.equal(timers[0].items, 'Парацетамол (500 мг) \u00d7 1 таб')
 })
 
 test('pushDebugSnapshot отправляет snapshot на телефон через messaging', async () => {
@@ -116,7 +135,7 @@ test('pushDebugSnapshot отправляет snapshot на телефон чер
 
   assert.ok(sent, 'запрос должен уйти на телефон')
   assert.equal(sent.method, 'debug_sync')
-  assert.deepEqual(sent.params.snapshot.timers, [1])
+  assert.equal(sent.params.snapshot.timers[0].id, 1)
 
   delete globalThis.getApp
 })
@@ -142,7 +161,7 @@ test('pushDebugSnapshot использует messaging, переданный ч�
 
   assert.equal(sent.length, 1, 'снимок отправлен через sideService из initSync')
   assert.equal(sent[0].method, 'debug_sync')
-  assert.deepEqual(sent[0].params.snapshot.timers, [1])
+  assert.equal(sent[0].params.snapshot.timers[0].id, 1)
 
   syncModule.initSync(null)
 })

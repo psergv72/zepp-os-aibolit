@@ -250,3 +250,38 @@ test('refreshAlarms при включённой отладке отправля�
   assert.ok(sent.some(p => p.method === 'debug_sync' && Array.isArray(p.params.snapshot.timers)), 'снимок содержит список таймеров')
   syncModule.initSync(null)
 })
+
+test('createIntakeAlarm регистрирует таймер в реестре с данными приёма', () => {
+  storage.__stores().get('aibolit-data.json').set('medications', [
+    { id: 'm1', name: 'Парацетамол', dosage: '500 мг', enabled: true },
+  ])
+  storage.__stores().get('aibolit-data.json').set('intakes', [
+    { id: 'i1', time: '08:00', weekDays: [1, 3, 5], label: 'Утро', items: [{ medicationId: 'm1', amount: '1 таб' }] },
+  ])
+
+  refreshAlarms()
+
+  const registry = storage.__stores().get('aibolit-data.json').get('alarmRegistry')
+  assert.ok(registry, 'реестр таймеров должен существовать')
+  const intakeEntry = Object.values(registry).find(e => e.type === 'intake')
+  assert.ok(intakeEntry, 'intake-таймер должен быть в реестре')
+  assert.equal(intakeEntry.intakeId, 'i1')
+  assert.equal(intakeEntry.time, '08:00')
+  assert.deepEqual(intakeEntry.weekDays, [1, 3, 5])
+})
+
+test('refreshAlarms удаляет из реестра таймеры, снятые при перестройке', () => {
+  storage.__stores().get('aibolit-data.json').set('settings', { debugMode: false, syncInterval: 60 })
+  storage.__stores().get('aibolit-data.json').set('intakes', [
+    { id: 'i1', time: '08:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] },
+  ])
+  const staleAlarmId = alarm.set({ url: 'app-service/reminder' })
+  storage.__stores().get('aibolit-data.json').set('alarmRegistry', {
+    [staleAlarmId]: { type: 'intake', intakeId: 'i1', time: '08:00' },
+  })
+
+  refreshAlarms()
+
+  const registry = storage.__stores().get('aibolit-data.json').get('alarmRegistry')
+  assert.equal(registry[staleAlarmId], undefined, 'снятый при перестройке таймер должен быть вычищен из реестра')
+})

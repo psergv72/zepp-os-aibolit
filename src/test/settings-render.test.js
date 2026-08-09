@@ -356,16 +356,23 @@ test('при включённой отладке пункт «Отладка» �
   assert.ok(findByTextContent(tree, 'Отладка'), 'пункт Отладка должен быть виден при включённой отладке')
 })
 
-test('страница Отладка показывает список таймеров на часах', () => {
+test('страница Отладка показывает подробные сведения о таймерах на часах', () => {
   const storage = createStorage()
-  storage.setItem('debugInfo', JSON.stringify({ timers: [1, 2, 3], log: [] }))
+  storage.setItem('debugInfo', JSON.stringify({
+    timers: [
+      { id: 1, type: 'intake', time: '08:00', weekDays: [1, 3, 5], label: 'Утро', items: 'Парацетамол \u00d7 1 таб', next: 1750000000 },
+      { id: 3, type: 'sync', interval: 60, next: 1750000000 },
+    ],
+    log: [],
+  }))
   setup(storage)
   options.navigateTo('debug')
   const tree = options.build({ settingsStorage: storage })
   assert.ok(findByTextContent(tree, 'Таймеры на часах'), 'должен быть заголовок Таймеры на часах')
   const texts = collectTexts(tree)
-  assert.ok(texts.includes('1'), 'таймер 1 должен отображаться')
-  assert.ok(texts.includes('3'), 'таймер 3 должен отображаться')
+  assert.ok(texts.some(t => t.includes('08:00') && t.includes('Парацетамол')), 'приём показывается с временем и лекарством')
+  assert.ok(texts.some(t => t.includes('Пн, Ср, Пт')), 'дни недели показываются')
+  assert.ok(texts.some(t => t.includes('Синхронизация')), 'sync-таймер описан')
 })
 
 test('страница Отладка показывает отладочные сообщения из лога', () => {

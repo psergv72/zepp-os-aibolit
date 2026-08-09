@@ -11,6 +11,7 @@ export const STORAGE_KEYS = {
   RETRY_TICK_ALARM_ID: 'retryTickAlarmId',
   PENDING_NOTIFICATION: 'pendingNotification',
   DEBUG_LOG: 'debugLog',
+  ALARM_REGISTRY: 'alarmRegistry',
 }
 
 export const INTAKE_STATUS = {

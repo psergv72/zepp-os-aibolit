@@ -617,11 +617,38 @@ AppSettingsPage({
     const next = (prev ? Number(prev) : Date.now()) + 1
     this.storage().setItem(STORAGE_KEYS.debugRefresh, String(next))
   },
-
   formatDebugTime(ts) {
     if (!ts) return ''
     const d = new Date(ts)
     return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ':' + String(d.getSeconds()).padStart(2, '0')
+  },
+
+  formatNextTime(ts) {
+    if (!ts) return ''
+    const d = new Date(ts * 1000)
+    return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0')
+  },
+
+  debugTimerText(timer) {
+    if (!timer || typeof timer !== 'object') return String(timer)
+    const id = 'id=' + timer.id
+    switch (timer.type) {
+      case 'intake': {
+        const days = weekDaysText(timer.weekDays) || 'каждый день'
+        const label = timer.label ? ' (' + timer.label + ')' : ''
+        const items = timer.items ? ' — ' + timer.items : ''
+        const next = timer.next ? ' (' + this.formatNextTime(timer.next) + ')' : ''
+        return timer.time + label + items + ' · ' + days + ' ' + id + next
+      }
+      case 'snooze':
+        return 'Отложка приёма ' + (timer.intakeId || '?') + ' ' + id
+      case 'sync':
+        return 'Синхронизация (каждые ' + (timer.interval !== undefined ? timer.interval : '?') + ' мин) ' + id
+      case 'retryTick':
+        return 'Периодический тик повтора ' + id
+      default:
+        return id
+    }
   },
 
   renderDebugPage() {
@@ -630,8 +657,8 @@ AppSettingsPage({
     const log = (info && info.log) || []
 
     const timerRows = timers.length
-      ? timers.map((id, i) => rowNode(
-        [Text({ style: S.rowSub }, [String(id)])],
+      ? timers.map((timer, i) => rowNode(
+        [Text({ style: S.rowSub }, [this.debugTimerText(timer)])],
         null,
         i === timers.length - 1,
       ))
@@ -647,10 +674,6 @@ AppSettingsPage({
 
     return View({ style: S.page }, [
       backLink(() => this.navigateTo('list')),
-      Text({ style: S.groupTitle }, ['Таймеры на часах']),
-      View({ style: S.card }, timerRows),
-      Text({ style: S.groupTitle }, ['Отладочные сообщения']),
-      View({ style: S.card }, logRows),
       View({ style: S.btnRow }, [
         Button({
           label: 'Обновить',
@@ -659,6 +682,10 @@ AppSettingsPage({
           onClick: () => this.requestDebugRefresh(),
         }),
       ]),
+      Text({ style: S.groupTitle }, ['Таймеры на часах']),
+      View({ style: S.card }, timerRows),
+      Text({ style: S.groupTitle }, ['Отладочные сообщения']),
+      View({ style: S.card }, logRows),
     ])
   },
 

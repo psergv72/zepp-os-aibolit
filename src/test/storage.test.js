@@ -17,6 +17,10 @@ const {
   clearPendingNotification,
   getDebugLog,
   setDebugLog,
+  getAlarmRegistry,
+  setAlarmRegistry,
+  registerAlarm,
+  unregisterAlarm,
 } = await import('../utils/storage.js')
 
 function seed() {
@@ -77,4 +81,44 @@ test('setDebugLog сохраняет массив, getDebugLog его возвр
 test('setDebugLog игнорирует не-массив и сбрасывает в пустой', () => {
   setDebugLog('oops')
   assert.deepEqual(getDebugLog(), [])
+})
+
+test('getAlarmRegistry возвращает пустой объект, если реестр не задан', () => {
+  assert.deepEqual(getAlarmRegistry(), {})
+})
+
+test('setAlarmRegistry сохраняет объект, getAlarmRegistry его возвращает', () => {
+  setAlarmRegistry({ 1: { type: 'intake', intakeId: 'i1' } })
+  assert.deepEqual(getAlarmRegistry(), { 1: { type: 'intake', intakeId: 'i1' } })
+})
+
+test('setAlarmRegistry игнорирует не-объект и сбрасывает в пустой', () => {
+  setAlarmRegistry('oops')
+  assert.deepEqual(getAlarmRegistry(), {})
+})
+
+test('registerAlarm добавляет запись в реестр', () => {
+  registerAlarm(7, { type: 'sync', interval: 60 })
+  assert.deepEqual(getAlarmRegistry(), { 7: { type: 'sync', interval: 60 } })
+})
+
+test('registerAlarm не меняет реестр при отсутствии id', () => {
+  setAlarmRegistry({ 7: { type: 'sync' } })
+  registerAlarm(null, { type: 'sync' })
+  registerAlarm(undefined, { type: 'sync' })
+  assert.deepEqual(getAlarmRegistry(), { 7: { type: 'sync' } })
+})
+
+test('unregisterAlarm удаляет запись из реестра', () => {
+  registerAlarm(7, { type: 'sync' })
+  registerAlarm(9, { type: 'intake' })
+  unregisterAlarm(7)
+  assert.deepEqual(getAlarmRegistry(), { 9: { type: 'intake' } })
+})
+
+test('unregisterAlarm не ломает реестр при отсутствии id', () => {
+  registerAlarm(7, { type: 'sync' })
+  unregisterAlarm(null)
+  unregisterAlarm(99)
+  assert.deepEqual(getAlarmRegistry(), { 7: { type: 'sync' } })
 })
