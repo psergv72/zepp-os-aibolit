@@ -86,3 +86,13 @@ test('syncConfig игнорирует конфиг с не более новой
   const store = storage.__stores().get('aibolit-data.json')
   assert.deepEqual(store.get('medications'), [{ id: 'm1' }])
 })
+
+test('onCall CLEAR_DEBUG очищает отладочный лог на часах', () => {
+  const store = storage.__stores().get('aibolit-data.json')
+  store.set('settings', { debugMode: true })
+  store.set('debugLog', [{ ts: 1, message: 'старое' }])
+
+  appOpts.onCall({ method: 'clear_debug' })
+
+  assert.deepEqual(store.get('debugLog'), [])
+})

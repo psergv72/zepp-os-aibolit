@@ -5,7 +5,7 @@ import { refreshAlarms } from './utils/schedule'
 import { applyConfigToStorage, applyConfigFromSettings } from './utils/watch-config'
 import { ZML_METHODS } from './utils/constants'
 import { initSync, retrySync } from './utils/sync'
-import { pushDebugSnapshot, addDebugEntry } from './utils/debug-log'
+import { pushDebugSnapshot, addDebugEntry, clearDebugLog } from './utils/debug-log'
 
 const logger = Logger.getLogger('aibolit-app')
 
@@ -32,6 +32,9 @@ App(
       }
       if (data && data.method === ZML_METHODS.REQUEST_DEBUG) {
         pushDebugSnapshot()
+      }
+      if (data && data.method === ZML_METHODS.CLEAR_DEBUG) {
+        clearDebugLog()
       }
     },
     syncConfig(attempt = 0) {
