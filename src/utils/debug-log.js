@@ -89,6 +89,7 @@ export function buildTimerList() {
 
 export function buildDebugSnapshot() {
   return {
+    ts: Date.now(),
     timers: buildTimerList(),
     log: getDebugLog(),
   }

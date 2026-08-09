@@ -1,4 +1,4 @@
-import { test } from 'node:test'
+import { test, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
 
 const node = (type) => (props, children) => ({ type, props, children })
@@ -91,9 +91,18 @@ function setup(storage) {
   options.state.editingItemIndex = -1
   options.state.viewHistoryDate = null
   options.state.settingsDraft = null
+  options.state.debugWaiting = false
+  options.state.debugTimedOut = false
+  options.state.debugPollTimer = null
+  options.state.debugLastRaw = null
+  options.state.debugRequestedAt = 0
   options._renderSeq = 0
   options.build({ settingsStorage: storage })
 }
+
+afterEach(() => {
+  if (options) options.stopDebugPolling()
+})
 
 function assertRefresh(storage, action, message) {
   const before = storage.getItem('__ui_render')
@@ -413,4 +422,53 @@ test('кнопка «Обновить» на странице Отладка з�
   btn.props.onClick()
   const after = storage.getItem('debugRefresh')
   assert.ok(after && after !== before, 'должен обновиться debugRefresh')
+  assert.equal(options.state.debugWaiting, true, 'после нажатия ожидается ответ часов')
+})
+
+test('страница Отладка показывает статус ожидания ответа часов', () => {
+  const storage = createStorage()
+  setup(storage)
+  options.navigateTo('debug')
+  const tree = options.build({ settingsStorage: storage })
+  assert.equal(options.state.debugWaiting, true, 'после входа в отладку идёт запрос')
+  const texts = collectTexts(tree)
+  assert.ok(texts.some(t => t.includes('Запрос отправлен на часы')), 'статус ожидания виден')
+})
+
+test('страница Отладка показывает время данных часов из снимка', () => {
+  const storage = createStorage()
+  storage.setItem('debugInfo', JSON.stringify({ ts: 1700000000000, timers: [], log: [] }))
+  setup(storage)
+  options.navigateTo('debug')
+  options.state.debugWaiting = false
+  const tree = options.build({ settingsStorage: storage })
+  const texts = collectTexts(tree)
+  assert.ok(texts.some(t => t.includes('Данные часов от')), 'статус с временем данных виден')
+})
+
+test('debugPollTick обновляет статус при появлении свежего снимка', () => {
+  const storage = createStorage()
+  setup(storage)
+  options.navigateTo('debug')
+  options.state.debugLastRaw = storage.getItem('debugInfo')
+  storage.setItem('debugInfo', JSON.stringify({ ts: 1700000000000, timers: [], log: [] }))
+  const before = storage.getItem('__ui_render')
+  options.debugPollTick()
+  assert.equal(options.state.debugWaiting, false, 'ожидание снимается при свежем снимке')
+  assert.equal(options.state.debugTimedOut, false, 'таймаута нет')
+  assert.notEqual(storage.getItem('__ui_render'), before, 'происходит перерисовка')
+  const tree = options.build({ settingsStorage: storage })
+  assert.ok(collectTexts(tree).some(t => t.includes('Данные часов от')), 'статус показывает свежие данные')
+})
+
+test('debugPollTick помечает таймаут, если часы не ответили', () => {
+  const storage = createStorage()
+  setup(storage)
+  options.navigateTo('debug')
+  options.state.debugRequestedAt = Date.now() - 20000
+  options.debugPollTick()
+  assert.equal(options.state.debugWaiting, false)
+  assert.equal(options.state.debugTimedOut, true)
+  const tree = options.build({ settingsStorage: storage })
+  assert.ok(collectTexts(tree).some(t => t.includes('Часы не ответили')), 'сообщение о таймауте видно')
 })

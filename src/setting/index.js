@@ -8,6 +8,9 @@ const STORAGE_KEYS = {
 
 const DEFAULT_SETTINGS = { retryInterval: 5, syncInterval: 60, snoozeOptions: [30, 45, 60, 90], minFontSize: 16, debugMode: false }
 
+const DEBUG_POLL_INTERVAL_MS = 700
+const DEBUG_POLL_TIMEOUT_MS = 15000
+
 const DAY_NAMES = [
   { name: 'Пн', value: '1' },
   { name: 'Вт', value: '2' },
@@ -34,6 +37,7 @@ const S = {
   bullet: { display: 'block', fontSize: '13px', color: '#8a8a8f', marginTop: '2px', paddingLeft: '20px' },
   chevron: { fontSize: '20px', color: '#c7c7cc', marginLeft: '8px' },
   hint: { fontSize: '14px', color: '#8a8a8f' },
+  debugStatus: { display: 'block', fontSize: '13px', color: '#8a8a8f', marginTop: '10px' },
   linkAdd: { fontSize: '16px', fontWeight: '600', color: '#2f6fed' },
   linkBack: { display: 'block', padding: '4px 0', marginBottom: '2px' },
   linkBackText: { fontSize: '15px', fontWeight: '400', color: '#555555' },
@@ -115,6 +119,11 @@ AppSettingsPage({
     editingItemIndex: -1,
     viewHistoryDate: null,
     settingsDraft: null,
+    debugWaiting: false,
+    debugTimedOut: false,
+    debugPollTimer: null,
+    debugLastRaw: null,
+    debugRequestedAt: 0,
   },
 
   storage() {
@@ -166,6 +175,7 @@ AppSettingsPage({
   },
 
   navigateTo(page, params) {
+    this.stopDebugPolling()
     this.state.page = page
     if (page === 'edit') {
       this.state.editDraft = params && params.medication
@@ -609,13 +619,62 @@ AppSettingsPage({
 
   getDebugInfo() {
     const data = this.storage().getItem(STORAGE_KEYS.debugInfo)
-    return data ? JSON.parse(data) : null
+    if (!data) return null
+    try {
+      return JSON.parse(data)
+    } catch (e) {
+      return null
+    }
   },
 
   requestDebugRefresh() {
     const prev = this.storage().getItem(STORAGE_KEYS.debugRefresh)
     const next = (prev ? Number(prev) : Date.now()) + 1
     this.storage().setItem(STORAGE_KEYS.debugRefresh, String(next))
+    this.state.debugWaiting = true
+    this.state.debugTimedOut = false
+    this.state.debugRequestedAt = Date.now()
+    this.startDebugPolling()
+    this.forceRender()
+  },
+
+  startDebugPolling() {
+    if (this.state.debugPollTimer) return
+    this.state.debugLastRaw = this.storage().getItem(STORAGE_KEYS.debugInfo) || null
+    this.state.debugPollTimer = setInterval(() => this.debugPollTick(), DEBUG_POLL_INTERVAL_MS)
+  },
+
+  stopDebugPolling() {
+    if (this.state.debugPollTimer) {
+      clearInterval(this.state.debugPollTimer)
+      this.state.debugPollTimer = null
+    }
+  },
+
+  debugPollTick() {
+    const raw = this.storage().getItem(STORAGE_KEYS.debugInfo) || null
+    const changed = raw !== this.state.debugLastRaw
+    this.state.debugLastRaw = raw
+    if (changed) {
+      this.state.debugWaiting = false
+      this.state.debugTimedOut = false
+      this.forceRender()
+      return
+    }
+    if (this.state.debugWaiting && Date.now() - this.state.debugRequestedAt > DEBUG_POLL_TIMEOUT_MS) {
+      this.state.debugWaiting = false
+      this.state.debugTimedOut = true
+      this.forceRender()
+    }
+  },
+
+  debugStatusText(info) {
+    const s = this.state
+    if (s.debugWaiting) return 'Запрос отправлен на часы, ждём ответ...'
+    if (s.debugTimedOut) return 'Часы не ответили. Откройте Aibolit на часах и нажмите «Обновить».'
+    if (info && info.ts) return 'Данные часов от ' + this.formatDebugTime(info.ts)
+    if (info) return 'Данные часов получены'
+    return 'Данные часов ещё не получены. Нажмите «Обновить».'
   },
   formatDebugTime(ts) {
     if (!ts) return ''
@@ -682,6 +741,7 @@ AppSettingsPage({
           onClick: () => this.requestDebugRefresh(),
         }),
       ]),
+      Text({ style: S.debugStatus }, [this.debugStatusText(info)]),
       Text({ style: S.groupTitle }, ['Таймеры на часах']),
       View({ style: S.card }, timerRows),
       Text({ style: S.groupTitle }, ['Отладочные сообщения']),
