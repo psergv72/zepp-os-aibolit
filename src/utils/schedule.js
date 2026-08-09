@@ -1,11 +1,13 @@
 import { set as setAlarm, cancel as cancelAlarm, getAllAlarms, REPEAT_WEEK, REPEAT_ONCE, REPEAT_MINUTE } from '@zos/alarm'
 import { log as Logger } from '@zos/utils'
 import { ALARM_MODES, DEFAULT_SETTINGS } from './constants'
-import { getMedications, getIntakes, getSettings, getSyncAlarmId, setSyncAlarmId, getSnoozeAlarmId, setSnoozeAlarmId, getPendingNotification, getRetryTickAlarmId, setRetryTickAlarmId, registerAlarm, unregisterAlarm } from './storage'
+import { getMedications, getIntakes, getSettings, getSyncAlarmId, setSyncAlarmId, getSnoozeAlarmId, setSnoozeAlarmId, getPendingNotification, getRetryTickAlarmId, setRetryTickAlarmId, registerAlarm, unregisterAlarm, getAlarmRegistry } from './storage'
 import { getWeekDaysBitmask, getEnabledMedItems, isIntakeOnDay } from './intake-logic.js'
 import { addDebugEntry, isDebugModeEnabled, pushDebugSnapshot } from './debug-log'
 
 const logger = Logger.getLogger('aibolit-schedule')
+
+const SCHEDULE_VERSION = 2
 
 function getNextAlarmTime(hours, minutes, weekDays) {
   const now = new Date()
@@ -51,6 +53,7 @@ export function createIntakeAlarm(intake) {
     weekDays: intake.weekDays || null,
     label: intake.label || '',
     next: nextTime,
+    scheduleVersion: SCHEDULE_VERSION,
   })
   return id
 }
@@ -75,15 +78,31 @@ export function createSnoozeAlarm(intakeId, delayMinutes, date) {
   if (id && id > 0) setSnoozeAlarmId(id)
   logger.log(`Created snooze alarm id=${id} for intake ${intakeId} in ${delayMinutes}min at ${time}`)
   addDebugEntry(`добавлен snooze-таймер id=${id} приёма ${intakeId} через ${delayMinutes} мин`)
-  registerAlarm(id, { type: 'snooze', intakeId, delayMinutes, next: time })
+  registerAlarm(id, { type: 'snooze', intakeId, delayMinutes, next: time, scheduleVersion: SCHEDULE_VERSION })
   return id
 }
 
 export function createRetryTickAlarm() {
   const prevId = getRetryTickAlarmId()
-  if (prevId !== null) {
+  const registry = getAlarmRegistry()
+  const prevInfo = prevId !== null ? registry[prevId] : undefined
+  const prevValid = prevInfo
+    && prevInfo.type === 'retryTick'
+    && prevInfo.scheduleVersion === SCHEDULE_VERSION
+    && (getAllAlarms() || []).includes(prevId)
+  if (prevValid) {
     logger.log(`Retry tick alarm already exists id=${prevId}, keep it`)
     return prevId
+  }
+
+  if (prevId !== null) {
+    try {
+      cancelAlarm(prevId)
+      unregisterAlarm(prevId)
+      addDebugEntry(`изменён retry-tick таймер: отменён id=${prevId}`)
+    } catch (e) {
+      logger.log(`Cancel old retry tick alarm failed: ${e}`)
+    }
   }
 
   const option = {
@@ -100,7 +119,7 @@ export function createRetryTickAlarm() {
   if (id && id > 0) setRetryTickAlarmId(id)
   logger.log(`Created retry tick alarm id=${id}`)
   addDebugEntry(`добавлен retry-tick таймер id=${id}`)
-  registerAlarm(id, { type: 'retryTick' })
+  registerAlarm(id, { type: 'retryTick', scheduleVersion: SCHEDULE_VERSION })
   return id
 }
 
@@ -116,34 +135,50 @@ export function createSyncAlarm(syncInterval) {
     }
   }
 
-  const raw = Number(syncInterval)
-  const interval = Number.isFinite(raw) && raw > 0
-    ? Math.max(1, Math.round(raw))
-    : DEFAULT_SETTINGS.syncInterval
+  const interval = normalizeSyncInterval(syncInterval)
 
   const start = Math.floor(Date.now() / 1000) + interval * 60
   const option = {
     url: 'app-service/reminder',
     time: start,
     repeat_type: REPEAT_MINUTE,
-    repeat_period: Math.max(1, interval - 1),
-    repeat_duration: 1,
+    repeat_period: 1,
+    repeat_duration: interval,
     param: JSON.stringify({ mode: ALARM_MODES.SYNC }),
     store: true,
   }
 
   const id = setAlarm(option)
   if (id && id > 0) setSyncAlarmId(id)
-  logger.log(`Created sync alarm id=${id} repeat_period=${option.repeat_period}min start=${start}`)
-  addDebugEntry(`добавлен sync-таймер id=${id} период ${option.repeat_period} мин`)
-  registerAlarm(id, { type: 'sync', interval: option.repeat_period, next: start })
+  logger.log(`Created sync alarm id=${id} interval=${interval}min start=${start}`)
+  addDebugEntry(`добавлен sync-таймер id=${id} период ${interval} мин`)
+  registerAlarm(id, { type: 'sync', interval, next: start, scheduleVersion: SCHEDULE_VERSION })
   return id
+}
+
+function weekDaysKey(weekDays) {
+  return weekDays && weekDays.length ? weekDays.slice().sort((a, b) => a - b).join(',') : ''
+}
+
+function normalizeSyncInterval(raw) {
+  const value = Number(raw)
+  return Number.isFinite(value) && value > 0 ? Math.max(1, Math.round(value)) : DEFAULT_SETTINGS.syncInterval
+}
+
+function intakeAlarmMatches(info, intake) {
+  return !!info
+    && info.type === 'intake'
+    && info.scheduleVersion === SCHEDULE_VERSION
+    && info.intakeId === intake.id
+    && info.time === intake.time
+    && weekDaysKey(info.weekDays) === weekDaysKey(intake.weekDays)
 }
 
 export function refreshAlarms() {
   const intakes = getIntakes()
-  const syncAlarmId = getSyncAlarmId()
-  const retryTickAlarmId = getRetryTickAlarmId()
+  const registry = getAlarmRegistry()
+  const snapshot = getAllAlarms() || []
+  const activeIds = new Set(snapshot)
 
   const transientIds = []
   const pending = getPendingNotification()
@@ -151,27 +186,65 @@ export function refreshAlarms() {
   const snoozeAlarmId = getSnoozeAlarmId()
   if (snoozeAlarmId) transientIds.push(snoozeAlarmId)
 
-  const allAlarms = getAllAlarms()
-  if (allAlarms && allAlarms.length > 0) {
-    for (const alarmId of allAlarms) {
-      if (alarmId === syncAlarmId) continue
-      if (alarmId === retryTickAlarmId) continue
-      if (transientIds.includes(alarmId)) continue
-      cancelAlarm(alarmId)
-      unregisterAlarm(alarmId)
-      addDebugEntry(`удалён таймер id=${alarmId} при перестройке расписания`)
-    }
-  }
+  const keepIds = new Set()
+  const cancelledIds = new Set()
 
   for (const intake of intakes) {
     if (getEnabledMedItems(intake, getMedications()).length === 0) continue
 
-    createIntakeAlarm(intake)
+    const existingIds = Object.entries(registry)
+      .filter(([, info]) => info && info.type === 'intake' && info.intakeId === intake.id)
+      .map(([id]) => Number(id))
+
+    const matchId = existingIds.find(id => {
+      const info = registry[id]
+      return intakeAlarmMatches(info, intake) && activeIds.has(id)
+    })
+
+    if (matchId !== undefined) {
+      keepIds.add(matchId)
+      for (const id of existingIds) {
+        if (id === matchId) continue
+        cancelAlarm(id)
+        unregisterAlarm(id)
+        cancelledIds.add(id)
+        addDebugEntry(`изменён таймер id=${id} приёма ${intake.id}: пересоздан`)
+      }
+      continue
+    }
+
+    for (const id of existingIds) {
+      cancelAlarm(id)
+      unregisterAlarm(id)
+      cancelledIds.add(id)
+      addDebugEntry(`изменён таймер id=${id} приёма ${intake.id}: пересоздан`)
+    }
+    keepIds.add(createIntakeAlarm(intake))
   }
 
   const settings = getSettings()
-  createSyncAlarm(settings.syncInterval)
-  createRetryTickAlarm()
+  const interval = normalizeSyncInterval(settings.syncInterval)
+  const syncAlarmId = getSyncAlarmId()
+  const syncInfo = syncAlarmId !== null ? registry[syncAlarmId] : undefined
+  const syncActive = syncAlarmId !== null && activeIds.has(syncAlarmId)
+  if (syncAlarmId !== null && syncActive && syncInfo && syncInfo.type === 'sync' && syncInfo.interval === interval && syncInfo.scheduleVersion === SCHEDULE_VERSION) {
+    keepIds.add(syncAlarmId)
+  } else {
+    if (syncAlarmId !== null) cancelledIds.add(syncAlarmId)
+    keepIds.add(createSyncAlarm(interval))
+  }
+
+  const retryTickAlarmId = createRetryTickAlarm()
+  if (retryTickAlarmId !== null && retryTickAlarmId !== undefined) keepIds.add(retryTickAlarmId)
+
+  for (const alarmId of snapshot) {
+    if (keepIds.has(alarmId)) continue
+    if (cancelledIds.has(alarmId)) continue
+    if (transientIds.includes(alarmId)) continue
+    cancelAlarm(alarmId)
+    unregisterAlarm(alarmId)
+    addDebugEntry(`удалён таймер id=${alarmId} при перестройке расписания`)
+  }
 
   logger.log('Alarms refreshed')
   if (isDebugModeEnabled()) {

@@ -115,7 +115,7 @@ test('createIntakeAlarm задаёт time строго в будущем, даж
   assert.ok(sets[0].option.time > nowSeconds, `time ${sets[0].option.time} должен быть в будущем`)
 })
 
-test('refreshAlarms создаёт sync-alarm с REPEAT_MINUTE и repeat_period из настроек', () => {
+test('refreshAlarms создаёт sync-alarm с REPEAT_MINUTE и repeat_duration из настроек', () => {
   storage.__stores().get('aibolit-data.json').set('intakes', [
     { id: 'i1', time: '08:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] },
   ])
@@ -127,8 +127,8 @@ test('refreshAlarms создаёт sync-alarm с REPEAT_MINUTE и repeat_period 
   assert.ok(syncSet, 'sync-alarm создан')
   assert.equal(syncSet.option.url, 'app-service/reminder')
   assert.equal(syncSet.option.repeat_type, 1)
-  assert.equal(syncSet.option.repeat_period, 29)
-  assert.equal(syncSet.option.repeat_period + syncSet.option.repeat_duration, 30)
+  assert.equal(syncSet.option.repeat_period, 1)
+  assert.equal(syncSet.option.repeat_duration, 30)
 })
 
 test('createSyncAlarm отменяет предыдущий sync-alarm и сохраняет новый id', () => {
@@ -176,7 +176,8 @@ test('createRetryTickAlarm создаёт периодический будил�
   assert.ok(tick, 'тик-будильник создан')
   assert.equal(tick.option.url, 'app-service/reminder')
   assert.equal(tick.option.repeat_type, 1, 'REPEAT_MINUTE')
-  assert.equal(tick.option.repeat_period + tick.option.repeat_duration, 2, 'период тика 2 мин')
+  assert.equal(tick.option.repeat_period, 1)
+  assert.equal(tick.option.repeat_duration, 1, 'период тика 1 мин')
   const storedId = storage.__stores().get('aibolit-data.json').get('retryTickAlarmId')
   assert.ok(storedId > 0, 'id тик-будильника сохранён в storage')
 })
@@ -216,6 +217,39 @@ test('createIntakeAlarm пишет отладочное сообщение пр�
   assert.ok(Array.isArray(log) && log.length > 0, 'debugLog должен быть заполнен')
   assert.ok(log.some(e => /добавлен таймер/.test(e.message)), 'есть запись о добавлении таймера')
   assert.ok(log.some(e => /sync-таймер/.test(e.message)), 'есть запись о sync-таймере')
+})
+
+test('sync-таймер отражает настроенный интервал 2 мин в реестре и логе', () => {
+  storage.__stores().get('aibolit-data.json').set('settings', { debugMode: true, syncInterval: 2, minFontSize: 16 })
+  refreshAlarms()
+  const registry = storage.__stores().get('aibolit-data.json').get('alarmRegistry')
+  const syncEntry = Object.values(registry).find(e => e.type === 'sync')
+  assert.equal(syncEntry.interval, 2, 'в реестре настроенный интервал')
+  const log = storage.__stores().get('aibolit-data.json').get('debugLog')
+  assert.ok(log.some(e => /sync-таймер.*период 2 мин/.test(e.message)), 'в логе настроенный интервал')
+})
+
+test('sync-таймер с интервалом 1 мин отражает интервал 1', () => {
+  storage.__stores().get('aibolit-data.json').set('settings', { debugMode: true, syncInterval: 1, minFontSize: 16 })
+  refreshAlarms()
+  const registry = storage.__stores().get('aibolit-data.json').get('alarmRegistry')
+  const syncEntry = Object.values(registry).find(e => e.type === 'sync')
+  assert.equal(syncEntry.interval, 1, 'в реестре интервал 1 мин')
+  const log = storage.__stores().get('aibolit-data.json').get('debugLog')
+  assert.ok(log.some(e => /sync-таймер.*период 1 мин/.test(e.message)), 'в логе интервал 1 мин')
+})
+
+test('sync-таймер задаёт repeat_duration равный настроенному интервалу', () => {
+  storage.__stores().get('aibolit-data.json').set('settings', { syncInterval: 1, minFontSize: 16 })
+  refreshAlarms()
+  let syncSet = alarm.__getCalls().find(c => c.method === 'set' && JSON.parse(c.option.param).mode === 'sync')
+  assert.equal(syncSet.option.repeat_duration, 1, 'интервал 1 мин → repeat_duration 1')
+
+  alarm.__reset()
+  storage.__stores().get('aibolit-data.json').set('settings', { syncInterval: 2, minFontSize: 16 })
+  refreshAlarms()
+  syncSet = alarm.__getCalls().find(c => c.method === 'set' && JSON.parse(c.option.param).mode === 'sync')
+  assert.equal(syncSet.option.repeat_duration, 2, 'интервал 2 мин → repeat_duration 2')
 })
 
 test('createIntakeAlarm не пишет в debugLog при выключенной отладке', () => {
@@ -270,18 +304,180 @@ test('createIntakeAlarm регистрирует таймер в реестре 
   assert.deepEqual(intakeEntry.weekDays, [1, 3, 5])
 })
 
-test('refreshAlarms удаляет из реестра таймеры, снятые при перестройке', () => {
+test('refreshAlarms вычищает из реестра таймер при изменении параметров приёма', () => {
   storage.__stores().get('aibolit-data.json').set('settings', { debugMode: false, syncInterval: 60 })
   storage.__stores().get('aibolit-data.json').set('intakes', [
     { id: 'i1', time: '08:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] },
   ])
   const staleAlarmId = alarm.set({ url: 'app-service/reminder' })
   storage.__stores().get('aibolit-data.json').set('alarmRegistry', {
-    [staleAlarmId]: { type: 'intake', intakeId: 'i1', time: '08:00' },
+    [staleAlarmId]: { type: 'intake', intakeId: 'i1', time: '09:00', weekDays: null },
   })
 
   refreshAlarms()
 
   const registry = storage.__stores().get('aibolit-data.json').get('alarmRegistry')
-  assert.equal(registry[staleAlarmId], undefined, 'снятый при перестройке таймер должен быть вычищен из реестра')
+  assert.equal(registry[staleAlarmId], undefined, 'таймер с изменившимися параметрами должен быть вычищен из реестра')
+})
+
+test('refreshAlarms не пересоздаёт таймер приёма при неизменных параметрах', () => {
+  storage.__stores().get('aibolit-data.json').set('intakes', [
+    { id: 'i1', time: '08:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] },
+  ])
+
+  refreshAlarms()
+  const firstSets = intakeSets()
+  assert.equal(firstSets.length, 1)
+  const firstId = firstSets[0].id
+
+  refreshAlarms()
+
+  const sets = intakeSets()
+  assert.equal(sets.length, 1, 'повторный refresh не должен создавать новый таймер приёма')
+  const cancels = alarm.__getCalls().filter(c => c.method === 'cancel' && c.id === firstId)
+  assert.equal(cancels.length, 0, 'неизменный таймер приёма не отменяется')
+})
+
+test('refreshAlarms пересоздаёт таймер приёма при изменении времени', () => {
+  storage.__stores().get('aibolit-data.json').set('intakes', [
+    { id: 'i1', time: '08:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] },
+  ])
+
+  refreshAlarms()
+  const first = intakeSets()[0]
+
+  storage.__stores().get('aibolit-data.json').set('intakes', [
+    { id: 'i1', time: '09:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] },
+  ])
+  refreshAlarms()
+
+  const sets = intakeSets()
+  assert.equal(sets.length, 2, 'изменение времени → создаётся новый таймер')
+  assert.notEqual(sets[1].id, first.id, 'новый таймер имеет другой id')
+  const cancels = alarm.__getCalls().filter(c => c.method === 'cancel' && c.id === first.id)
+  assert.equal(cancels.length, 1, 'старый таймер приёма отменён')
+})
+
+test('refreshAlarms пересоздаёт таймер приёма при изменении дней недели', () => {
+  storage.__stores().get('aibolit-data.json').set('intakes', [
+    { id: 'i1', time: '08:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] },
+  ])
+
+  refreshAlarms()
+  const first = intakeSets()[0]
+
+  storage.__stores().get('aibolit-data.json').set('intakes', [
+    { id: 'i1', time: '08:00', weekDays: [1, 3, 5], items: [{ medicationId: 'm1', amount: '1' }] },
+  ])
+  refreshAlarms()
+
+  const sets = intakeSets()
+  assert.equal(sets.length, 2, 'изменение дней недели → создаётся новый таймер')
+  assert.notEqual(sets[1].id, first.id)
+  const cancels = alarm.__getCalls().filter(c => c.method === 'cancel' && c.id === first.id)
+  assert.equal(cancels.length, 1, 'старый таймер приёма отменён')
+})
+
+test('refreshAlarms не пересоздаёт sync-таймер при неизменном интервале', () => {
+  storage.__stores().get('aibolit-data.json').set('settings', { retryInterval: 60, syncInterval: 30, snoozeOptions: [30, 45, 60, 90], minFontSize: 16 })
+  storage.__stores().get('aibolit-data.json').set('intakes', [])
+
+  refreshAlarms()
+  refreshAlarms()
+
+  const syncSets = alarm.__getCalls().filter(c => c.method === 'set' && JSON.parse(c.option.param).mode === 'sync')
+  assert.equal(syncSets.length, 1, 'повторный refresh не должен создавать новый sync-таймер')
+})
+
+test('refreshAlarms пересоздаёт sync-таймер при изменении интервала', () => {
+  storage.__stores().get('aibolit-data.json').set('settings', { syncInterval: 30, minFontSize: 16 })
+  storage.__stores().get('aibolit-data.json').set('intakes', [])
+
+  refreshAlarms()
+  const firstSync = alarm.__getCalls().find(c => c.method === 'set' && JSON.parse(c.option.param).mode === 'sync')
+  const firstSyncId = firstSync.id
+
+  storage.__stores().get('aibolit-data.json').set('settings', { syncInterval: 60, minFontSize: 16 })
+  refreshAlarms()
+
+  const syncSets = alarm.__getCalls().filter(c => c.method === 'set' && JSON.parse(c.option.param).mode === 'sync')
+  assert.equal(syncSets.length, 2, 'изменение интервала → создаётся новый sync-таймер')
+  const cancels = alarm.__getCalls().filter(c => c.method === 'cancel' && c.id === firstSyncId)
+  assert.equal(cancels.length, 1, 'старый sync-таймер отменён')
+})
+
+test('refreshAlarms пересоздаёт таймер приёма, если система сняла его', () => {
+  storage.__stores().get('aibolit-data.json').set('intakes', [
+    { id: 'i1', time: '08:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] },
+  ])
+
+  refreshAlarms()
+  const first = intakeSets()[0]
+
+  alarm.cancel(first.id)
+
+  refreshAlarms()
+
+  const sets = intakeSets()
+  assert.equal(sets.length, 2, 'снятый системой таймер приёма создаётся заново')
+})
+
+test('createRetryTickAlarm не переиспользует сохранённый id, если таймера нет в реестре', () => {
+  storage.__stores().get('aibolit-data.json').set('retryTickAlarmId', 500)
+
+  const id = createRetryTickAlarm()
+
+  assert.notEqual(id, 500, 'устаревший id не переиспользуется')
+  const tickSets = alarm.__getCalls().filter(c => c.method === 'set' && JSON.parse(c.option.param).mode === 'retry_tick')
+  assert.equal(tickSets.length, 1, 'создан новый тик-таймер')
+})
+
+test('refreshAlarms пересоздаёт sync-таймер, если в реестре устаревшая версия расписания', () => {
+  storage.__stores().get('aibolit-data.json').set('intakes', [
+    { id: 'i1', time: '08:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] },
+  ])
+  storage.__stores().get('aibolit-data.json').set('settings', { syncInterval: 2, minFontSize: 16 })
+
+  refreshAlarms()
+  const firstSync = alarm.__getCalls().find(c => c.method === 'set' && JSON.parse(c.option.param).mode === 'sync')
+  const syncId = firstSync.id
+
+  const registry = storage.__stores().get('aibolit-data.json').get('alarmRegistry')
+  registry[syncId].scheduleVersion = 1
+  storage.__stores().get('aibolit-data.json').set('alarmRegistry', registry)
+
+  refreshAlarms()
+
+  const syncSets = alarm.__getCalls().filter(c => c.method === 'set' && JSON.parse(c.option.param).mode === 'sync')
+  assert.equal(syncSets.length, 2, 'sync пересоздан при устаревшей версии')
+  const cancels = alarm.__getCalls().filter(c => c.method === 'cancel' && c.id === syncId)
+  assert.equal(cancels.length, 1, 'старый sync-таймер отменён')
+})
+
+test('refreshAlarms отменяет системный таймер без записи в реестре', () => {
+  storage.__stores().get('aibolit-data.json').set('intakes', [])
+  const strayId = alarm.set({ url: 'app-service/reminder' })
+
+  refreshAlarms()
+
+  const cancels = alarm.__getCalls().filter(c => c.method === 'cancel' && c.id === strayId)
+  assert.equal(cancels.length, 1, 'таймер без записи в реестре отменяется')
+})
+
+test('refreshAlarms отменяет таймер удалённого приёма', () => {
+  storage.__stores().get('aibolit-data.json').set('intakes', [
+    { id: 'i1', time: '08:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] },
+    { id: 'i2', time: '12:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] },
+  ])
+  refreshAlarms()
+  const i2 = intakeSets().find(c => JSON.parse(c.option.param).intakeId === 'i2')
+  assert.ok(i2, 'таймер i2 создан')
+
+  storage.__stores().get('aibolit-data.json').set('intakes', [
+    { id: 'i1', time: '08:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] },
+  ])
+  refreshAlarms()
+
+  const cancels = alarm.__getCalls().filter(c => c.method === 'cancel' && c.id === i2.id)
+  assert.equal(cancels.length, 1, 'таймер удалённого приёма отменяется')
 })
