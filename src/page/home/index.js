@@ -26,7 +26,7 @@ Page({
   },
 
   pullConfig() {
-    fetchConfigFromSide().then((config) => {
+    fetchConfigFromSide('страница home').then((config) => {
       if (config && !this._destroyed) this.refreshView()
     })
   },

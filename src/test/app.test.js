@@ -96,3 +96,15 @@ test('onCall CLEAR_DEBUG очищает отладочный лог на час�
 
   assert.deepEqual(store.get('debugLog'), [])
 })
+
+test('syncConfig пишет источник в отладочный лог', async () => {
+  const store = storage.__stores().get('aibolit-data.json')
+  store.set('settings', { debugMode: true })
+  appOpts.request = () => Promise.resolve({ config: { revision: 3 } })
+
+  appOpts.syncConfig(0, 'уведомление')
+  await new Promise((resolve) => setTimeout(resolve, 0))
+
+  const log = store.get('debugLog')
+  assert.ok(log.some(e => e.message.includes('запрос настроек с телефона (уведомление, попытка 1)')))
+})

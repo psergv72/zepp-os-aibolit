@@ -23,7 +23,7 @@ function handleEvent(e) {
 
   if (mode === ALARM_MODES.SYNC) {
     logger.log('sync tick: apply config, refresh alarms, retry queue')
-    fetchConfigFromSide()
+    fetchConfigFromSide('sync-тик')
     refreshAlarms()
     retrySync()
     return

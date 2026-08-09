@@ -21,14 +21,14 @@ App(
       if (applyConfigFromSettings()) {
         logger.log('config applied from settings on create')
       }
-      this.syncConfig()
+      this.syncConfig(0, 'при старте')
       refreshAlarms()
     },
     onCall(data) {
       logger.log(`app onCall method: ${data && data.method}`)
       if (data && data.method === ZML_METHODS.CONFIG_SYNCED) {
         addDebugEntry('получено уведомление об изменении настроек с телефона')
-        this.syncConfig()
+        this.syncConfig(0, 'уведомление')
       }
       if (data && data.method === ZML_METHODS.REQUEST_DEBUG) {
         pushDebugSnapshot()
@@ -37,8 +37,8 @@ App(
         clearDebugLog()
       }
     },
-    syncConfig(attempt = 0) {
-      addDebugEntry(`запрос настроек с телефона (попытка ${attempt + 1})`)
+    syncConfig(attempt = 0, source = '') {
+      addDebugEntry(`запрос настроек с телефона (${source ? source + ', ' : ''}попытка ${attempt + 1})`)
       this.request({ method: ZML_METHODS.GET_CONFIG })
         .then((result) => {
           logger.log('app syncConfig result received')
@@ -49,7 +49,7 @@ App(
           logger.log(`app syncConfig failed: ${error}`)
           if (attempt < 5) {
             addDebugEntry(`не удалось получить настройки с телефона: ${error}, повтор через 1 с`)
-            setTimeout(() => this.syncConfig(attempt + 1), 1000)
+            setTimeout(() => this.syncConfig(attempt + 1, source), 1000)
           } else {
             addDebugEntry('не удалось получить настройки с телефона: попытки исчерпаны')
           }

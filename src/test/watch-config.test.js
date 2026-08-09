@@ -175,12 +175,34 @@ test('fetchConfigFromSide пишет в лог неудачную попытку
     },
   })
 
-  const result = await fetchConfigFromSide(1, 1)
+  const result = await fetchConfigFromSide(undefined, 1, 1)
 
   delete globalThis.getApp
   assert.equal(result, false)
   const log = store().get('debugLog')
   assert.ok(log.some(e => e.message.includes('не удалось получить настройки с телефона')))
+})
+
+test('fetchConfigFromSide с источником пишет источник в сообщение запроса', async () => {
+  store().set('settings', { debugMode: true })
+  globalThis.getApp = () => ({
+    _options: {
+      globalData: {
+        messaging: {
+          request() {
+            return Promise.resolve({ config: { revision: 9, medications: [{ id: 'm9' }] } })
+          },
+        },
+      },
+    },
+  })
+
+  const result = await fetchConfigFromSide('sync-тик', 1, 1)
+
+  delete globalThis.getApp
+  assert.equal(result, true)
+  const log = store().get('debugLog')
+  assert.ok(log.some(e => e.message.includes('запрос настроек с телефона (sync-тик, попытка 1)')))
 })
 
 test('fetchConfigFromSide пишет в лог запрос настроек при обращении к телефону', async () => {
@@ -199,7 +221,7 @@ test('fetchConfigFromSide пишет в лог запрос настроек п�
     },
   })
 
-  const result = await fetchConfigFromSide(1, 1)
+  const result = await fetchConfigFromSide(undefined, 1, 1)
 
   delete globalThis.getApp
   assert.equal(result, true)

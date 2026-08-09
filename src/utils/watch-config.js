@@ -78,7 +78,7 @@ export function applyConfigFromSettings() {
   return applied
 }
 
-export function fetchConfigFromSide(maxAttempts = 6, delayMs = 1000) {
+export function fetchConfigFromSide(source = '', maxAttempts = 6, delayMs = 1000) {
   return new Promise((resolve) => {
     if (applyConfigFromSettings()) {
       resolve(true)
@@ -96,7 +96,7 @@ export function fetchConfigFromSide(maxAttempts = 6, delayMs = 1000) {
         resolve(false)
         return
       }
-      addDebugEntry(`запрос настроек с телефона (попытка ${maxAttempts - n + 1})`)
+      addDebugEntry(`запрос настроек с телефона (${source ? source + ', ' : ''}попытка ${maxAttempts - n + 1})`)
       messaging.request({ method: ZML_METHODS.GET_CONFIG })
         .then((result) => {
           applyConfigToStorage(result && result.config)

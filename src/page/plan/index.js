@@ -37,7 +37,7 @@ Page({
   },
 
   pullConfig() {
-    fetchConfigFromSide().then((config) => {
+    fetchConfigFromSide('страница plan').then((config) => {
       if (config && !this._destroyed) this.refreshView()
     })
   },
