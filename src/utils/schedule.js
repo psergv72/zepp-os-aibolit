@@ -89,6 +89,8 @@ export function createRetryTickAlarm() {
   const prevValid = prevInfo
     && prevInfo.type === 'retryTick'
     && prevInfo.scheduleVersion === SCHEDULE_VERSION
+    && typeof prevInfo.endTime === 'number'
+    && prevInfo.endTime > Math.floor(Date.now() / 1000)
     && (getAllAlarms() || []).includes(prevId)
   if (prevValid) {
     logger.log(`Retry tick alarm already exists id=${prevId}, keep it`)
@@ -105,9 +107,13 @@ export function createRetryTickAlarm() {
     }
   }
 
+  const time = Math.floor(Date.now() / 1000) + 120
+  const endTime = endOfTodaySeconds()
   const option = {
     url: 'app-service/reminder',
-    time: Math.floor(Date.now() / 1000) + 120,
+    time: time,
+    start_time: time,
+    end_time: endTime,
     repeat_type: REPEAT_MINUTE,
     repeat_period: 1,
     repeat_duration: 1,
@@ -117,10 +123,17 @@ export function createRetryTickAlarm() {
 
   const id = setAlarm(option)
   if (id && id > 0) setRetryTickAlarmId(id)
-  logger.log(`Created retry tick alarm id=${id}`)
-  addDebugEntry(`добавлен retry-tick таймер id=${id}`)
-  registerAlarm(id, { type: 'retryTick', scheduleVersion: SCHEDULE_VERSION })
+  logger.log(`Created retry tick alarm id=${id} window until ${endTime}`)
+  addDebugEntry(`добавлен retry-tick таймер id=${id} до конца дня`)
+  registerAlarm(id, { type: 'retryTick', scheduleVersion: SCHEDULE_VERSION, endTime })
   return id
+}
+
+function endOfTodaySeconds() {
+  const d = new Date()
+  d.setDate(d.getDate() + 1)
+  d.setHours(0, 0, 0, 0)
+  return Math.floor(d.getTime() / 1000)
 }
 
 export function createSyncAlarm(syncInterval) {
@@ -234,8 +247,10 @@ export function refreshAlarms() {
     keepIds.add(createSyncAlarm(interval))
   }
 
+  const oldRetryTickAlarmId = getRetryTickAlarmId()
   const retryTickAlarmId = createRetryTickAlarm()
   if (retryTickAlarmId !== null && retryTickAlarmId !== undefined) keepIds.add(retryTickAlarmId)
+  if (oldRetryTickAlarmId !== null && oldRetryTickAlarmId !== retryTickAlarmId) cancelledIds.add(oldRetryTickAlarmId)
 
   for (const alarmId of snapshot) {
     if (keepIds.has(alarmId)) continue

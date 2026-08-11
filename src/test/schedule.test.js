@@ -195,6 +195,61 @@ test('refreshAlarms создаёт тик-будильник один раз и 
   assert.ok(!cancels.some(c => c.id === tickId), 'тик-будильник не должен быть отменён')
 })
 
+test('createRetryTickAlarm задаёт окно повтора start_time/end_time до конца дня', () => {
+  createRetryTickAlarm()
+  const sets = alarm.__getCalls().filter(c => c.method === 'set')
+  const tick = sets.find(c => JSON.parse(c.option.param).mode === 'retry_tick')
+  assert.ok(tick, 'тик-будильник создан')
+  assert.equal(typeof tick.option.start_time, 'number', 'start_time задан')
+  assert.equal(typeof tick.option.end_time, 'number', 'end_time задан')
+  assert.ok(tick.option.end_time > tick.option.time, 'end_time позже первого срабатывания')
+  const tomorrow = new Date()
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  tomorrow.setHours(0, 0, 0, 0)
+  assert.equal(tick.option.end_time, Math.floor(tomorrow.getTime() / 1000), 'end_time = конец текущего дня')
+  const storedId = storage.__stores().get('aibolit-data.json').get('retryTickAlarmId')
+  const registry = storage.__stores().get('aibolit-data.json').get('alarmRegistry')
+  assert.equal(registry[storedId].endTime, tick.option.end_time, 'endTime сохранён в реестре')
+})
+
+test('refreshAlarms пересоздаёт тик-будильник с истёкшим окном повтора', () => {
+  storage.__stores().get('aibolit-data.json').set('intakes', [
+    { id: 'i1', time: '08:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] },
+  ])
+  refreshAlarms()
+  const tickSets = alarm.__getCalls().filter(c => c.method === 'set' && JSON.parse(c.option.param).mode === 'retry_tick')
+  assert.equal(tickSets.length, 1, 'первый тик-будильник создан')
+  const tickId = tickSets[0].id
+  const registry = storage.__stores().get('aibolit-data.json').get('alarmRegistry')
+  registry[tickId].endTime = Math.floor(Date.now() / 1000) - 60
+  storage.__stores().get('aibolit-data.json').set('alarmRegistry', registry)
+
+  refreshAlarms()
+
+  const setsAfter = alarm.__getCalls().filter(c => c.method === 'set' && JSON.parse(c.option.param).mode === 'retry_tick')
+  assert.equal(setsAfter.length, 2, 'тик-будильник пересоздан при истёкшем окне')
+  const cancels = alarm.__getCalls().filter(c => c.method === 'cancel' && c.id === tickId)
+  assert.equal(cancels.length, 1, 'старый тик-будильник отменён')
+})
+
+test('refreshAlarms пересоздаёт тик-будильник старого формата без endTime', () => {
+  storage.__stores().get('aibolit-data.json').set('intakes', [
+    { id: 'i1', time: '08:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] },
+  ])
+  refreshAlarms()
+  const tickSets = alarm.__getCalls().filter(c => c.method === 'set' && JSON.parse(c.option.param).mode === 'retry_tick')
+  assert.equal(tickSets.length, 1, 'первый тик-будильник создан')
+  const tickId = tickSets[0].id
+  const registry = storage.__stores().get('aibolit-data.json').get('alarmRegistry')
+  registry[tickId] = { type: 'retryTick', scheduleVersion: 2 }
+  storage.__stores().get('aibolit-data.json').set('alarmRegistry', registry)
+
+  refreshAlarms()
+
+  const setsAfter = alarm.__getCalls().filter(c => c.method === 'set' && JSON.parse(c.option.param).mode === 'retry_tick')
+  assert.equal(setsAfter.length, 2, 'тик-будильник без endTime пересоздаётся')
+})
+
 test('createSnoozeAlarm передаёт date в параметр будильника', () => {
   createSnoozeAlarm('i1', 30, '2026-08-07')
   const set = alarm.__getCalls().find(c => c.method === 'set')
