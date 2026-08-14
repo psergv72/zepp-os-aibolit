@@ -230,3 +230,40 @@ test('fetchConfigFromSide пишет в лог запрос настроек п�
   const log = store().get('debugLog')
   assert.ok(log.some(e => e.message.includes('запрос настроек с телефона')))
 })
+
+test('fetchConfigFromSide не падает без setTimeout и без messaging (контекст app-service)', async () => {
+  delete globalThis.settings
+  delete globalThis.getApp
+  const originalSetTimeout = globalThis.setTimeout
+  delete globalThis.setTimeout
+  try {
+    const result = await fetchConfigFromSide(undefined, 2, 1)
+    assert.equal(result, false)
+  } finally {
+    globalThis.setTimeout = originalSetTimeout
+  }
+})
+
+test('fetchConfigFromSide не падает без setTimeout, когда запрос уже провалился', async () => {
+  delete globalThis.settings
+  globalThis.getApp = () => ({
+    _options: {
+      globalData: {
+        messaging: {
+          request() {
+            return Promise.reject(new Error('offline'))
+          },
+        },
+      },
+    },
+  })
+  const originalSetTimeout = globalThis.setTimeout
+  delete globalThis.setTimeout
+  try {
+    const result = await fetchConfigFromSide(undefined, 2, 1)
+    assert.equal(result, false)
+  } finally {
+    globalThis.setTimeout = originalSetTimeout
+    delete globalThis.getApp
+  }
+})

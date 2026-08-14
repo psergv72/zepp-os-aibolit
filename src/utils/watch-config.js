@@ -88,7 +88,7 @@ export function fetchConfigFromSide(source = '', maxAttempts = 6, delayMs = 1000
     const attempt = (n) => {
       const messaging = getMessaging()
       if (!messaging || typeof messaging.request !== 'function') {
-        if (n > 0) {
+        if (n > 0 && typeof setTimeout === 'function') {
           setTimeout(() => attempt(n - 1), delayMs)
           return
         }
@@ -103,7 +103,7 @@ export function fetchConfigFromSide(source = '', maxAttempts = 6, delayMs = 1000
           resolve(!!(result && result.config))
         })
         .catch(() => {
-          if (n > 0) {
+          if (n > 0 && typeof setTimeout === 'function') {
             addDebugEntry(`не удалось получить настройки с телефона (осталось попыток: ${n})`)
             setTimeout(() => attempt(n - 1), delayMs)
             return
