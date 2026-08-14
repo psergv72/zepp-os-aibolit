@@ -54,6 +54,46 @@ test('refreshAlarms не создаёт alarm для приёма без вкл�
   assert.equal(sets.length, 0)
 })
 
+test('refreshAlarms не отменяет intake-таймер при пустых медикаментах (неполная конфигурация)', () => {
+  storage.__stores().get('aibolit-data.json').set('intakes', [
+    { id: 'i1', time: '08:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] },
+  ])
+  refreshAlarms()
+  const first = intakeSets()[0]
+  assert.ok(first, 'intake-таймер создан при загруженных лекарствах')
+
+  storage.__stores().get('aibolit-data.json').set('medications', [])
+
+  refreshAlarms()
+
+  const cancels = alarm.__getCalls().filter(c => c.method === 'cancel' && c.id === first.id)
+  assert.equal(cancels.length, 0, 'intake-таймер не должен быть отменён при пустых медикаментах')
+})
+
+test('refreshAlarms создаёт intake-таймер при пустых медикаментах, если его нет', () => {
+  storage.__stores().get('aibolit-data.json').set('medications', [])
+  storage.__stores().get('aibolit-data.json').set('intakes', [
+    { id: 'i1', time: '08:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] },
+  ])
+
+  refreshAlarms()
+
+  const sets = intakeSets()
+  assert.equal(sets.length, 1, 'intake-таймер создан даже при пустых медикаментах')
+})
+
+test('refreshAlarms пишет в лог снимок таймеров в начале перестройки', () => {
+  storage.__stores().get('aibolit-data.json').set('settings', { debugMode: true, syncInterval: 60 })
+  storage.__stores().get('aibolit-data.json').set('intakes', [
+    { id: 'i1', time: '08:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] },
+  ])
+
+  refreshAlarms()
+
+  const log = storage.__stores().get('aibolit-data.json').get('debugLog')
+  assert.ok(log.some(e => /перестройка расписания: активных таймеров/.test(e.message)), 'в логе снимок таймеров в начале перестройки')
+})
+
 test('refreshAlarms создаёт alarm для уже принятого сегодня приёма (для будущих недель)', () => {
   const today = new Date()
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`

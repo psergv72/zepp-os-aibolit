@@ -189,9 +189,15 @@ function intakeAlarmMatches(info, intake) {
 
 export function refreshAlarms() {
   const intakes = getIntakes()
+  const medications = getMedications()
   const registry = getAlarmRegistry()
   const snapshot = getAllAlarms() || []
   const activeIds = new Set(snapshot)
+
+  if (isDebugModeEnabled()) {
+    const intakeAlarmCount = Object.values(registry).filter(info => info && info.type === 'intake').length
+    addDebugEntry(`перестройка расписания: активных таймеров ${snapshot.length}, из них приёмных ${intakeAlarmCount}, приёмов в конфиге ${intakes.length}`)
+  }
 
   const transientIds = []
   const pending = getPendingNotification()
@@ -202,8 +208,17 @@ export function refreshAlarms() {
   const keepIds = new Set()
   const cancelledIds = new Set()
 
+  const medsLoaded = Array.isArray(medications) && medications.length > 0
+  const configIndeterminate = intakes.length > 0 && !medsLoaded
+
+  if (configIndeterminate) {
+    for (const [id, info] of Object.entries(registry)) {
+      if (info && info.type === 'intake') keepIds.add(Number(id))
+    }
+  }
+
   for (const intake of intakes) {
-    if (getEnabledMedItems(intake, getMedications()).length === 0) continue
+    if (medsLoaded && getEnabledMedItems(intake, medications).length === 0) continue
 
     const existingIds = Object.entries(registry)
       .filter(([, info]) => info && info.type === 'intake' && info.intakeId === intake.id)
