@@ -1,27 +1,42 @@
+import { getItem, setItem, removeItem, clear } from '../../../utils/storage.js'
+import { __resetFs } from './zos-fs.mjs'
+
 const stores = new Map()
 
 class LocalStorageLike {
   constructor(name) {
     this.name = name
     if (!stores.has(name)) {
-      stores.set(name, new Map())
+      stores.set(name, this)
     }
   }
 
   getItem(key) {
-    return stores.get(this.name).get(key)
+    return getItem(key, undefined)
   }
 
   setItem(key, value) {
-    stores.get(this.name).set(key, value)
+    setItem(key, value)
   }
 
   removeItem(key) {
-    stores.get(this.name).delete(key)
+    removeItem(key)
   }
 
   clear() {
-    stores.get(this.name).clear()
+    clear()
+  }
+
+  set(key, value) {
+    this.setItem(key, value)
+  }
+
+  get(key) {
+    return this.getItem(key)
+  }
+
+  has(key) {
+    return this.getItem(key) !== undefined
   }
 }
 
@@ -30,7 +45,8 @@ export class ShareLocalStorage extends LocalStorageLike {}
 export class LocalStorage extends LocalStorageLike {}
 
 export function __resetStorage() {
-  stores.clear()
+  clear()
+  __resetFs()
 }
 
 export function __stores() {
