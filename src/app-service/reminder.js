@@ -1,6 +1,6 @@
 import { log as Logger } from '@zos/utils'
 import { fetchConfigFromSide } from '../utils/watch-config'
-import { refreshAlarms } from '../utils/schedule'
+import { refreshAlarms, createRetryTickAlarm } from '../utils/schedule'
 import { retrySync } from '../utils/sync'
 import { ALARM_MODES } from '../utils/constants'
 import { getTodayDateStr, clearSnoozeAlarmId } from '../utils/storage'
@@ -32,6 +32,7 @@ function handleEvent(e) {
   if (mode === ALARM_MODES.RETRY_TICK) {
     logger.log('retry tick: maybe retry pending')
     maybeRetryPending()
+    createRetryTickAlarm()
     return
   }
 

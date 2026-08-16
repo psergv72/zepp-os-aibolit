@@ -94,6 +94,7 @@ test('refreshAlarms пишет в лог снимок таймеров в нач
 
   const log = storage.__stores().get('aibolit-data.json').get('debugLog')
   assert.ok(log.some(e => /перестройка расписания: активных таймеров/.test(e.message)), 'в логе снимок таймеров в начале перестройки')
+  assert.ok(log.some(e => /лекарств в конфиге 3/.test(e.message)), 'в логе количество лекарств')
 })
 
 test('refreshAlarms создаёт alarm для уже принятого сегодня приёма (для будущих недель)', () => {
@@ -290,6 +291,69 @@ test('refreshAlarms пересоздаёт тик-будильник старо�
 
   const setsAfter = alarm.__getCalls().filter(c => c.method === 'set' && JSON.parse(c.option.param).mode === 'retry_tick')
   assert.equal(setsAfter.length, 2, 'тик-будильник без endTime пересоздаётся')
+})
+
+test('refreshAlarms пересоздаёт тик-будильник, когда до конца окна осталось меньше часа', () => {
+  storage.__stores().get('aibolit-data.json').set('intakes', [
+    { id: 'i1', time: '08:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] },
+  ])
+  refreshAlarms()
+  const tickSets = alarm.__getCalls().filter(c => c.method === 'set' && JSON.parse(c.option.param).mode === 'retry_tick')
+  assert.equal(tickSets.length, 1, 'первый тик-будильник создан')
+  const tickId = tickSets[0].id
+  const registry = storage.__stores().get('aibolit-data.json').get('alarmRegistry')
+  registry[tickId].endTime = Math.floor(Date.now() / 1000) + 30 * 60
+  storage.__stores().get('aibolit-data.json').set('alarmRegistry', registry)
+
+  refreshAlarms()
+
+  const setsAfter = alarm.__getCalls().filter(c => c.method === 'set' && JSON.parse(c.option.param).mode === 'retry_tick')
+  assert.equal(setsAfter.length, 2, 'тик пересоздан при малом остатке окна')
+})
+
+test('createSyncAlarm задаёт окно повтора start_time/end_time и сохраняет endTime в реестре', () => {
+  createSyncAlarm(60)
+  const set = alarm.__getCalls().find(c => c.method === 'set' && JSON.parse(c.option.param).mode === 'sync')
+  assert.ok(set, 'sync-таймер создан')
+  assert.equal(typeof set.option.start_time, 'number', 'start_time задан')
+  assert.equal(typeof set.option.end_time, 'number', 'end_time задан')
+  assert.ok(set.option.end_time > set.option.time, 'end_time позже первого срабатывания')
+  const storedId = storage.__stores().get('aibolit-data.json').get('syncAlarmId')
+  const registry = storage.__stores().get('aibolit-data.json').get('alarmRegistry')
+  assert.equal(registry[storedId].endTime, set.option.end_time, 'endTime сохранён в реестре')
+})
+
+test('refreshAlarms пересоздаёт sync-таймер, если до конца окна осталось мало времени', () => {
+  storage.__stores().get('aibolit-data.json').set('intakes', [])
+  refreshAlarms()
+  const firstSync = alarm.__getCalls().find(c => c.method === 'set' && JSON.parse(c.option.param).mode === 'sync')
+  assert.ok(firstSync, 'sync-таймер создан')
+  const syncId = firstSync.id
+  const registry = storage.__stores().get('aibolit-data.json').get('alarmRegistry')
+  registry[syncId].endTime = Math.floor(Date.now() / 1000) + 60 * 60
+  storage.__stores().get('aibolit-data.json').set('alarmRegistry', registry)
+
+  refreshAlarms()
+
+  const syncSets = alarm.__getCalls().filter(c => c.method === 'set' && JSON.parse(c.option.param).mode === 'sync')
+  assert.equal(syncSets.length, 2, 'sync пересоздан при малом остатке окна')
+})
+
+test('refreshAlarms логирует причину пропуска приёма без активных лекарств', () => {
+  storage.__stores().get('aibolit-data.json').set('settings', { debugMode: true, syncInterval: 60 })
+  storage.__stores().get('aibolit-data.json').set('medications', [
+    { id: 'm2', name: 'Другое', enabled: true },
+  ])
+  storage.__stores().get('aibolit-data.json').set('intakes', [
+    { id: 'i1', time: '08:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] },
+  ])
+
+  refreshAlarms()
+
+  const log = storage.__stores().get('aibolit-data.json').get('debugLog')
+  assert.ok(log.some(e => /приём i1 пропущен: нет активных лекарств/.test(e.message)), 'в логе причина пропуска приёма')
+  const sets = intakeSets()
+  assert.equal(sets.length, 0, 'таймер пропущенного приёма не создан')
 })
 
 test('createSnoozeAlarm передаёт date в параметр будильника', () => {

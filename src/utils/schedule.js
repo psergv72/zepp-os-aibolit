@@ -8,6 +8,9 @@ import { addDebugEntry, isDebugModeEnabled, pushDebugSnapshot } from './debug-lo
 const logger = Logger.getLogger('aibolit-schedule')
 
 const SCHEDULE_VERSION = 2
+const RETRY_TICK_RENEW_SECONDS = 60 * 60
+const SYNC_RENEW_SECONDS = 6 * 60 * 60
+const SYNC_WINDOW_SECONDS = 24 * 60 * 60
 
 function getNextAlarmTime(hours, minutes, weekDays) {
   const now = new Date()
@@ -90,7 +93,7 @@ export function createRetryTickAlarm() {
     && prevInfo.type === 'retryTick'
     && prevInfo.scheduleVersion === SCHEDULE_VERSION
     && typeof prevInfo.endTime === 'number'
-    && prevInfo.endTime > Math.floor(Date.now() / 1000)
+    && prevInfo.endTime - Math.floor(Date.now() / 1000) > RETRY_TICK_RENEW_SECONDS
     && (getAllAlarms() || []).includes(prevId)
   if (prevValid) {
     logger.log(`Retry tick alarm already exists id=${prevId}, keep it`)
@@ -151,9 +154,12 @@ export function createSyncAlarm(syncInterval) {
   const interval = normalizeSyncInterval(syncInterval)
 
   const start = Math.floor(Date.now() / 1000) + interval * 60
+  const endTime = start + SYNC_WINDOW_SECONDS
   const option = {
     url: 'app-service/reminder',
     time: start,
+    start_time: start,
+    end_time: endTime,
     repeat_type: REPEAT_MINUTE,
     repeat_period: interval,
     repeat_duration: 1,
@@ -163,9 +169,9 @@ export function createSyncAlarm(syncInterval) {
 
   const id = setAlarm(option)
   if (id && id > 0) setSyncAlarmId(id)
-  logger.log(`Created sync alarm id=${id} interval=${interval}min start=${start}`)
+  logger.log(`Created sync alarm id=${id} interval=${interval}min start=${start} window until ${endTime}`)
   addDebugEntry(`добавлен sync-таймер id=${id} период ${interval} мин`)
-  registerAlarm(id, { type: 'sync', interval, next: start, scheduleVersion: SCHEDULE_VERSION })
+  registerAlarm(id, { type: 'sync', interval, next: start, endTime, scheduleVersion: SCHEDULE_VERSION })
   return id
 }
 
@@ -196,7 +202,7 @@ export function refreshAlarms() {
 
   if (isDebugModeEnabled()) {
     const intakeAlarmCount = Object.values(registry).filter(info => info && info.type === 'intake').length
-    addDebugEntry(`перестройка расписания: активных таймеров ${snapshot.length}, из них приёмных ${intakeAlarmCount}, приёмов в конфиге ${intakes.length}`)
+    addDebugEntry(`перестройка расписания: активных таймеров ${snapshot.length}, из них приёмных ${intakeAlarmCount}, приёмов в конфиге ${intakes.length}, лекарств в конфиге ${Array.isArray(medications) ? medications.length : 0}`)
   }
 
   const transientIds = []
@@ -218,7 +224,13 @@ export function refreshAlarms() {
   }
 
   for (const intake of intakes) {
-    if (medsLoaded && getEnabledMedItems(intake, medications).length === 0) continue
+    if (medsLoaded && getEnabledMedItems(intake, medications).length === 0) {
+      if (isDebugModeEnabled()) {
+        const itemIds = (intake.items || []).map(item => item.medicationId).join(', ')
+        addDebugEntry(`приём ${intake.id} пропущен: нет активных лекарств (items: ${itemIds || 'нет'}, лекарств в конфиге: ${medications.length})`)
+      }
+      continue
+    }
 
     const existingIds = Object.entries(registry)
       .filter(([, info]) => info && info.type === 'intake' && info.intakeId === intake.id)
@@ -255,7 +267,7 @@ export function refreshAlarms() {
   const syncAlarmId = getSyncAlarmId()
   const syncInfo = syncAlarmId !== null ? registry[syncAlarmId] : undefined
   const syncActive = syncAlarmId !== null && activeIds.has(syncAlarmId)
-  if (syncAlarmId !== null && syncActive && syncInfo && syncInfo.type === 'sync' && syncInfo.interval === interval && syncInfo.scheduleVersion === SCHEDULE_VERSION) {
+  if (syncAlarmId !== null && syncActive && syncInfo && syncInfo.type === 'sync' && syncInfo.interval === interval && syncInfo.scheduleVersion === SCHEDULE_VERSION && typeof syncInfo.endTime === 'number' && syncInfo.endTime - Math.floor(Date.now() / 1000) > SYNC_RENEW_SECONDS) {
     keepIds.add(syncAlarmId)
   } else {
     if (syncAlarmId !== null) cancelledIds.add(syncAlarmId)

@@ -173,6 +173,12 @@ test('RETRY_TICK не шлёт уведомление без pending и пере
   assert.equal(notification.__calls[0].title, 'Пора принимать лекарства')
 })
 
+test('RETRY_TICK создаёт retry-tick таймер (самопродление)', () => {
+  serviceOpts.onInit(JSON.stringify({ mode: 'retry_tick' }))
+  const tickSets = alarm.__getCalls().filter(c => c.method === 'set' && JSON.parse(c.option.param).mode === 'retry_tick')
+  assert.equal(tickSets.length, 1, 'тик создаётся из обработчика RETRY_TICK')
+})
+
 test('уведомление содержит кнопку Отменить', () => {
   serviceOpts.onInit(JSON.stringify({ mode: 'reminder', intakeId: 'i1' }))
   assert.equal(notification.__calls.length, 1)
