@@ -50,7 +50,8 @@ function handleEvent(e) {
   }
 
   logger.log('reminder: issue notification for mode=' + mode + ' intakeId=' + intakeId + ' date=' + date)
-  issueNotification(intakeId)
+  const source = mode === ALARM_MODES.SNOOZE ? 'отложка' : (mode === ALARM_MODES.RETRY ? 'повтор' : 'приём')
+  issueNotification(intakeId, source)
 }
 
 AppService({

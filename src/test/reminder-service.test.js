@@ -242,3 +242,21 @@ test('срабатывание snooze-будильника очищает сох
   assert.equal(store.get('snoozeAlarmId'), undefined, 'snoozeAlarmId должен быть очищен после срабатывания')
   assert.equal(notification.__calls.length, 1)
 })
+
+test('REMINDER пишет в лог источник «приём» при выдаче уведомления', () => {
+  const store = storage.__stores().get('aibolit-data.json')
+  store.set('settings', { debugMode: true })
+  serviceOpts.onInit(JSON.stringify({ mode: 'reminder', intakeId: 'i1' }))
+  const log = store.get('debugLog')
+  assert.ok(log.some(e => /уведомление выдано \(приём\)/.test(e.message)), 'в логе источник приём')
+})
+
+test('SNOOZE пишет в лог источник «отложка» при выдаче уведомления', () => {
+  const today = new Date()
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  const store = storage.__stores().get('aibolit-data.json')
+  store.set('settings', { debugMode: true })
+  serviceOpts.onInit(JSON.stringify({ mode: 'snooze', intakeId: 'i1', date: todayStr }))
+  const log = store.get('debugLog')
+  assert.ok(log.some(e => /уведомление выдано \(отложка\)/.test(e.message)), 'в логе источник отложка')
+})

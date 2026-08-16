@@ -228,3 +228,44 @@ test('maybeRetryPending игнорирует уже обработанный п�
   lifecycle.maybeRetryPending()
   assert.equal(notification.__calls.length, 0)
 })
+
+test('issueNotification пишет в лог успешную выдачу уведомления', () => {
+  store().set('settings', { debugMode: true })
+  lifecycle.issueNotification('i1')
+  const log = store().get('debugLog')
+  assert.ok(log.some(e => /уведомление выдано/.test(e.message)), 'в логе успешная выдача')
+})
+
+test('issueNotification пишет в лог причину отказа для уже обработанного приёма', () => {
+  store().set('settings', { debugMode: true })
+  store().set('takeLogs', [{ intakeId: 'i1', date: todayStr(), status: 'taken' }])
+  lifecycle.issueNotification('i1')
+  const log = store().get('debugLog')
+  assert.ok(log.some(e => /уведомление не выдано/.test(e.message) && /уже/.test(e.message)), 'в логе причина отказа')
+})
+
+test('issueNotification пишет в лог ошибку при сбое notify', () => {
+  store().set('settings', { debugMode: true })
+  notification.__failNextNotify()
+  lifecycle.issueNotification('i1')
+  const log = store().get('debugLog')
+  assert.ok(log.some(e => /ошибка при выдаче уведомления/.test(e.message)), 'в логе ошибка notify')
+  assert.equal(notification.__calls.length, 0, 'уведомление не добавлено в список')
+})
+
+test('maybeRetryPending пишет в лог причину пропуска по интервалу', () => {
+  store().set('settings', { retryInterval: 2, syncInterval: 60, snoozeOptions: [30], minFontSize: 16, debugMode: true })
+  store().set('pendingNotification', { intakeId: 'i1', date: todayStr(), issuedAt: Date.now() - 60 * 1000 })
+  lifecycle.maybeRetryPending()
+  const log = store().get('debugLog')
+  assert.ok(log.some(e => /повтор не выводится: интервал ещё не прошёл/.test(e.message)), 'в логе причина пропуска')
+})
+
+test('maybeRetryPending пишет в лог успешный повтор с источником', () => {
+  store().set('settings', { retryInterval: 2, syncInterval: 60, snoozeOptions: [30], minFontSize: 16, debugMode: true })
+  store().set('pendingNotification', { intakeId: 'i1', date: todayStr(), issuedAt: Date.now() - 3 * 60 * 1000 })
+  lifecycle.maybeRetryPending()
+  const log = store().get('debugLog')
+  assert.ok(log.some(e => /повтор выводится для приёма i1/.test(e.message)), 'в логе повтор выводится')
+  assert.ok(log.some(e => /уведомление выдано \(повтор\)/.test(e.message)), 'в логе выдача с источником повтор')
+})

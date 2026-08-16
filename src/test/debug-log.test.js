@@ -5,6 +5,7 @@ import { register } from 'node:module'
 register(new URL('./helpers/zos-loader.mjs', import.meta.url))
 
 const storage = await import('./helpers/stubs/zos-storage.mjs')
+const fs = await import('./helpers/stubs/zos-fs.mjs')
 const alarm = await import('./helpers/stubs/zos-alarm.mjs')
 const syncModule = await import('../utils/sync.js')
 
@@ -24,6 +25,7 @@ function store() {
 
 function seed() {
   storage.__resetStorage()
+  fs.__resetFs()
   alarm.__reset()
   new storage.ShareLocalStorage('aibolit-data.json')
 }

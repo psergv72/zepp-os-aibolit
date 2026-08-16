@@ -6,12 +6,14 @@ register(new URL('./helpers/zos-loader.mjs', import.meta.url))
 
 const alarm = await import('./helpers/stubs/zos-alarm.mjs')
 const storage = await import('./helpers/stubs/zos-storage.mjs')
+const fs = await import('./helpers/stubs/zos-fs.mjs')
 
 const { refreshAlarms, createSyncAlarm, createSnoozeAlarm, createRetryTickAlarm } = await import('../utils/schedule.js')
 const syncModule = await import('../utils/sync.js')
 
 function seed() {
   storage.__resetStorage()
+  fs.__resetFs()
   new storage.ShareLocalStorage('aibolit-data.json')
   storage.__stores().get('aibolit-data.json').set('medications', [
     { id: 'm1', name: 'Парацетамол', enabled: true },

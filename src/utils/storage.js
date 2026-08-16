@@ -4,6 +4,7 @@ import { STORAGE_KEYS, DEFAULT_SETTINGS } from './constants'
 
 const storage = new ShareLocalStorage('aibolit-data.json')
 const PENDING_FILE = 'aibolit-pending.json'
+const DEBUG_LOG_FILE = 'aibolit-debuglog.json'
 
 function getItem(key, defaultValue = null) {
   const value = storage.getItem(key)
@@ -204,13 +205,36 @@ export function setRetryTickCount(count) {
   setItem('retryTickCount', count)
 }
 
+function readDebugLogFile() {
+  try {
+    const content = readFileSync({ path: DEBUG_LOG_FILE, options: { encoding: 'utf8' } })
+    if (content === undefined || content === null || content === '') return null
+    const parsed = JSON.parse(content)
+    return Array.isArray(parsed) ? parsed : null
+  } catch (e) {
+    return null
+  }
+}
+
+function writeDebugLogFile(log) {
+  try {
+    writeFileSync({ path: DEBUG_LOG_FILE, data: JSON.stringify(log), options: { encoding: 'utf8' } })
+  } catch (e) {
+    // ignore
+  }
+}
+
 export function getDebugLog() {
+  const fromFile = readDebugLogFile()
+  if (fromFile) return fromFile
   const value = getItem(STORAGE_KEYS.DEBUG_LOG, [])
   return Array.isArray(value) ? value : []
 }
 
 export function setDebugLog(log) {
-  setItem(STORAGE_KEYS.DEBUG_LOG, Array.isArray(log) ? log : [])
+  const normalized = Array.isArray(log) ? log : []
+  writeDebugLogFile(normalized)
+  setItem(STORAGE_KEYS.DEBUG_LOG, normalized)
 }
 
 export function getAlarmRegistry() {

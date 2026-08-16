@@ -83,6 +83,13 @@ test('setDebugLog игнорирует не-массив и сбрасывает
   assert.deepEqual(getDebugLog(), [])
 })
 
+test('debugLog персистится в fs и переживает сброс ShareLocalStorage (контекст app-service)', () => {
+  setDebugLog([{ ts: 1, message: 'из app-service' }])
+  storage.__resetStorage()
+  new storage.ShareLocalStorage('aibolit-data.json')
+  assert.deepEqual(getDebugLog(), [{ ts: 1, message: 'из app-service' }])
+})
+
 test('getAlarmRegistry возвращает пустой объект, если реестр не задан', () => {
   assert.deepEqual(getAlarmRegistry(), {})
 })
