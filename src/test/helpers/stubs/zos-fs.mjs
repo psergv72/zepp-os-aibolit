@@ -13,13 +13,6 @@ function resolvePath(option) {
   return option
 }
 
-function strToBuffer(str) {
-  const buf = new ArrayBuffer(str.length * 2)
-  const view = new Uint16Array(buf)
-  for (let i = 0; i < str.length; i++) view[i] = str.charCodeAt(i)
-  return buf
-}
-
 function bufferToStr(buffer) {
   const view = new Uint16Array(buffer)
   let s = ''
@@ -29,9 +22,12 @@ function bufferToStr(buffer) {
 
 export function openSync(option) {
   const path = resolvePath(option)
-  const fd = nextFd++
-  fds.set(fd, path)
   if (files[path] === undefined) files[path] = ''
+  if (option && typeof option.flag === 'number' && (option.flag & O_TRUNC) === O_TRUNC) {
+    files[path] = ''
+  }
+  const fd = nextFd++
+  fds.set(fd, { path, pos: 0 })
   return fd
 }
 
@@ -40,16 +36,19 @@ export function closeSync(option) {
 }
 
 export function writeSync(option) {
-  const path = fds.get(option.fd)
-  if (path === undefined) return -1
-  files[path] = bufferToStr(option.buffer)
+  const entry = fds.get(option.fd)
+  if (entry === undefined) return -1
+  const text = bufferToStr(option.buffer)
+  const prev = files[entry.path] === undefined ? '' : files[entry.path]
+  files[entry.path] = prev.slice(0, entry.pos) + text
+  entry.pos += text.length
   return option.buffer.byteLength
 }
 
 export function readSync(option) {
-  const path = fds.get(option.fd)
-  if (path === undefined) return 0
-  const data = files[path] === undefined ? '' : files[path]
+  const entry = fds.get(option.fd)
+  if (entry === undefined) return 0
+  const data = files[entry.path] ?? ''
   const view = new Uint16Array(option.buffer)
   let n = 0
   for (let i = 0; i < view.length && i < data.length; i++) {
@@ -106,4 +105,6 @@ export function __fsFiles() {
 
 export function __resetFs() {
   for (const k of Object.keys(files)) delete files[k]
+  fds.clear()
+  nextFd = 1
 }
