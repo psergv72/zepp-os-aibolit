@@ -1,6 +1,8 @@
 import { getItem, setItem, removeItem, clear } from '../../../utils/storage.js'
 import { __resetFs } from './zos-fs.mjs'
 
+const MISSING = Symbol('missing')
+
 const stores = new Map()
 
 class LocalStorageLike {
@@ -12,7 +14,8 @@ class LocalStorageLike {
   }
 
   getItem(key) {
-    return getItem(key, undefined)
+    const value = getItem(key, MISSING)
+    return value === MISSING ? undefined : value
   }
 
   setItem(key, value) {
