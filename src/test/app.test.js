@@ -87,6 +87,32 @@ test('syncConfig игнорирует конфиг с не более новой
   assert.deepEqual(store.get('medications'), [{ id: 'm1' }])
 })
 
+test('syncConfig при неудачном запросе не сбрасывает конфигурацию, а ретрай применяет свежую', async () => {
+  const store = storage.__stores().get('aibolit-data.json')
+  store.set('medications', [{ id: 'm1' }])
+  store.set('intakes', [{ id: 'i1' }])
+  store.set('configRevision', 3)
+
+  let attempt = 0
+  appOpts.request = () => {
+    attempt++
+    if (attempt === 1) return Promise.reject(new Error('offline'))
+    return Promise.resolve({ config: { revision: 4, medications: [{ id: 'm2' }] } })
+  }
+
+  appOpts.syncConfig()
+  await new Promise((resolve) => setTimeout(resolve, 0))
+
+  assert.deepEqual(store.get('medications'), [{ id: 'm1' }], 'после первой неудачи конфиг не сброшен')
+  assert.deepEqual(store.get('intakes'), [{ id: 'i1' }], 'intakes не сброшены')
+  assert.equal(store.get('configRevision'), 3)
+
+  await new Promise((resolve) => setTimeout(resolve, 1100))
+
+  assert.deepEqual(store.get('medications'), [{ id: 'm2' }], 'ретрай применил свежий конфиг')
+  assert.equal(store.get('configRevision'), 4)
+})
+
 test('onCall CLEAR_DEBUG очищает отладочный лог на часах', () => {
   const store = storage.__stores().get('aibolit-data.json')
   store.set('settings', { debugMode: true })
