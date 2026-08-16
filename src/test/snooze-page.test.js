@@ -9,6 +9,7 @@ globalThis.Page = (opts) => { pageOpts = opts }
 
 const { __reset } = await import('./helpers/stubs/zos-ui.mjs')
 const storage = await import('./helpers/stubs/zos-storage.mjs')
+const fs = await import('./helpers/stubs/zos-fs.mjs')
 const router = await import('./helpers/stubs/zos-router.mjs')
 const device = await import('./helpers/stubs/zos-device.mjs')
 const alarm = await import('./helpers/stubs/zos-alarm.mjs')
@@ -26,6 +27,7 @@ function instance() {
 
 function seed() {
   storage.__resetStorage()
+  fs.__resetFs()
   new storage.ShareLocalStorage('aibolit-data.json')
   storage.__stores().get('aibolit-data.json').set('intakes', [{
     id: 'i1',

@@ -10,6 +10,7 @@ globalThis.Page = (opts) => { pageOpts = opts }
 const { __getRegistry, __getRedrawCount, __reset, event, widget, text_style } = await import('./helpers/stubs/zos-ui.mjs')
 
 const storage = await import('./helpers/stubs/zos-storage.mjs')
+const fs = await import('./helpers/stubs/zos-fs.mjs')
 
 const router = await import('./helpers/stubs/zos-router.mjs')
 
@@ -19,6 +20,7 @@ await import('../page/plan/index.js')
 
 function seed() {
   storage.__resetStorage()
+  fs.__resetFs()
   new storage.ShareLocalStorage('aibolit-data.json')
   const meds = [{ id: 'm1', name: 'Аспирин', enabled: true }]
   const intakes = [{

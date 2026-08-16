@@ -8,6 +8,7 @@ let appOpts = null
 globalThis.App = (opts) => { appOpts = opts }
 
 const storage = await import('./helpers/stubs/zos-storage.mjs')
+const fs = await import('./helpers/stubs/zos-fs.mjs')
 
 await import('../app.js')
 
@@ -15,6 +16,7 @@ const originalSyncConfig = appOpts.syncConfig
 
 function seed() {
   storage.__resetStorage()
+  fs.__resetFs()
   new storage.ShareLocalStorage('aibolit-data.json')
   appOpts.syncConfig = originalSyncConfig
   delete appOpts.request

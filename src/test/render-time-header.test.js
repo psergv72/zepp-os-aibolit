@@ -7,6 +7,7 @@ register(new URL('./helpers/zos-loader.mjs', import.meta.url))
 const { __getRegistry, __reset, widget, createWidget, deleteWidget } = await import('./helpers/stubs/zos-ui.mjs')
 const device = await import('./helpers/stubs/zos-device.mjs')
 const storage = await import('./helpers/stubs/zos-storage.mjs')
+const fs = await import('./helpers/stubs/zos-fs.mjs')
 
 const { createViewManager } = await import('../utils/view-manager.js')
 const { renderTimeHeader, getContentBounds } = await import('../utils/screen-layout.js')
@@ -19,6 +20,7 @@ beforeEach(() => {
   __reset()
   device.__setShape('round')
   storage.__resetStorage()
+  fs.__resetFs()
   new storage.ShareLocalStorage('aibolit-data.json')
 })
 

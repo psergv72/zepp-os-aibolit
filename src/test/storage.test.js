@@ -21,6 +21,12 @@ const {
   setAlarmRegistry,
   registerAlarm,
   unregisterAlarm,
+  getMedications,
+  setMedications,
+  getIntakes,
+  setIntakes,
+  getSettings,
+  setSettings,
 } = await import('../utils/storage.js')
 
 function seed() {
@@ -58,6 +64,20 @@ test('syncAlarmId персистится в fs и переживает сбро�
   storage.__resetStorage()
   new storage.ShareLocalStorage('aibolit-data.json')
   assert.equal(getSyncAlarmId(), 42)
+})
+
+test('конфиг (медикаменты, приёмы, настройки) переносится в fs и переживает сброс ShareLocalStorage', () => {
+  setMedications([{ id: 'm1', name: 'Парацетамол', enabled: true }])
+  setIntakes([{ id: 'i1', time: '08:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] }])
+  setSettings({ minFontSize: 20 })
+  setConfigRevision(7)
+  storage.__resetStorage()
+  new storage.ShareLocalStorage('aibolit-data.json')
+
+  assert.deepEqual(getMedications(), [{ id: 'm1', name: 'Парацетамол', enabled: true }], 'лекарства не потеряны')
+  assert.deepEqual(getIntakes(), [{ id: 'i1', time: '08:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] }], 'приёмы не потеряны')
+  assert.deepEqual(getSettings(), { minFontSize: 20 }, 'настройки не потеряны')
+  assert.equal(getConfigRevision(), 7, 'ревизия не потеряна')
 })
 
 test('getPendingNotification возвращает null, если pending не задан', () => {

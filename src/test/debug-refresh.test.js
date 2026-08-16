@@ -10,6 +10,7 @@ let sideOpts = null
 globalThis.AppSideService = (opts) => { sideOpts = opts }
 
 const storage = await import('./helpers/stubs/zos-storage.mjs')
+const fs = await import('./helpers/stubs/zos-fs.mjs')
 const syncModule = await import('../utils/sync.js')
 const debugLogModule = await import('../utils/debug-log.js')
 
@@ -18,6 +19,7 @@ await import('../app-side/index.js')
 
 function seed() {
   storage.__resetStorage()
+  fs.__resetFs()
   new storage.ShareLocalStorage('aibolit-data.json')
   syncModule.initSync(null)
   const phoneStore = new Map()

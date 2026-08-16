@@ -5,75 +5,53 @@ import { STORAGE_KEYS, DEFAULT_SETTINGS } from './constants'
 const storage = new ShareLocalStorage('aibolit-data.json')
 const PENDING_FILE = 'aibolit-pending.json'
 const DEBUG_LOG_FILE = 'aibolit-debuglog.json'
-const FS_FILE_NAMES = {
-  [STORAGE_KEYS.ALARM_REGISTRY]: 'aibolit-alarm-registry.json',
-  [STORAGE_KEYS.SYNC_ALARM_ID]: 'aibolit-sync-alarm-id.json',
-  [STORAGE_KEYS.RETRY_TICK_ALARM_ID]: 'aibolit-retry-tick-id.json',
-  [STORAGE_KEYS.SNOOZE_ALARM_ID]: 'aibolit-snooze-id.json',
+const STORAGE_BACKUP_FILE = 'aibolit-storage-backup.json'
+
+function readBackup() {
+  try {
+    const content = readFileSync({ path: STORAGE_BACKUP_FILE, options: { encoding: 'utf8' } })
+    if (content === undefined || content === null || content === '') return {}
+    const parsed = JSON.parse(content)
+    return parsed && typeof parsed === 'object' ? parsed : {}
+  } catch (e) {
+    return {}
+  }
+}
+
+function writeBackup(data) {
+  try {
+    writeFileSync({ path: STORAGE_BACKUP_FILE, data: JSON.stringify(data), options: { encoding: 'utf8' } })
+  } catch (e) {
+    // ignore
+  }
 }
 
 function getItem(key, defaultValue = null) {
+  const backup = readBackup()
+  if (Object.prototype.hasOwnProperty.call(backup, key)) return backup[key]
   const value = storage.getItem(key)
   return value !== undefined ? value : defaultValue
 }
 
 function setItem(key, value) {
   storage.setItem(key, value)
+  const backup = readBackup()
+  backup[key] = value
+  writeBackup(backup)
 }
 
 function removeItem(key) {
   storage.removeItem(key)
+  const backup = readBackup()
+  if (Object.prototype.hasOwnProperty.call(backup, key)) {
+    delete backup[key]
+    writeBackup(backup)
+  }
 }
 
 function clear() {
   storage.clear()
-}
-
-function readFsValue(key) {
-  const path = FS_FILE_NAMES[key]
-  if (!path) return undefined
-  try {
-    const content = readFileSync({ path, options: { encoding: 'utf8' } })
-    if (content === undefined || content === null || content === '') return undefined
-    return JSON.parse(content)
-  } catch (e) {
-    return undefined
-  }
-}
-
-function writeFsValue(key, value) {
-  const path = FS_FILE_NAMES[key]
-  if (!path) return
-  try {
-    writeFileSync({ path, data: JSON.stringify(value), options: { encoding: 'utf8' } })
-  } catch (e) {
-    // ignore
-  }
-}
-
-function removeFsValue(key) {
-  const path = FS_FILE_NAMES[key]
-  if (!path) return
-  try {
-    rmSync({ path })
-  } catch (e) {
-    // ignore
-  }
-}
-
-function getPersistent(key, defaultValue) {
-  const fromFile = readFsValue(key)
-  return fromFile !== undefined ? fromFile : getItem(key, defaultValue)
-}
-
-function setPersistent(key, value) {
-  writeFsValue(key, value)
-  setItem(key, value)
-}
-
-function removePersistent(key) {
-  removeFsValue(key)
-  removeItem(key)
+  writeBackup({})
 }
 
 export function getMedications() {
@@ -215,38 +193,38 @@ export function setConfigRevision(revision) {
 }
 
 export function getSyncAlarmId() {
-  const value = getPersistent(STORAGE_KEYS.SYNC_ALARM_ID, null)
+  const value = getItem(STORAGE_KEYS.SYNC_ALARM_ID, null)
   return typeof value === 'number' ? value : null
 }
 
 export function setSyncAlarmId(id) {
-  setPersistent(STORAGE_KEYS.SYNC_ALARM_ID, id)
+  setItem(STORAGE_KEYS.SYNC_ALARM_ID, id)
 }
 
 export function clearSyncAlarmId() {
-  removePersistent(STORAGE_KEYS.SYNC_ALARM_ID)
+  removeItem(STORAGE_KEYS.SYNC_ALARM_ID)
 }
 
 export function getSnoozeAlarmId() {
-  const value = getPersistent(STORAGE_KEYS.SNOOZE_ALARM_ID, null)
+  const value = getItem(STORAGE_KEYS.SNOOZE_ALARM_ID, null)
   return typeof value === 'number' ? value : null
 }
 
 export function setSnoozeAlarmId(id) {
-  setPersistent(STORAGE_KEYS.SNOOZE_ALARM_ID, id)
+  setItem(STORAGE_KEYS.SNOOZE_ALARM_ID, id)
 }
 
 export function clearSnoozeAlarmId() {
-  removePersistent(STORAGE_KEYS.SNOOZE_ALARM_ID)
+  removeItem(STORAGE_KEYS.SNOOZE_ALARM_ID)
 }
 
 export function getRetryTickAlarmId() {
-  const value = getPersistent(STORAGE_KEYS.RETRY_TICK_ALARM_ID, null)
+  const value = getItem(STORAGE_KEYS.RETRY_TICK_ALARM_ID, null)
   return typeof value === 'number' ? value : null
 }
 
 export function setRetryTickAlarmId(id) {
-  setPersistent(STORAGE_KEYS.RETRY_TICK_ALARM_ID, id)
+  setItem(STORAGE_KEYS.RETRY_TICK_ALARM_ID, id)
 }
 
 export function getRetryTickCount() {
@@ -291,12 +269,12 @@ export function setDebugLog(log) {
 }
 
 export function getAlarmRegistry() {
-  const value = getPersistent(STORAGE_KEYS.ALARM_REGISTRY, {})
+  const value = getItem(STORAGE_KEYS.ALARM_REGISTRY, {})
   return value && typeof value === 'object' ? value : {}
 }
 
 export function setAlarmRegistry(registry) {
-  setPersistent(STORAGE_KEYS.ALARM_REGISTRY, registry && typeof registry === 'object' ? registry : {})
+  setItem(STORAGE_KEYS.ALARM_REGISTRY, registry && typeof registry === 'object' ? registry : {})
 }
 
 export function registerAlarm(id, info) {

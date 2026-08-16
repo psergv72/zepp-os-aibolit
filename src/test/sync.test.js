@@ -5,10 +5,12 @@ import { register } from 'node:module'
 register(new URL('./helpers/zos-loader.mjs', import.meta.url))
 
 const storage = await import('./helpers/stubs/zos-storage.mjs')
+const fs = await import('./helpers/stubs/zos-fs.mjs')
 const { initSync, retrySync, sendTakeLogToPhone, sendCancellationToPhone, sendUndoTakeToPhone, fetchTakesFromPhone, mergeTakeRecords } = await import('../utils/sync.js')
 
 function seed() {
   storage.__resetStorage()
+  fs.__resetFs()
   new storage.ShareLocalStorage('aibolit-data.json')
 }
 
