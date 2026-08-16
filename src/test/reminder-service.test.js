@@ -18,7 +18,7 @@ const lifecycle = await import('../utils/notification-lifecycle.js')
 
 function seed() {
   storage.__resetStorage()
-  new storage.ShareLocalStorage('aibolit-data.json')
+  new storage.LocalStorage('aibolit-data.json')
   storage.__stores().get('aibolit-data.json').set('medications', [
     { id: 'm1', name: 'Парацетамол', enabled: true },
   ])

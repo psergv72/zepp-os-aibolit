@@ -1,11 +1,25 @@
-import { ShareLocalStorage } from '@zos/storage'
+import { LocalStorage, ShareLocalStorage } from '@zos/storage'
 import { readFileSync, writeFileSync, rmSync } from '@zos/fs'
 import { STORAGE_KEYS, DEFAULT_SETTINGS } from './constants'
 
-const storage = new ShareLocalStorage('aibolit-data.json')
+const storage = new LocalStorage('aibolit-data.json')
 const PENDING_FILE = 'aibolit-pending.json'
 const DEBUG_LOG_FILE = 'aibolit-debuglog.json'
 const STORAGE_BACKUP_FILE = 'aibolit-storage-backup.json'
+
+function migrateFromShareLocalStorage() {
+  try {
+    const legacy = new ShareLocalStorage('aibolit-data.json')
+    for (const key of Object.values(STORAGE_KEYS)) {
+      const legacyValue = legacy.getItem(key)
+      if (legacyValue !== undefined && getItem(key, undefined) === undefined) {
+        setItem(key, legacyValue)
+      }
+    }
+  } catch (e) {
+    // ignore
+  }
+}
 
 function readBackup() {
   try {
@@ -53,6 +67,8 @@ function clear() {
   storage.clear()
   writeBackup({})
 }
+
+migrateFromShareLocalStorage()
 
 export function getMedications() {
   const value = getItem(STORAGE_KEYS.MEDICATIONS, [])

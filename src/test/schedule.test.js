@@ -15,7 +15,7 @@ const syncModule = await import('../utils/sync.js')
 function seed() {
   storage.__resetStorage()
   fs.__resetFs()
-  new storage.ShareLocalStorage('aibolit-data.json')
+  new storage.LocalStorage('aibolit-data.json')
   storage.__stores().get('aibolit-data.json').set('medications', [
     { id: 'm1', name: 'Парацетамол', enabled: true },
     { id: 'm2', name: 'Аспирин', enabled: true },

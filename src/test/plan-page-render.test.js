@@ -21,7 +21,7 @@ await import('../page/plan/index.js')
 function seed() {
   storage.__resetStorage()
   fs.__resetFs()
-  new storage.ShareLocalStorage('aibolit-data.json')
+  new storage.LocalStorage('aibolit-data.json')
   const meds = [{ id: 'm1', name: 'Аспирин', enabled: true }]
   const intakes = [{
     id: 'i1',

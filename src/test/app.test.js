@@ -17,7 +17,7 @@ const originalSyncConfig = appOpts.syncConfig
 function seed() {
   storage.__resetStorage()
   fs.__resetFs()
-  new storage.ShareLocalStorage('aibolit-data.json')
+  new storage.LocalStorage('aibolit-data.json')
   appOpts.syncConfig = originalSyncConfig
   delete appOpts.request
 }

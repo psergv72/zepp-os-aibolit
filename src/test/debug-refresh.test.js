@@ -20,7 +20,7 @@ await import('../app-side/index.js')
 function seed() {
   storage.__resetStorage()
   fs.__resetFs()
-  new storage.ShareLocalStorage('aibolit-data.json')
+  new storage.LocalStorage('aibolit-data.json')
   syncModule.initSync(null)
   const phoneStore = new Map()
   globalThis.settings = {

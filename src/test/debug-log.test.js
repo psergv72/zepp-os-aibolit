@@ -28,7 +28,7 @@ function seed() {
   storage.__resetStorage()
   fs.__resetFs()
   alarm.__reset()
-  new storage.ShareLocalStorage('aibolit-data.json')
+  new storage.LocalStorage('aibolit-data.json')
 }
 
 beforeEach(() => {

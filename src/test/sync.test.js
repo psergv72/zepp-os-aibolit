@@ -11,7 +11,7 @@ const { initSync, retrySync, sendTakeLogToPhone, sendCancellationToPhone, sendUn
 function seed() {
   storage.__resetStorage()
   fs.__resetFs()
-  new storage.ShareLocalStorage('aibolit-data.json')
+  new storage.LocalStorage('aibolit-data.json')
 }
 
 beforeEach(() => {

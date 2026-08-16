@@ -32,7 +32,7 @@ const {
 function seed() {
   storage.__resetStorage()
   fs.__resetFs()
-  new storage.ShareLocalStorage('aibolit-data.json')
+  new storage.LocalStorage('aibolit-data.json')
 }
 
 beforeEach(() => {
@@ -62,7 +62,7 @@ test('setSyncAlarmId сохраняет id, clearSyncAlarmId сбрасывае�
 test('syncAlarmId персистится в fs и переживает сброс ShareLocalStorage (контекст app-service)', () => {
   setSyncAlarmId(42)
   storage.__resetStorage()
-  new storage.ShareLocalStorage('aibolit-data.json')
+  new storage.LocalStorage('aibolit-data.json')
   assert.equal(getSyncAlarmId(), 42)
 })
 
@@ -72,7 +72,7 @@ test('конфиг (медикаменты, приёмы, настройки) п
   setSettings({ minFontSize: 20 })
   setConfigRevision(7)
   storage.__resetStorage()
-  new storage.ShareLocalStorage('aibolit-data.json')
+  new storage.LocalStorage('aibolit-data.json')
 
   assert.deepEqual(getMedications(), [{ id: 'm1', name: 'Парацетамол', enabled: true }], 'лекарства не потеряны')
   assert.deepEqual(getIntakes(), [{ id: 'i1', time: '08:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] }], 'приёмы не потеряны')
@@ -113,7 +113,7 @@ test('setDebugLog игнорирует не-массив и сбрасывает
 test('debugLog персистится в fs и переживает сброс ShareLocalStorage (контекст app-service)', () => {
   setDebugLog([{ ts: 1, message: 'из app-service' }])
   storage.__resetStorage()
-  new storage.ShareLocalStorage('aibolit-data.json')
+  new storage.LocalStorage('aibolit-data.json')
   assert.deepEqual(getDebugLog(), [{ ts: 1, message: 'из app-service' }])
 })
 
@@ -139,7 +139,7 @@ test('registerAlarm добавляет запись в реестр', () => {
 test('alarmRegistry персистится в fs и переживает сброс ShareLocalStorage (контекст app-service)', () => {
   registerAlarm(7, { type: 'sync', interval: 60 })
   storage.__resetStorage()
-  new storage.ShareLocalStorage('aibolit-data.json')
+  new storage.LocalStorage('aibolit-data.json')
   assert.deepEqual(getAlarmRegistry(), { 7: { type: 'sync', interval: 60 } })
 })
 

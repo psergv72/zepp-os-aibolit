@@ -1,6 +1,6 @@
 const stores = new Map()
 
-export class ShareLocalStorage {
+class LocalStorageLike {
   constructor(name) {
     this.name = name
     if (!stores.has(name)) {
@@ -24,6 +24,10 @@ export class ShareLocalStorage {
     stores.get(this.name).clear()
   }
 }
+
+export class ShareLocalStorage extends LocalStorageLike {}
+
+export class LocalStorage extends LocalStorageLike {}
 
 export function __resetStorage() {
   stores.clear()

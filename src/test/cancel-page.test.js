@@ -18,7 +18,7 @@ await import('../page/cancel/index.js')
 function seed() {
   storage.__resetStorage()
   fs.__resetFs()
-  new storage.ShareLocalStorage('aibolit-data.json')
+  new storage.LocalStorage('aibolit-data.json')
   storage.__stores().get('aibolit-data.json').set('intakes', [{
     id: 'i1',
     time: '08:00',

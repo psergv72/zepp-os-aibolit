@@ -21,7 +21,7 @@ beforeEach(() => {
   device.__setShape('round')
   storage.__resetStorage()
   fs.__resetFs()
-  new storage.ShareLocalStorage('aibolit-data.json')
+  new storage.LocalStorage('aibolit-data.json')
 })
 
 test('создаёт текст времени и линию FILL_RECT правее текста', () => {
