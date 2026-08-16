@@ -5,10 +5,24 @@ import { STORAGE_KEYS, DEFAULT_SETTINGS } from './constants'
 const storage = new LocalStorage('aibolit-data.json')
 const PENDING_FILE = 'aibolit-pending.json'
 const DEBUG_LOG_FILE = 'aibolit-debuglog.json'
-const STORAGE_BACKUP_FILE = 'aibolit-storage-backup.json'
+const MIGRATION_FLAG = 'aibolit_storage_migrated'
+const FS_FILE_NAMES = {
+  [STORAGE_KEYS.MEDICATIONS]: 'aibolit-key-medications.json',
+  [STORAGE_KEYS.INTAKES]: 'aibolit-key-intakes.json',
+  [STORAGE_KEYS.TAKE_LOGS]: 'aibolit-key-take-logs.json',
+  [STORAGE_KEYS.CANCELLATIONS]: 'aibolit-key-cancellations.json',
+  [STORAGE_KEYS.SETTINGS]: 'aibolit-key-settings.json',
+  [STORAGE_KEYS.SYNC_QUEUE]: 'aibolit-key-sync-queue.json',
+  [STORAGE_KEYS.CONFIG_REVISION]: 'aibolit-key-config-revision.json',
+  [STORAGE_KEYS.SYNC_ALARM_ID]: 'aibolit-key-sync-alarm-id.json',
+  [STORAGE_KEYS.SNOOZE_ALARM_ID]: 'aibolit-key-snooze-id.json',
+  [STORAGE_KEYS.RETRY_TICK_ALARM_ID]: 'aibolit-key-retry-tick-id.json',
+  [STORAGE_KEYS.ALARM_REGISTRY]: 'aibolit-key-alarm-registry.json',
+}
 
 function migrateFromShareLocalStorage() {
   try {
+    if (storage.getItem(MIGRATION_FLAG)) return
     const legacy = new ShareLocalStorage('aibolit-data.json')
     for (const key of Object.values(STORAGE_KEYS)) {
       const legacyValue = legacy.getItem(key)
@@ -16,56 +30,63 @@ function migrateFromShareLocalStorage() {
         setItem(key, legacyValue)
       }
     }
+    storage.setItem(MIGRATION_FLAG, true)
   } catch (e) {
     // ignore
   }
 }
 
-function readBackup() {
+function readKeyFile(path) {
   try {
-    const content = readFileSync({ path: STORAGE_BACKUP_FILE, options: { encoding: 'utf8' } })
-    if (content === undefined || content === null || content === '') return {}
-    const parsed = JSON.parse(content)
-    return parsed && typeof parsed === 'object' ? parsed : {}
+    const content = readFileSync({ path, options: { encoding: 'utf8' } })
+    if (content === undefined || content === null || content === '') return undefined
+    return JSON.parse(content)
   } catch (e) {
-    return {}
+    return undefined
   }
 }
 
-function writeBackup(data) {
+function writeKeyFile(path, value) {
   try {
-    writeFileSync({ path: STORAGE_BACKUP_FILE, data: JSON.stringify(data), options: { encoding: 'utf8' } })
+    writeFileSync({ path, data: JSON.stringify(value), options: { encoding: 'utf8' } })
+  } catch (e) {
+    // ignore
+  }
+}
+
+function removeKeyFile(path) {
+  try {
+    rmSync({ path })
   } catch (e) {
     // ignore
   }
 }
 
 function getItem(key, defaultValue = null) {
-  const backup = readBackup()
-  if (Object.prototype.hasOwnProperty.call(backup, key)) return backup[key]
+  const path = FS_FILE_NAMES[key]
+  if (path) {
+    const fromFile = readKeyFile(path)
+    if (fromFile !== undefined) return fromFile
+  }
   const value = storage.getItem(key)
   return value !== undefined ? value : defaultValue
 }
 
 function setItem(key, value) {
   storage.setItem(key, value)
-  const backup = readBackup()
-  backup[key] = value
-  writeBackup(backup)
+  const path = FS_FILE_NAMES[key]
+  if (path) writeKeyFile(path, value)
 }
 
 function removeItem(key) {
   storage.removeItem(key)
-  const backup = readBackup()
-  if (Object.prototype.hasOwnProperty.call(backup, key)) {
-    delete backup[key]
-    writeBackup(backup)
-  }
+  const path = FS_FILE_NAMES[key]
+  if (path) removeKeyFile(path)
 }
 
 function clear() {
   storage.clear()
-  writeBackup({})
+  for (const path of Object.values(FS_FILE_NAMES)) removeKeyFile(path)
 }
 
 migrateFromShareLocalStorage()
