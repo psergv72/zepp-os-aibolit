@@ -49,12 +49,17 @@ export function setItem(key, value) {
   if (path) AsyncStorage.WriteJson(path, { [key]: value })
 }
 
+// Внимание: setItem ставит AsyncStorage.WriteJson в очередь (асинхронная запись ~2 мс).
+// Если удаление выполнится раньше срабатывания очереди, запись пересоздаст файл со старым значением.
+// Сейчас вызовы set/remove разнесены во времени, поэтому окно гонки не достигается.
 export function removeItem(key) {
   pendingCache.delete(key)
   const path = FS_FILE_NAMES[key]
   if (path) Storage.RemoveFile(path)
 }
 
+// Внимание: аналогичная гонка set→clear — уже поставленные в очередь записи
+// (AsyncStorage.WriteJson) не отменяются и могут пересоздать файлы после удаления.
 export function clear() {
   pendingCache.clear()
   for (const path of Object.values(FS_FILE_NAMES)) {
