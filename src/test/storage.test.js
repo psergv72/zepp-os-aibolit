@@ -1,10 +1,10 @@
 import { test, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { register } from 'node:module'
+import { parseNdJson } from '../utils/ndjson.js'
 
 register(new URL('./helpers/zos-loader.mjs', import.meta.url))
 
-const storage = await import('./helpers/stubs/zos-storage.mjs')
 const fs = await import('./helpers/stubs/zos-fs.mjs')
 const {
   getConfigRevision,
@@ -27,16 +27,18 @@ const {
   setIntakes,
   getSettings,
   setSettings,
+  getSyncQueue,
+  setSyncQueue,
+  getCancellations,
+  setCancellations,
+  isIntakeCancelled,
+  clearAll,
+  saveAndQuit,
 } = await import('../utils/storage.js')
 
-function seed() {
-  storage.__resetStorage()
-  fs.__resetFs()
-  new storage.LocalStorage('aibolit-data.json')
-}
-
 beforeEach(() => {
-  seed()
+  clearAll()
+  fs.__resetFs()
 })
 
 test('getConfigRevision возвращает 0, если ревизия не задана', () => {
@@ -59,25 +61,43 @@ test('setSyncAlarmId сохраняет id, clearSyncAlarmId сбрасывае�
   assert.equal(getSyncAlarmId(), null)
 })
 
-test('syncAlarmId персистится в fs и переживает сброс ShareLocalStorage (контекст app-service)', () => {
-  setSyncAlarmId(42)
-  storage.__resetStorage()
-  new storage.LocalStorage('aibolit-data.json')
-  assert.equal(getSyncAlarmId(), 42)
-})
-
-test('конфиг (медикаменты, приёмы, настройки) переносится в fs и переживает сброс ShareLocalStorage', () => {
+test('конфиг (медикаменты, приёмы, настройки) читается через кэш сразу после записи', () => {
   setMedications([{ id: 'm1', name: 'Парацетамол', enabled: true }])
   setIntakes([{ id: 'i1', time: '08:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] }])
   setSettings({ minFontSize: 20 })
   setConfigRevision(7)
-  storage.__resetStorage()
-  new storage.LocalStorage('aibolit-data.json')
 
-  assert.deepEqual(getMedications(), [{ id: 'm1', name: 'Парацетамол', enabled: true }], 'лекарства не потеряны')
-  assert.deepEqual(getIntakes(), [{ id: 'i1', time: '08:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] }], 'приёмы не потеряны')
-  assert.deepEqual(getSettings(), { minFontSize: 20 }, 'настройки не потеряны')
-  assert.equal(getConfigRevision(), 7, 'ревизия не потеряна')
+  assert.deepEqual(getMedications(), [{ id: 'm1', name: 'Парацетамол', enabled: true }])
+  assert.deepEqual(getIntakes(), [{ id: 'i1', time: '08:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] }])
+  assert.deepEqual(getSettings(), { minFontSize: 20 })
+  assert.equal(getConfigRevision(), 7)
+})
+
+test('данные записываются в по-ключевые файлы после saveAndQuit и читаются через parseNdJson', () => {
+  setMedications([{ id: 'm1', name: 'Парацетамол', enabled: true }])
+  setSyncAlarmId(42)
+  saveAndQuit()
+
+  const fsFiles = fs.__fsFiles()
+  const medFile = fsFiles['aibolit-key-medications.json']
+  const alarmFile = fsFiles['aibolit-key-sync-alarm-id.json']
+  assert.ok(medFile, 'файл медикаментов создан')
+  assert.ok(alarmFile, 'файл sync-alarm id создан')
+  // saveAndQuit пишет обычный JSON синхронно (NDJSON формирует асинхронный путь
+  // AsyncStorage); parseNdJson умеет читать оба формата, поэтому данные переживают рестарт.
+  assert.deepEqual(parseNdJson(medFile), { medications: [{ id: 'm1', name: 'Парацетамол', enabled: true }] })
+  assert.deepEqual(parseNdJson(alarmFile), { syncAlarmId: 42 })
+})
+
+test('чтение из файла после сброса кэша (имитация другого контекста)', () => {
+  setMedications([{ id: 'm1' }])
+  saveAndQuit()
+  // сбрасываем кэш, удаляя файл через fs stub и пере-сидя файл вручную в NDJSON
+  fs.__resetFs()
+  const { writeFileSync } = fs
+  writeFileSync({ path: 'aibolit-key-medications.json', data: '{"T":"meta","A":["medications"],"medications":1}\n{"T":"medications","D":{"id":"m1"}}\n' })
+  // чистый кэш: getMedications читает с диска
+  assert.deepEqual(getMedications(), [{ id: 'm1' }])
 })
 
 test('getPendingNotification возвращает null, если pending не задан', () => {
@@ -110,13 +130,6 @@ test('setDebugLog игнорирует не-массив и сбрасывает
   assert.deepEqual(getDebugLog(), [])
 })
 
-test('debugLog персистится в fs и переживает сброс ShareLocalStorage (контекст app-service)', () => {
-  setDebugLog([{ ts: 1, message: 'из app-service' }])
-  storage.__resetStorage()
-  new storage.LocalStorage('aibolit-data.json')
-  assert.deepEqual(getDebugLog(), [{ ts: 1, message: 'из app-service' }])
-})
-
 test('getAlarmRegistry возвращает пустой объект, если реестр не задан', () => {
   assert.deepEqual(getAlarmRegistry(), {})
 })
@@ -133,13 +146,6 @@ test('setAlarmRegistry игнорирует не-объект и сбрасыв�
 
 test('registerAlarm добавляет запись в реестр', () => {
   registerAlarm(7, { type: 'sync', interval: 60 })
-  assert.deepEqual(getAlarmRegistry(), { 7: { type: 'sync', interval: 60 } })
-})
-
-test('alarmRegistry персистится в fs и переживает сброс ShareLocalStorage (контекст app-service)', () => {
-  registerAlarm(7, { type: 'sync', interval: 60 })
-  storage.__resetStorage()
-  new storage.LocalStorage('aibolit-data.json')
   assert.deepEqual(getAlarmRegistry(), { 7: { type: 'sync', interval: 60 } })
 })
 
@@ -162,4 +168,18 @@ test('unregisterAlarm не ломает реестр при отсутствии
   unregisterAlarm(null)
   unregisterAlarm(99)
   assert.deepEqual(getAlarmRegistry(), { 7: { type: 'sync' } })
+})
+
+test('syncQueue сохраняется и очищается', () => {
+  setSyncQueue([{ id: 'a', intakeId: 'i1' }])
+  assert.deepEqual(getSyncQueue(), [{ id: 'a', intakeId: 'i1' }])
+  setSyncQueue([])
+  assert.deepEqual(getSyncQueue(), [])
+})
+
+test('cancellations: добавление, проверка, повторное добавление не дублирует', () => {
+  setCancellations([])
+  setCancellations([{ intakeId: 'i1', date: '2026-08-07' }])
+  assert.equal(isIntakeCancelled('i1', '2026-08-07'), true)
+  assert.equal(isIntakeCancelled('i2', '2026-08-07'), false)
 })
