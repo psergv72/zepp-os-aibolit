@@ -89,7 +89,25 @@ test('refreshAlarms не отменяет intake-таймер при полно�
   assert.equal(cancels.length, 0, 'intake-таймер не должен быть отменён при сброшенной конфигурации')
 })
 
-test('refreshAlarms логирует сброс конфигурации при сохранении таймеров', () => {
+test('refreshAlarms не отменяет intake-таймер при сбросе конфигурации и реестра', () => {
+  storage.__stores().get('aibolit-data.json').set('intakes', [
+    { id: 'i1', time: '08:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] },
+  ])
+  refreshAlarms()
+  const first = intakeSets()[0]
+  assert.ok(first, 'intake-таймер создан')
+
+  storage.__stores().get('aibolit-data.json').set('medications', [])
+  storage.__stores().get('aibolit-data.json').set('intakes', [])
+  storage.__stores().get('aibolit-data.json').set('alarmRegistry', {})
+
+  refreshAlarms()
+
+  const cancels = alarm.__getCalls().filter(c => c.method === 'cancel' && c.id === first.id)
+  assert.equal(cancels.length, 0, 'intake-таймер не должен быть отменён при сбросе конфигурации и реестра')
+})
+
+test('refreshAlarms логирует пустую конфигурацию при сохранении таймеров', () => {
   storage.__stores().get('aibolit-data.json').set('settings', { debugMode: true, syncInterval: 60 })
   storage.__stores().get('aibolit-data.json').set('intakes', [
     { id: 'i1', time: '08:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] },
@@ -102,7 +120,7 @@ test('refreshAlarms логирует сброс конфигурации при 
   refreshAlarms()
 
   const log = storage.__stores().get('aibolit-data.json').get('debugLog')
-  assert.ok(log.some(e => /конфигурация сброшена/.test(e.message)), 'в логе сброс конфигурации')
+  assert.ok(log.some(e => /конфигурация пуста/.test(e.message)), 'в логе пустая конфигурация')
 })
 
 test('refreshAlarms создаёт intake-таймер при пустых медикаментах, если его нет', () => {
