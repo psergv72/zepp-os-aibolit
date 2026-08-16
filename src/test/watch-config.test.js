@@ -163,17 +163,26 @@ test('applyConfigFromSettings пишет в лог применение и пр�
   delete globalThis.settings
 })
 
-test('applyConfigToStorage пишет в лог предупреждение, когда конфиг с телефона пуст', () => {
+test('applyConfigToStorage не применяет пустой конфиг и пишет предупреждение, если на часах есть данные', () => {
   store().set('settings', { debugMode: true })
   store().set('medications', [{ id: 'm1' }])
   store().set('intakes', [{ id: 'i1' }])
 
   const result = applyConfigToStorage({ revision: 6, medications: [], intakes: [] })
 
-  assert.equal(result, true)
+  assert.equal(result, false, 'пустой конфиг не применён')
+  assert.deepEqual(store().get('medications'), [{ id: 'm1' }], 'лекарства не сброшены')
+  assert.deepEqual(store().get('intakes'), [{ id: 'i1' }], 'приёмы не сброшены')
+  assert.equal(store().get('configRevision'), undefined, 'ревизия не продвинута')
   const log = store().get('debugLog')
-  assert.ok(log.some(e => /конфиг с телефона пуст/.test(e.message)), 'в логе предупреждение о пустом конфиге')
-  assert.ok(log.some(e => /было приёмов 1, лекарств 1/.test(e.message)), 'в логе прежнее количество данных')
+  assert.ok(log.some(e => /конфиг с телефона пуст/.test(e.message) && /не применён/.test(e.message)), 'в логе предупреждение')
+})
+
+test('applyConfigToStorage применяет пустой конфиг, когда на часах нет данных', () => {
+  const result = applyConfigToStorage({ revision: 6, medications: [], intakes: [] })
+
+  assert.equal(result, true, 'пустой конфиг применён на пустых часах')
+  assert.equal(store().get('configRevision'), 6)
 })
 
 test('applyConfigToStorage не пишет предупреждение, когда конфиг непустой', () => {
@@ -185,7 +194,7 @@ test('applyConfigToStorage не пишет предупреждение, ког�
   assert.ok(!log.some(e => /конфиг с телефона пуст/.test(e.message)), 'нет предупреждения при непустом конфиге')
 })
 
-test('applyConfigFromSettings пишет в лог предупреждение, когда конфиг из settingsStorage пуст', () => {
+test('applyConfigFromSettings не применяет пустой конфиг из settingsStorage, если на часах есть данные', () => {
   store().set('settings', { debugMode: true })
   store().set('medications', [{ id: 'm1' }])
   store().set('intakes', [{ id: 'i1' }])
@@ -205,10 +214,11 @@ test('applyConfigFromSettings пишет в лог предупреждение,
   const result = applyConfigFromSettings()
 
   delete globalThis.settings
-  assert.equal(result, true)
+  assert.equal(result, false, 'пустой конфиг из зеркала не применён')
+  assert.deepEqual(store().get('medications'), [{ id: 'm1' }], 'лекарства не сброшены')
+  assert.deepEqual(store().get('intakes'), [{ id: 'i1' }], 'приёмы не сброшены')
   const log = store().get('debugLog')
-  assert.ok(log.some(e => /конфиг из settingsStorage пуст/.test(e.message)), 'в логе предупреждение о пустом конфиге из зеркала')
-  assert.ok(log.some(e => /было приёмов 1, лекарств 1/.test(e.message)), 'в логе прежнее количество данных')
+  assert.ok(log.some(e => /конфиг из settingsStorage пуст/.test(e.message) && /не применён/.test(e.message)), 'в логе предупреждение')
 })
 
 test('fetchConfigFromSide пишет в лог неудачную попытку получения настроек', async () => {

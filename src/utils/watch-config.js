@@ -25,14 +25,20 @@ export function applyConfigToStorage(config) {
 
   const prevIntakes = getIntakes().length
   const prevMeds = getMedications().length
+  const configBothEmpty = Array.isArray(config.medications) && config.medications.length === 0 && Array.isArray(config.intakes) && config.intakes.length === 0
+
+  if (configBothEmpty && (prevIntakes > 0 || prevMeds > 0)) {
+    addDebugEntry(`внимание: конфиг с телефона пуст, но на часах есть данные (приёмов ${prevIntakes}, лекарств ${prevMeds}): конфиг не применён`)
+    return false
+  }
 
   if (Array.isArray(config.medications)) setMedications(config.medications)
   if (Array.isArray(config.intakes)) setIntakes(config.intakes)
   if (config.settings && typeof config.settings === 'object') setSettings(config.settings)
   setConfigRevision(config.revision)
 
-  if (Array.isArray(config.medications) && config.medications.length === 0 && Array.isArray(config.intakes) && config.intakes.length === 0) {
-    addDebugEntry(`внимание: конфиг с телефона пуст (приёмы и лекарства отсутствуют), до применения было приёмов ${prevIntakes}, лекарств ${prevMeds}`)
+  if (configBothEmpty) {
+    addDebugEntry(`внимание: конфиг с телефона пуст (приёмы и лекарства отсутствуют) — применён`)
   }
 
   addDebugEntry(`настройки с телефона применены (ревизия ${config.revision})`)
@@ -53,44 +59,39 @@ export function applyConfigFromSettings() {
 
   const prevIntakes = getIntakes().length
   const prevMeds = getMedications().length
+
+  const medsArray = parseSettingsItem(storage.getItem('medications'))
+  const intakesArray = parseSettingsItem(storage.getItem('intakes'))
+  const settings = parseSettingsItem(storage.getItem('settings'))
+
+  const medsList = Array.isArray(medsArray) ? medsArray : null
+  const intakesList = Array.isArray(intakesArray) ? intakesArray : null
+
+  const bothEmpty = medsList !== null && medsList.length === 0 && intakesList !== null && intakesList.length === 0
+  if (bothEmpty && (prevIntakes > 0 || prevMeds > 0)) {
+    addDebugEntry(`внимание: конфиг из settingsStorage пуст, но на часах есть данные (приёмов ${prevIntakes}, лекарств ${prevMeds}): конфиг не применён`)
+    return false
+  }
+
   let applied = false
-  let medsEmpty = false
-  let intakesEmpty = false
 
-  const medsRaw = storage.getItem('medications')
-  if (medsRaw !== null && medsRaw !== undefined) {
-    const value = parseSettingsItem(medsRaw)
-    if (Array.isArray(value)) {
-      setMedications(value)
-      applied = true
-      if (value.length === 0) medsEmpty = true
-    }
+  if (medsList) {
+    setMedications(medsList)
+    applied = true
   }
 
-  const intakesRaw = storage.getItem('intakes')
-  if (intakesRaw !== null && intakesRaw !== undefined) {
-    const value = parseSettingsItem(intakesRaw)
-    if (Array.isArray(value)) {
-      setIntakes(value)
-      applied = true
-      if (value.length === 0) intakesEmpty = true
-    }
+  if (intakesList) {
+    setIntakes(intakesList)
+    applied = true
   }
 
-  const settingsRaw = storage.getItem('settings')
-  if (settingsRaw !== null && settingsRaw !== undefined) {
-    const value = parseSettingsItem(settingsRaw)
-    if (value && typeof value === 'object') {
-      setSettings(value)
-      applied = true
-    }
+  if (settings && typeof settings === 'object') {
+    setSettings(settings)
+    applied = true
   }
 
   if (applied) {
     setConfigRevision(revision)
-    if (medsEmpty && intakesEmpty) {
-      addDebugEntry(`внимание: конфиг из settingsStorage пуст (приёмы и лекарства отсутствуют), до применения было приёмов ${prevIntakes}, лекарств ${prevMeds}`)
-    }
     addDebugEntry(`настройки из settingsStorage применены (ревизия ${revision})`)
   }
   return applied
