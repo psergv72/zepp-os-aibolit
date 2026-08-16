@@ -99,14 +99,21 @@ const DEBUG_LOG_FILE = 'aibolit-debuglog.json'
 const pendingCache = new Map()
 ```
 
-- `setItem(key, value)`: `pendingCache.set(key, value)`; `AsyncStorage.WriteJson(path, value)`.
+- `setItem(key, value)`: `pendingCache.set(key, value)`;
+  `AsyncStorage.WriteJson(path, { [key]: value })` (файл хранит объект с одним ключом).
 - `getItem(key, default)`: если в `pendingCache` — вернуть его; иначе синхронно
-  `Storage.ReadFile(path)` + NDJSON-парсер, результат в `pendingCache`.
-- `removeItem(key)`: удалить из `pendingCache`; `AsyncStorage.RemoveFile(path)`.
-- `clear()`: очистить `pendingCache`; удалить все файлы.
+  `Storage.ReadFile(path)` + NDJSON-парсер → `parsed[key]`. Результат чтения с диска
+  в кэш НЕ кладётся — это сохраняет свежесть между контекстами.
+- `removeItem(key)`: удалить из `pendingCache`; синхронно `Storage.RemoveFile(path)`
+  (удаление мгновенное, чтобы `getItem` не читал ещё существующий файл).
+- `clear()`: очистить `pendingCache`; удалить все файлы через `Storage.RemoveFile`.
 
 Кэш даёт мгновенную свежесть при паттерне «записал → прочитал» в том же контексте
 и свежесть с диска для ключей, которые писал другой контекст.
+
+Известное ограничение: асинхронная запись через `AsyncStorage.WriteJson` создаёт окно
+гонки set→remove (запись из очереди может пересоздать файл, удалённый `removeItem`).
+Сейчас вызовы set/remove разнесены во времени, поэтому окно не достигается.
 
 ### Синхронный NDJSON-парсер
 
