@@ -215,9 +215,13 @@ export function refreshAlarms() {
   const cancelledIds = new Set()
 
   const medsLoaded = Array.isArray(medications) && medications.length > 0
-  const configIndeterminate = intakes.length > 0 && !medsLoaded
+  const hasIntakeAlarms = Object.values(registry).some(info => info && info.type === 'intake')
+  const configIndeterminate = (intakes.length > 0 && !medsLoaded) || (intakes.length === 0 && medications.length === 0 && hasIntakeAlarms)
 
   if (configIndeterminate) {
+    if (isDebugModeEnabled() && intakes.length === 0 && medications.length === 0) {
+      addDebugEntry('конфигурация сброшена (приёмы и лекарства пусты), но есть приёмные таймеры: таймеры сохранены')
+    }
     for (const [id, info] of Object.entries(registry)) {
       if (info && info.type === 'intake') keepIds.add(Number(id))
     }
