@@ -53,6 +53,13 @@ test('setSyncAlarmId сохраняет id, clearSyncAlarmId сбрасывае�
   assert.equal(getSyncAlarmId(), null)
 })
 
+test('syncAlarmId персистится в fs и переживает сброс ShareLocalStorage (контекст app-service)', () => {
+  setSyncAlarmId(42)
+  storage.__resetStorage()
+  new storage.ShareLocalStorage('aibolit-data.json')
+  assert.equal(getSyncAlarmId(), 42)
+})
+
 test('getPendingNotification возвращает null, если pending не задан', () => {
   assert.equal(getPendingNotification(), null)
 })
@@ -106,6 +113,13 @@ test('setAlarmRegistry игнорирует не-объект и сбрасыв�
 
 test('registerAlarm добавляет запись в реестр', () => {
   registerAlarm(7, { type: 'sync', interval: 60 })
+  assert.deepEqual(getAlarmRegistry(), { 7: { type: 'sync', interval: 60 } })
+})
+
+test('alarmRegistry персистится в fs и переживает сброс ShareLocalStorage (контекст app-service)', () => {
+  registerAlarm(7, { type: 'sync', interval: 60 })
+  storage.__resetStorage()
+  new storage.ShareLocalStorage('aibolit-data.json')
   assert.deepEqual(getAlarmRegistry(), { 7: { type: 'sync', interval: 60 } })
 })
 

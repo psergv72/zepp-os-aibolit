@@ -8,6 +8,7 @@ const storage = await import('./helpers/stubs/zos-storage.mjs')
 const fs = await import('./helpers/stubs/zos-fs.mjs')
 const alarm = await import('./helpers/stubs/zos-alarm.mjs')
 const syncModule = await import('../utils/sync.js')
+const { setAlarmRegistry } = await import('../utils/storage.js')
 
 const {
   isDebugModeEnabled,
@@ -103,7 +104,7 @@ test('buildDebugSnapshot описывает intake-таймер с назван�
   store().set('medications', [{ id: 'm1', name: 'Парацетамол', dosage: '500 мг', enabled: true }])
   store().set('intakes', [{ id: 'i1', time: '08:00', weekDays: [1, 3, 5], label: 'Утро', items: [{ medicationId: 'm1', amount: '1 таб' }] }])
   alarm.set({ url: 'app-service/reminder' })
-  store().set('alarmRegistry', {
+  setAlarmRegistry({
     1: { type: 'intake', intakeId: 'i1', time: '08:00', weekDays: [1, 3, 5], label: 'Утро', next: 1000 },
   })
 

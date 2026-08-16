@@ -202,7 +202,8 @@ export function refreshAlarms() {
 
   if (isDebugModeEnabled()) {
     const intakeAlarmCount = Object.values(registry).filter(info => info && info.type === 'intake').length
-    addDebugEntry(`перестройка расписания: активных таймеров ${snapshot.length}, из них приёмных ${intakeAlarmCount}, приёмов в конфиге ${intakes.length}, лекарств в конфиге ${Array.isArray(medications) ? medications.length : 0}`)
+    const orphanCount = snapshot.filter(id => !registry[id]).length
+    addDebugEntry(`перестройка расписания: активных таймеров ${snapshot.length} (ids: ${snapshot.join(',')}), из них приёмных ${intakeAlarmCount}, приёмов в конфиге ${intakes.length}, лекарств в конфиге ${Array.isArray(medications) ? medications.length : 0}, сиротских (без записи в реестре) ${orphanCount}`)
   }
 
   const transientIds = []

@@ -9,6 +9,7 @@ const storage = await import('./helpers/stubs/zos-storage.mjs')
 const fs = await import('./helpers/stubs/zos-fs.mjs')
 
 const { refreshAlarms, createSyncAlarm, createSnoozeAlarm, createRetryTickAlarm } = await import('../utils/schedule.js')
+const { getAlarmRegistry, setAlarmRegistry } = await import('../utils/storage.js')
 const syncModule = await import('../utils/sync.js')
 
 function seed() {
@@ -99,7 +100,7 @@ test('refreshAlarms не отменяет intake-таймер при сброс�
 
   storage.__stores().get('aibolit-data.json').set('medications', [])
   storage.__stores().get('aibolit-data.json').set('intakes', [])
-  storage.__stores().get('aibolit-data.json').set('alarmRegistry', {})
+  setAlarmRegistry({})
 
   refreshAlarms()
 
@@ -146,6 +147,22 @@ test('refreshAlarms пишет в лог снимок таймеров в нач
   const log = storage.__stores().get('aibolit-data.json').get('debugLog')
   assert.ok(log.some(e => /перестройка расписания: активных таймеров/.test(e.message)), 'в логе снимок таймеров в начале перестройки')
   assert.ok(log.some(e => /лекарств в конфиге 3/.test(e.message)), 'в логе количество лекарств')
+})
+
+test('refreshAlarms пишет в лог id активных таймеров и сиротских без записи в реестре', () => {
+  storage.__stores().get('aibolit-data.json').set('settings', { debugMode: true, syncInterval: 60 })
+  storage.__stores().get('aibolit-data.json').set('intakes', [
+    { id: 'i1', time: '08:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] },
+  ])
+  const orphanId = alarm.set({ url: 'app-service/reminder' })
+
+  refreshAlarms()
+
+  const log = storage.__stores().get('aibolit-data.json').get('debugLog')
+  const snapshotEntry = log.find(e => /перестройка расписания/.test(e.message))
+  assert.ok(snapshotEntry, 'в логе снимок')
+  assert.ok(snapshotEntry.message.includes('ids: ' + orphanId), 'в снимке id активного таймера')
+  assert.ok(/сиротских \(без записи в реестре\) 1/.test(snapshotEntry.message), 'в снимке сиротский таймер')
 })
 
 test('refreshAlarms создаёт alarm для уже принятого сегодня приёма (для будущих недель)', () => {
@@ -302,7 +319,7 @@ test('createRetryTickAlarm задаёт окно повтора start_time/end_t
   tomorrow.setHours(0, 0, 0, 0)
   assert.equal(tick.option.end_time, Math.floor(tomorrow.getTime() / 1000), 'end_time = конец текущего дня')
   const storedId = storage.__stores().get('aibolit-data.json').get('retryTickAlarmId')
-  const registry = storage.__stores().get('aibolit-data.json').get('alarmRegistry')
+  const registry = getAlarmRegistry()
   assert.equal(registry[storedId].endTime, tick.option.end_time, 'endTime сохранён в реестре')
 })
 
@@ -314,9 +331,9 @@ test('refreshAlarms пересоздаёт тик-будильник с истё
   const tickSets = alarm.__getCalls().filter(c => c.method === 'set' && JSON.parse(c.option.param).mode === 'retry_tick')
   assert.equal(tickSets.length, 1, 'первый тик-будильник создан')
   const tickId = tickSets[0].id
-  const registry = storage.__stores().get('aibolit-data.json').get('alarmRegistry')
+  const registry = getAlarmRegistry()
   registry[tickId].endTime = Math.floor(Date.now() / 1000) - 60
-  storage.__stores().get('aibolit-data.json').set('alarmRegistry', registry)
+  setAlarmRegistry(registry)
 
   refreshAlarms()
 
@@ -334,9 +351,9 @@ test('refreshAlarms пересоздаёт тик-будильник старо�
   const tickSets = alarm.__getCalls().filter(c => c.method === 'set' && JSON.parse(c.option.param).mode === 'retry_tick')
   assert.equal(tickSets.length, 1, 'первый тик-будильник создан')
   const tickId = tickSets[0].id
-  const registry = storage.__stores().get('aibolit-data.json').get('alarmRegistry')
+  const registry = getAlarmRegistry()
   registry[tickId] = { type: 'retryTick', scheduleVersion: 2 }
-  storage.__stores().get('aibolit-data.json').set('alarmRegistry', registry)
+  setAlarmRegistry(registry)
 
   refreshAlarms()
 
@@ -352,9 +369,9 @@ test('refreshAlarms пересоздаёт тик-будильник, когда
   const tickSets = alarm.__getCalls().filter(c => c.method === 'set' && JSON.parse(c.option.param).mode === 'retry_tick')
   assert.equal(tickSets.length, 1, 'первый тик-будильник создан')
   const tickId = tickSets[0].id
-  const registry = storage.__stores().get('aibolit-data.json').get('alarmRegistry')
+  const registry = getAlarmRegistry()
   registry[tickId].endTime = Math.floor(Date.now() / 1000) + 30 * 60
-  storage.__stores().get('aibolit-data.json').set('alarmRegistry', registry)
+  setAlarmRegistry(registry)
 
   refreshAlarms()
 
@@ -370,7 +387,7 @@ test('createSyncAlarm задаёт окно повтора start_time/end_time �
   assert.equal(typeof set.option.end_time, 'number', 'end_time задан')
   assert.ok(set.option.end_time > set.option.time, 'end_time позже первого срабатывания')
   const storedId = storage.__stores().get('aibolit-data.json').get('syncAlarmId')
-  const registry = storage.__stores().get('aibolit-data.json').get('alarmRegistry')
+  const registry = getAlarmRegistry()
   assert.equal(registry[storedId].endTime, set.option.end_time, 'endTime сохранён в реестре')
 })
 
@@ -380,9 +397,9 @@ test('refreshAlarms пересоздаёт sync-таймер, если до ко
   const firstSync = alarm.__getCalls().find(c => c.method === 'set' && JSON.parse(c.option.param).mode === 'sync')
   assert.ok(firstSync, 'sync-таймер создан')
   const syncId = firstSync.id
-  const registry = storage.__stores().get('aibolit-data.json').get('alarmRegistry')
+  const registry = getAlarmRegistry()
   registry[syncId].endTime = Math.floor(Date.now() / 1000) + 60 * 60
-  storage.__stores().get('aibolit-data.json').set('alarmRegistry', registry)
+  setAlarmRegistry(registry)
 
   refreshAlarms()
 
@@ -434,7 +451,7 @@ test('createIntakeAlarm пишет отладочное сообщение пр�
 test('sync-таймер отражает настроенный интервал 2 мин в реестре и логе', () => {
   storage.__stores().get('aibolit-data.json').set('settings', { debugMode: true, syncInterval: 2, minFontSize: 16 })
   refreshAlarms()
-  const registry = storage.__stores().get('aibolit-data.json').get('alarmRegistry')
+  const registry = getAlarmRegistry()
   const syncEntry = Object.values(registry).find(e => e.type === 'sync')
   assert.equal(syncEntry.interval, 2, 'в реестре настроенный интервал')
   const log = storage.__stores().get('aibolit-data.json').get('debugLog')
@@ -444,7 +461,7 @@ test('sync-таймер отражает настроенный интервал
 test('sync-таймер с интервалом 1 мин отражает интервал 1', () => {
   storage.__stores().get('aibolit-data.json').set('settings', { debugMode: true, syncInterval: 1, minFontSize: 16 })
   refreshAlarms()
-  const registry = storage.__stores().get('aibolit-data.json').get('alarmRegistry')
+  const registry = getAlarmRegistry()
   const syncEntry = Object.values(registry).find(e => e.type === 'sync')
   assert.equal(syncEntry.interval, 1, 'в реестре интервал 1 мин')
   const log = storage.__stores().get('aibolit-data.json').get('debugLog')
@@ -507,7 +524,7 @@ test('createIntakeAlarm регистрирует таймер в реестре 
 
   refreshAlarms()
 
-  const registry = storage.__stores().get('aibolit-data.json').get('alarmRegistry')
+  const registry = getAlarmRegistry()
   assert.ok(registry, 'реестр таймеров должен существовать')
   const intakeEntry = Object.values(registry).find(e => e.type === 'intake')
   assert.ok(intakeEntry, 'intake-таймер должен быть в реестре')
@@ -522,13 +539,13 @@ test('refreshAlarms вычищает из реестра таймер при и�
     { id: 'i1', time: '08:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] },
   ])
   const staleAlarmId = alarm.set({ url: 'app-service/reminder' })
-  storage.__stores().get('aibolit-data.json').set('alarmRegistry', {
+  setAlarmRegistry({
     [staleAlarmId]: { type: 'intake', intakeId: 'i1', time: '09:00', weekDays: null },
   })
 
   refreshAlarms()
 
-  const registry = storage.__stores().get('aibolit-data.json').get('alarmRegistry')
+  const registry = getAlarmRegistry()
   assert.equal(registry[staleAlarmId], undefined, 'таймер с изменившимися параметрами должен быть вычищен из реестра')
 })
 
@@ -654,9 +671,9 @@ test('refreshAlarms пересоздаёт sync-таймер, если в рее
   const firstSync = alarm.__getCalls().find(c => c.method === 'set' && JSON.parse(c.option.param).mode === 'sync')
   const syncId = firstSync.id
 
-  const registry = storage.__stores().get('aibolit-data.json').get('alarmRegistry')
+  const registry = getAlarmRegistry()
   registry[syncId].scheduleVersion = 1
-  storage.__stores().get('aibolit-data.json').set('alarmRegistry', registry)
+  setAlarmRegistry(registry)
 
   refreshAlarms()
 
