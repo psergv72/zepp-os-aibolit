@@ -31,6 +31,7 @@ const {
   setSyncQueue,
   getCancellations,
   setCancellations,
+  addCancellation,
   isIntakeCancelled,
   clearAll,
   saveAndQuit,
@@ -92,11 +93,12 @@ test('данные записываются в по-ключевые файлы 
 test('чтение из файла после сброса кэша (имитация другого контекста)', () => {
   setMedications([{ id: 'm1' }])
   saveAndQuit()
-  // сбрасываем кэш, удаляя файл через fs stub и пере-сидя файл вручную в NDJSON
+  // сбрасываем кэш и файлы (удаляем), затем вручную пишем NDJSON-файл
+  clearAll()
   fs.__resetFs()
   const { writeFileSync } = fs
   writeFileSync({ path: 'aibolit-key-medications.json', data: '{"T":"meta","A":["medications"],"medications":1}\n{"T":"medications","D":{"id":"m1"}}\n' })
-  // чистый кэш: getMedications читает с диска
+  // кэш пуст: getMedications читает с диска
   assert.deepEqual(getMedications(), [{ id: 'm1' }])
 })
 
@@ -177,9 +179,11 @@ test('syncQueue сохраняется и очищается', () => {
   assert.deepEqual(getSyncQueue(), [])
 })
 
-test('cancellations: добавление, проверка, повторное добавление не дублирует', () => {
-  setCancellations([])
-  setCancellations([{ intakeId: 'i1', date: '2026-08-07' }])
+test('addCancellation: добавление, проверка, повторное добавление не дублирует', () => {
+  clearAll()
+  addCancellation('i1', '2026-08-07')
+  addCancellation('i1', '2026-08-07')
   assert.equal(isIntakeCancelled('i1', '2026-08-07'), true)
   assert.equal(isIntakeCancelled('i2', '2026-08-07'), false)
+  assert.deepEqual(getCancellations(), [{ intakeId: 'i1', date: '2026-08-07' }])
 })
