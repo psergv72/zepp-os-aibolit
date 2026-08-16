@@ -1,11 +1,9 @@
-import { LocalStorage, ShareLocalStorage } from '@zos/storage'
-import { readFileSync, writeFileSync, rmSync } from '@zos/fs'
+import { AsyncStorage, Storage } from '@silver-zepp/easy-storage'
+import { parseNdJson } from './ndjson.js'
 import { STORAGE_KEYS, DEFAULT_SETTINGS } from './constants'
 
-const storage = new LocalStorage('aibolit-data.json')
-const PENDING_FILE = 'aibolit-pending.json'
-const DEBUG_LOG_FILE = 'aibolit-debuglog.json'
-const MIGRATION_FLAG = 'aibolit_storage_migrated'
+const pendingCache = new Map()
+
 const FS_FILE_NAMES = {
   [STORAGE_KEYS.MEDICATIONS]: 'aibolit-key-medications.json',
   [STORAGE_KEYS.INTAKES]: 'aibolit-key-intakes.json',
@@ -18,78 +16,55 @@ const FS_FILE_NAMES = {
   [STORAGE_KEYS.SNOOZE_ALARM_ID]: 'aibolit-key-snooze-id.json',
   [STORAGE_KEYS.RETRY_TICK_ALARM_ID]: 'aibolit-key-retry-tick-id.json',
   [STORAGE_KEYS.ALARM_REGISTRY]: 'aibolit-key-alarm-registry.json',
+  [STORAGE_KEYS.PENDING_NOTIFICATION]: 'aibolit-pending.json',
+  [STORAGE_KEYS.DEBUG_LOG]: 'aibolit-debuglog.json',
+  retryTickCount: 'aibolit-key-retry-tick-count.json',
 }
 
-function migrateFromShareLocalStorage() {
+function readKeyFile(path, key) {
   try {
-    if (storage.getItem(MIGRATION_FLAG)) return
-    const legacy = new ShareLocalStorage('aibolit-data.json')
-    for (const key of Object.values(STORAGE_KEYS)) {
-      const legacyValue = legacy.getItem(key)
-      if (legacyValue !== undefined && getItem(key, undefined) === undefined) {
-        setItem(key, legacyValue)
-      }
-    }
-    storage.setItem(MIGRATION_FLAG, true)
-  } catch (e) {
-    // ignore
-  }
-}
-
-function readKeyFile(path) {
-  try {
-    const content = readFileSync({ path, options: { encoding: 'utf8' } })
-    if (content === undefined || content === null || content === '') return undefined
-    return JSON.parse(content)
+    const content = Storage.ReadFile(path)
+    if (!content) return undefined
+    const parsed = parseNdJson(content)
+    if (parsed === undefined || parsed === null) return undefined
+    return parsed[key]
   } catch (e) {
     return undefined
   }
 }
 
-function writeKeyFile(path, value) {
-  try {
-    writeFileSync({ path, data: JSON.stringify(value), options: { encoding: 'utf8' } })
-  } catch (e) {
-    // ignore
-  }
-}
-
-function removeKeyFile(path) {
-  try {
-    rmSync({ path })
-  } catch (e) {
-    // ignore
-  }
-}
-
-function getItem(key, defaultValue = null) {
+export function getItem(key, defaultValue = null) {
+  if (pendingCache.has(key)) return pendingCache.get(key)
   const path = FS_FILE_NAMES[key]
   if (path) {
-    const fromFile = readKeyFile(path)
+    const fromFile = readKeyFile(path, key)
     if (fromFile !== undefined) return fromFile
   }
-  const value = storage.getItem(key)
-  return value !== undefined ? value : defaultValue
+  return defaultValue
 }
 
-function setItem(key, value) {
-  storage.setItem(key, value)
+export function setItem(key, value) {
+  pendingCache.set(key, value)
   const path = FS_FILE_NAMES[key]
-  if (path) writeKeyFile(path, value)
+  if (path) AsyncStorage.WriteJson(path, { [key]: value })
 }
 
-function removeItem(key) {
-  storage.removeItem(key)
+export function removeItem(key) {
+  pendingCache.delete(key)
   const path = FS_FILE_NAMES[key]
-  if (path) removeKeyFile(path)
+  if (path) Storage.RemoveFile(path)
 }
 
-function clear() {
-  storage.clear()
-  for (const path of Object.values(FS_FILE_NAMES)) removeKeyFile(path)
+export function clear() {
+  pendingCache.clear()
+  for (const path of Object.values(FS_FILE_NAMES)) {
+    Storage.RemoveFile(path)
+  }
 }
 
-migrateFromShareLocalStorage()
+export function saveAndQuit() {
+  return AsyncStorage.SaveAndQuit()
+}
 
 export function getMedications() {
   const value = getItem(STORAGE_KEYS.MEDICATIONS, [])
@@ -273,35 +248,13 @@ export function setRetryTickCount(count) {
   setItem('retryTickCount', count)
 }
 
-function readDebugLogFile() {
-  try {
-    const content = readFileSync({ path: DEBUG_LOG_FILE, options: { encoding: 'utf8' } })
-    if (content === undefined || content === null || content === '') return null
-    const parsed = JSON.parse(content)
-    return Array.isArray(parsed) ? parsed : null
-  } catch (e) {
-    return null
-  }
-}
-
-function writeDebugLogFile(log) {
-  try {
-    writeFileSync({ path: DEBUG_LOG_FILE, data: JSON.stringify(log), options: { encoding: 'utf8' } })
-  } catch (e) {
-    // ignore
-  }
-}
-
 export function getDebugLog() {
-  const fromFile = readDebugLogFile()
-  if (fromFile) return fromFile
   const value = getItem(STORAGE_KEYS.DEBUG_LOG, [])
   return Array.isArray(value) ? value : []
 }
 
 export function setDebugLog(log) {
   const normalized = Array.isArray(log) ? log : []
-  writeDebugLogFile(normalized)
   setItem(STORAGE_KEYS.DEBUG_LOG, normalized)
 }
 
@@ -330,46 +283,15 @@ export function unregisterAlarm(id) {
   }
 }
 
-function readPendingFile() {
-  try {
-    const content = readFileSync({ path: PENDING_FILE, options: { encoding: 'utf8' } })
-    if (content === undefined || content === null || content === '') return null
-    const parsed = JSON.parse(content)
-    return parsed && typeof parsed === 'object' ? parsed : null
-  } catch (e) {
-    return null
-  }
-}
-
-function writePendingFile(pending) {
-  try {
-    writeFileSync({ path: PENDING_FILE, data: JSON.stringify(pending), options: { encoding: 'utf8' } })
-  } catch (e) {
-    // ignore
-  }
-}
-
-function removePendingFile() {
-  try {
-    rmSync({ path: PENDING_FILE })
-  } catch (e) {
-    // ignore
-  }
-}
-
 export function getPendingNotification() {
-  const fromFile = readPendingFile()
-  if (fromFile) return fromFile
   const value = getItem(STORAGE_KEYS.PENDING_NOTIFICATION, null)
   return value && typeof value === 'object' ? value : null
 }
 
 export function setPendingNotification(pending) {
-  writePendingFile(pending)
   setItem(STORAGE_KEYS.PENDING_NOTIFICATION, pending)
 }
 
 export function clearPendingNotification() {
-  removePendingFile()
   removeItem(STORAGE_KEYS.PENDING_NOTIFICATION)
 }
