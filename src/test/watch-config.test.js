@@ -163,6 +163,54 @@ test('applyConfigFromSettings пишет в лог применение и пр�
   delete globalThis.settings
 })
 
+test('applyConfigToStorage пишет в лог предупреждение, когда конфиг с телефона пуст', () => {
+  store().set('settings', { debugMode: true })
+  store().set('medications', [{ id: 'm1' }])
+  store().set('intakes', [{ id: 'i1' }])
+
+  const result = applyConfigToStorage({ revision: 6, medications: [], intakes: [] })
+
+  assert.equal(result, true)
+  const log = store().get('debugLog')
+  assert.ok(log.some(e => /конфиг с телефона пуст/.test(e.message)), 'в логе предупреждение о пустом конфиге')
+  assert.ok(log.some(e => /было приёмов 1, лекарств 1/.test(e.message)), 'в логе прежнее количество данных')
+})
+
+test('applyConfigToStorage не пишет предупреждение, когда конфиг непустой', () => {
+  store().set('settings', { debugMode: true })
+
+  applyConfigToStorage({ revision: 6, medications: [{ id: 'm1' }], intakes: [{ id: 'i1' }] })
+
+  const log = store().get('debugLog')
+  assert.ok(!log.some(e => /конфиг с телефона пуст/.test(e.message)), 'нет предупреждения при непустом конфиге')
+})
+
+test('applyConfigFromSettings пишет в лог предупреждение, когда конфиг из settingsStorage пуст', () => {
+  store().set('settings', { debugMode: true })
+  store().set('medications', [{ id: 'm1' }])
+  store().set('intakes', [{ id: 'i1' }])
+  globalThis.settings = {
+    settingsStorage: {
+      getItem(key) {
+        const map = {
+          configRevision: '9',
+          medications: '[]',
+          intakes: '[]',
+        }
+        return map[key] !== undefined ? map[key] : null
+      },
+    },
+  }
+
+  const result = applyConfigFromSettings()
+
+  delete globalThis.settings
+  assert.equal(result, true)
+  const log = store().get('debugLog')
+  assert.ok(log.some(e => /конфиг из settingsStorage пуст/.test(e.message)), 'в логе предупреждение о пустом конфиге из зеркала')
+  assert.ok(log.some(e => /было приёмов 1, лекарств 1/.test(e.message)), 'в логе прежнее количество данных')
+})
+
 test('fetchConfigFromSide пишет в лог неудачную попытку получения настроек', async () => {
   store().set('settings', { debugMode: true })
   globalThis.getApp = () => ({

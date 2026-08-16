@@ -1,5 +1,5 @@
 import { ZML_METHODS, STORAGE_KEYS } from './constants'
-import { setMedications, setIntakes, setSettings, getConfigRevision, setConfigRevision } from './storage'
+import { setMedications, setIntakes, setSettings, getConfigRevision, setConfigRevision, getMedications, getIntakes } from './storage'
 import { parseSettingsItem } from './config-sync'
 import { addDebugEntry } from './debug-log'
 import { getMessaging } from './sync'
@@ -22,10 +22,19 @@ export function applyConfigToStorage(config) {
     addDebugEntry(`настройки с телефона пропущены: ревизия ${config.revision} не новее текущей`)
     return false
   }
+
+  const prevIntakes = getIntakes().length
+  const prevMeds = getMedications().length
+
   if (Array.isArray(config.medications)) setMedications(config.medications)
   if (Array.isArray(config.intakes)) setIntakes(config.intakes)
   if (config.settings && typeof config.settings === 'object') setSettings(config.settings)
   setConfigRevision(config.revision)
+
+  if (Array.isArray(config.medications) && config.medications.length === 0 && Array.isArray(config.intakes) && config.intakes.length === 0) {
+    addDebugEntry(`внимание: конфиг с телефона пуст (приёмы и лекарства отсутствуют), до применения было приёмов ${prevIntakes}, лекарств ${prevMeds}`)
+  }
+
   addDebugEntry(`настройки с телефона применены (ревизия ${config.revision})`)
   return true
 }
@@ -42,7 +51,11 @@ export function applyConfigFromSettings() {
     return false
   }
 
+  const prevIntakes = getIntakes().length
+  const prevMeds = getMedications().length
   let applied = false
+  let medsEmpty = false
+  let intakesEmpty = false
 
   const medsRaw = storage.getItem('medications')
   if (medsRaw !== null && medsRaw !== undefined) {
@@ -50,6 +63,7 @@ export function applyConfigFromSettings() {
     if (Array.isArray(value)) {
       setMedications(value)
       applied = true
+      if (value.length === 0) medsEmpty = true
     }
   }
 
@@ -59,6 +73,7 @@ export function applyConfigFromSettings() {
     if (Array.isArray(value)) {
       setIntakes(value)
       applied = true
+      if (value.length === 0) intakesEmpty = true
     }
   }
 
@@ -73,6 +88,9 @@ export function applyConfigFromSettings() {
 
   if (applied) {
     setConfigRevision(revision)
+    if (medsEmpty && intakesEmpty) {
+      addDebugEntry(`внимание: конфиг из settingsStorage пуст (приёмы и лекарства отсутствуют), до применения было приёмов ${prevIntakes}, лекарств ${prevMeds}`)
+    }
     addDebugEntry(`настройки из settingsStorage применены (ревизия ${revision})`)
   }
   return applied
