@@ -6,6 +6,7 @@ import { applyConfigToStorage, applyConfigFromSettings } from './utils/watch-con
 import { ZML_METHODS } from './utils/constants'
 import { initSync, retrySync } from './utils/sync'
 import { pushDebugSnapshot, addDebugEntry, clearDebugLog } from './utils/debug-log'
+import { saveAndQuit } from './utils/storage'
 
 const logger = Logger.getLogger('aibolit-app')
 
@@ -57,6 +58,7 @@ App(
     },
     onDestroy() {
       logger.log('app onDestroy invoked')
+      saveAndQuit()
     }
   })
 )

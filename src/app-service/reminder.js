@@ -3,7 +3,7 @@ import { fetchConfigFromSide } from '../utils/watch-config'
 import { refreshAlarms, createRetryTickAlarm } from '../utils/schedule'
 import { retrySync } from '../utils/sync'
 import { ALARM_MODES } from '../utils/constants'
-import { getTodayDateStr, clearSnoozeAlarmId } from '../utils/storage'
+import { getTodayDateStr, clearSnoozeAlarmId, saveAndQuit } from '../utils/storage'
 import { issueNotification, maybeRetryPending } from '../utils/notification-lifecycle'
 
 const logger = Logger.getLogger('aibolit-reminder')
@@ -68,5 +68,6 @@ AppService({
 
   onDestroy() {
     logger.log('reminder onDestroy')
+    saveAndQuit()
   },
 })
