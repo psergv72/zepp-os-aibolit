@@ -17,6 +17,11 @@ test('parseNdJson разбирает обычный JSON (fallback после Sa
   assert.deepEqual(parseNdJson(raw), { medications: [{ id: 'm1' }] })
 })
 
+test('parseNdJson разбирает многострочный обычный JSON (fallback)', () => {
+  const raw = '{\n  "medications": [\n    { "id": "m1" }\n  ]\n}\n'
+  assert.deepEqual(parseNdJson(raw), { medications: [{ id: 'm1' }] })
+})
+
 test('parseNdJson возвращает undefined для пустой строки', () => {
   assert.equal(parseNdJson(''), undefined)
   assert.equal(parseNdJson(undefined), undefined)

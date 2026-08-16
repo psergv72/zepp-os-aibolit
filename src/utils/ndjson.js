@@ -22,7 +22,7 @@ export function parseNdJson(content) {
   try {
     first = decodeTokens(JSON.parse(lines[0]))
   } catch (e) {
-    return undefined
+    // падаем в fallback для обычного JSON ниже
   }
   if (!first || first.type !== 'meta') {
     try {
