@@ -183,7 +183,7 @@ export function renewSyncAlarmWindow() {
   const syncInfo = syncAlarmId !== null ? registry[syncAlarmId] : undefined
   const activeIds = new Set(getAllAlarms() || [])
   const syncActive = syncAlarmId !== null && activeIds.has(syncAlarmId)
-  if (syncAlarmId !== null && syncActive && syncInfo && syncInfo.type === 'sync' && syncInfo.interval === interval && syncInfo.scheduleVersion === SCHEDULE_VERSION && typeof syncInfo.endTime === 'number' && syncInfo.endTime - Math.floor(Date.now() / 1000) > SYNC_RENEW_SECONDS) {
+  if (syncAlarmId !== null && syncActive && isSyncAlarmWindowValid(syncInfo, interval)) {
     logger.log(`Sync alarm window still valid id=${syncAlarmId}`)
     return syncAlarmId
   }
@@ -198,6 +198,15 @@ function weekDaysKey(weekDays) {
 function normalizeSyncInterval(raw) {
   const value = Number(raw)
   return Number.isFinite(value) && value > 0 ? Math.max(1, Math.round(value)) : DEFAULT_SETTINGS.syncInterval
+}
+
+function isSyncAlarmWindowValid(syncInfo, interval) {
+  return !!syncInfo
+    && syncInfo.type === 'sync'
+    && syncInfo.scheduleVersion === SCHEDULE_VERSION
+    && syncInfo.interval === interval
+    && typeof syncInfo.endTime === 'number'
+    && syncInfo.endTime - Math.floor(Date.now() / 1000) > SYNC_RENEW_SECONDS
 }
 
 function intakeAlarmMatches(info, intake) {
@@ -294,7 +303,7 @@ export function refreshAlarms() {
   const syncAlarmId = getSyncAlarmId()
   const syncInfo = syncAlarmId !== null ? registry[syncAlarmId] : undefined
   const syncActive = syncAlarmId !== null && activeIds.has(syncAlarmId)
-  if (syncAlarmId !== null && syncActive && syncInfo && syncInfo.type === 'sync' && syncInfo.interval === interval && syncInfo.scheduleVersion === SCHEDULE_VERSION && typeof syncInfo.endTime === 'number' && syncInfo.endTime - Math.floor(Date.now() / 1000) > SYNC_RENEW_SECONDS) {
+  if (syncAlarmId !== null && syncActive && isSyncAlarmWindowValid(syncInfo, interval)) {
     keepIds.add(syncAlarmId)
   } else {
     if (syncAlarmId !== null) cancelledIds.add(syncAlarmId)
