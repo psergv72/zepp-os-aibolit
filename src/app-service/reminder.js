@@ -1,6 +1,6 @@
 import { log as Logger } from '@zos/utils'
 import { syncFromPhone } from '../utils/sync-all'
-import { createRetryTickAlarm } from '../utils/schedule'
+import { createRetryTickAlarm, renewSyncAlarmWindow } from '../utils/schedule'
 import { retrySync } from '../utils/sync'
 import { ALARM_MODES } from '../utils/constants'
 import { getTodayDateStr, clearSnoozeAlarmId, saveAndQuit } from '../utils/storage'
@@ -24,6 +24,7 @@ function handleEvent(e) {
   if (mode === ALARM_MODES.SYNC) {
     logger.log('sync tick: apply config, fetch take logs, retry queue')
     syncFromPhone('sync-тик')
+    renewSyncAlarmWindow()
     retrySync()
     return
   }

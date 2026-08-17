@@ -175,6 +175,22 @@ export function createSyncAlarm(syncInterval) {
   return id
 }
 
+export function renewSyncAlarmWindow() {
+  const settings = getSettings()
+  const interval = normalizeSyncInterval(settings.syncInterval)
+  const syncAlarmId = getSyncAlarmId()
+  const registry = getAlarmRegistry()
+  const syncInfo = syncAlarmId !== null ? registry[syncAlarmId] : undefined
+  const activeIds = new Set(getAllAlarms() || [])
+  const syncActive = syncAlarmId !== null && activeIds.has(syncAlarmId)
+  if (syncAlarmId !== null && syncActive && syncInfo && syncInfo.type === 'sync' && syncInfo.interval === interval && syncInfo.scheduleVersion === SCHEDULE_VERSION && typeof syncInfo.endTime === 'number' && syncInfo.endTime - Math.floor(Date.now() / 1000) > SYNC_RENEW_SECONDS) {
+    logger.log(`Sync alarm window still valid id=${syncAlarmId}`)
+    return syncAlarmId
+  }
+  logger.log('Sync alarm window expired, recreating')
+  return createSyncAlarm(interval)
+}
+
 function weekDaysKey(weekDays) {
   return weekDays && weekDays.length ? weekDays.slice().sort((a, b) => a - b).join(',') : ''
 }

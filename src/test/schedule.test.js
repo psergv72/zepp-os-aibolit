@@ -8,7 +8,7 @@ const alarm = await import('./helpers/stubs/zos-alarm.mjs')
 const storage = await import('./helpers/stubs/zos-storage.mjs')
 const fs = await import('./helpers/stubs/zos-fs.mjs')
 
-const { refreshAlarms, createSyncAlarm, createSnoozeAlarm, createRetryTickAlarm } = await import('../utils/schedule.js')
+const { refreshAlarms, createSyncAlarm, createSnoozeAlarm, createRetryTickAlarm, renewSyncAlarmWindow } = await import('../utils/schedule.js')
 const { getAlarmRegistry, setAlarmRegistry } = await import('../utils/storage.js')
 const syncModule = await import('../utils/sync.js')
 
@@ -709,4 +709,34 @@ test('refreshAlarms отменяет таймер удалённого приё�
 
   const cancels = alarm.__getCalls().filter(c => c.method === 'cancel' && c.id === i2.id)
   assert.equal(cancels.length, 1, 'таймер удалённого приёма отменяется')
+})
+
+test('renewSyncAlarmWindow не пересоздаёт sync-таймер при валидном окне', () => {
+  storage.__stores().get('aibolit-data.json').set('settings', { syncInterval: 60, minFontSize: 16 })
+  storage.__stores().get('aibolit-data.json').set('intakes', [])
+  refreshAlarms()
+  const callsBefore = alarm.__getCalls().length
+
+  const id = renewSyncAlarmWindow()
+
+  assert.equal(alarm.__getCalls().length, callsBefore, 'при валидном окне будильники не пересоздаются')
+  assert.ok(id > 0, 'возвращается id текущего sync-таймера')
+})
+
+test('renewSyncAlarmWindow пересоздаёт sync-таймер при истекающем окне', () => {
+  storage.__stores().get('aibolit-data.json').set('settings', { syncInterval: 60, minFontSize: 16 })
+  storage.__stores().get('aibolit-data.json').set('intakes', [])
+  refreshAlarms()
+  const syncSet = alarm.__getCalls().find(c => c.method === 'set' && JSON.parse(c.option.param).mode === 'sync')
+  const syncId = syncSet.id
+  const registry = getAlarmRegistry()
+  registry[syncId].endTime = Math.floor(Date.now() / 1000) + 60 * 60
+  setAlarmRegistry(registry)
+
+  renewSyncAlarmWindow()
+
+  const syncSets = alarm.__getCalls().filter(c => c.method === 'set' && JSON.parse(c.option.param).mode === 'sync')
+  assert.equal(syncSets.length, 2, 'sync пересоздан при малом остатке окна')
+  const cancels = alarm.__getCalls().filter(c => c.method === 'cancel' && c.id === syncId)
+  assert.equal(cancels.length, 1, 'старый sync-таймер отменён')
 })
