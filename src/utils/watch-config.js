@@ -2,6 +2,7 @@ import { ZML_METHODS, STORAGE_KEYS } from './constants'
 import { setMedications, setIntakes, setSettings, getConfigRevision, setConfigRevision, getMedications, getIntakes } from './storage'
 import { parseSettingsItem } from './config-sync'
 import { addDebugEntry } from './debug-log'
+import { emitDataChanged } from './data-events'
 import { getMessaging } from './sync'
 
 export function getSettingsStorage() {
@@ -36,6 +37,7 @@ export function applyConfigToStorage(config) {
   if (Array.isArray(config.intakes)) setIntakes(config.intakes)
   if (config.settings && typeof config.settings === 'object') setSettings(config.settings)
   setConfigRevision(config.revision)
+  emitDataChanged()
 
   if (configBothEmpty) {
     addDebugEntry(`внимание: конфиг с телефона пуст (приёмы и лекарства отсутствуют) — применён`)
@@ -93,6 +95,7 @@ export function applyConfigFromSettings() {
   if (applied) {
     setConfigRevision(revision)
     addDebugEntry(`настройки из settingsStorage применены (ревизия ${revision})`)
+    emitDataChanged()
   }
   return applied
 }

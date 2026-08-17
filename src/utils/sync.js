@@ -1,4 +1,5 @@
 import { log as Logger } from '@zos/utils'
+import { emitDataChanged } from './data-events'
 import { ZML_METHODS, INTAKE_STATUS } from './constants'
 import { getSyncQueue, addToSyncQueue, clearSyncedItems, pruneOldTakeLogs, getTakeLogs, setTakeLogs } from './storage'
 
@@ -53,7 +54,10 @@ export function mergeTakeRecords(records) {
     takeLogs.push(record)
     changed = true
   }
-  if (changed) setTakeLogs(takeLogs)
+  if (changed) {
+    setTakeLogs(takeLogs)
+    emitDataChanged()
+  }
   return changed
 }
 
