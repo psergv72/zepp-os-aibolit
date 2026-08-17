@@ -121,8 +121,7 @@ export function fetchConfigFromSide(source = '', maxAttempts = 6, delayMs = 1000
       addDebugEntry(`запрос настроек с телефона (${source ? source + ', ' : ''}попытка ${maxAttempts - n + 1})`)
       messaging.request({ method: ZML_METHODS.GET_CONFIG })
         .then((result) => {
-          applyConfigToStorage(result && result.config)
-          resolve(!!(result && result.config))
+          resolve(applyConfigToStorage(result && result.config))
         })
         .catch(() => {
           if (n > 0 && typeof setTimeout === 'function') {

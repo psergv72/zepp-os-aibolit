@@ -327,3 +327,50 @@ test('fetchConfigFromSide не падает без setTimeout, когда зап
     delete globalThis.getApp
   }
 })
+
+test('fetchConfigFromSide возвращает false, когда конфиг получен, но не применён (старая ревизия)', async () => {
+  applyConfigToStorage({ revision: 5, medications: [{ id: 'm1' }] })
+  globalThis.getApp = () => ({
+    _options: {
+      globalData: {
+        messaging: {
+          request() {
+            return Promise.resolve({ config: { revision: 4, medications: [{ id: 'm2' }] } })
+          },
+        },
+      },
+    },
+  })
+
+  const result = await fetchConfigFromSide(undefined, 1, 1)
+
+  delete globalThis.getApp
+  assert.equal(result, false)
+  assert.deepEqual(store().get('medications'), [{ id: 'm1' }])
+})
+
+test('fetchConfigFromSide при неудачном запросе ретраит и применяет свежую конфигурацию', async () => {
+  const store = storage.__stores().get('aibolit-data.json')
+  store.set('configRevision', 3)
+  let attempt = 0
+  globalThis.getApp = () => ({
+    _options: {
+      globalData: {
+        messaging: {
+          request() {
+            attempt++
+            if (attempt === 1) return Promise.reject(new Error('offline'))
+            return Promise.resolve({ config: { revision: 4, medications: [{ id: 'm2' }] } })
+          },
+        },
+      },
+    },
+  })
+
+  const result = await fetchConfigFromSide(undefined, 2, 10)
+
+  delete globalThis.getApp
+  assert.equal(result, true)
+  assert.deepEqual(store.get('medications'), [{ id: 'm2' }])
+  assert.equal(store.get('configRevision'), 4)
+})
