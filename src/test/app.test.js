@@ -9,110 +9,51 @@ globalThis.App = (opts) => { appOpts = opts }
 
 const storage = await import('./helpers/stubs/zos-storage.mjs')
 const fs = await import('./helpers/stubs/zos-fs.mjs')
+const sync = await import('../utils/sync.js')
 
 await import('../app.js')
-
-const originalSyncConfig = appOpts.syncConfig
 
 function seed() {
   storage.__resetStorage()
   fs.__resetFs()
   new storage.LocalStorage('aibolit-data.json')
-  appOpts.syncConfig = originalSyncConfig
-  delete appOpts.request
+  sync.initSync(null)
+  delete globalThis.getApp
 }
 
 beforeEach(() => {
   seed()
 })
 
-test('onCall CONFIG_SYNCED запрашивает свежий конфиг с телефона вместо применения payload', () => {
-  let syncCalled = 0
-  appOpts.syncConfig = () => { syncCalled++ }
+test('onCall CONFIG_SYNCED запрашивает свежий конфиг с телефона вместо применения payload', async () => {
+  const sent = []
+  sync.initSync({
+    request(payload) {
+      sent.push(payload)
+      if (payload.method === 'get_config') return Promise.resolve({ config: { revision: 9, medications: [], intakes: [] } })
+      if (payload.method === 'get_take_logs') return Promise.resolve({ records: [] })
+      return Promise.resolve({ success: true, count: 0 })
+    },
+  })
 
   appOpts.onCall({ method: 'config_synced', params: { config: { revision: 99, medications: [] } } })
+  await new Promise((resolve) => setTimeout(resolve, 10))
 
-  assert.equal(syncCalled, 1, 'уведомление запускает syncConfig')
+  assert.ok(sent.some(p => p.method === 'get_config'), 'уведомление запускает запрос конфига')
   const store = storage.__stores().get('aibolit-data.json')
-  assert.equal(store.get('configRevision'), undefined, 'payload не применяется напрямую')
+  assert.equal(store.get('configRevision'), 9, 'применён конфиг из ответа, а не из payload')
 })
 
-test('onCall CONFIG_SYNCED пишет в отладочный лог при включённой отладке', () => {
+test('onCall CONFIG_SYNCED пишет в отладочный лог при включённой отладке', async () => {
   const store = storage.__stores().get('aibolit-data.json')
   store.set('settings', { debugMode: true })
-  appOpts.syncConfig = () => {}
+  sync.initSync({ request: () => Promise.resolve({ config: { revision: 9 } }) })
 
   appOpts.onCall({ method: 'config_synced' })
+  await new Promise((resolve) => setTimeout(resolve, 10))
 
   const log = store.get('debugLog')
   assert.ok(log.some(e => e.message.includes('получено уведомление об изменении настроек с телефона')))
-})
-
-test('syncConfig применяет конфиг с телефона при успешном ответе', async () => {
-  const requests = []
-  appOpts.request = (payload) => {
-    requests.push(payload)
-    return Promise.resolve({
-      config: {
-        revision: 3,
-        medications: [{ id: 'm1' }],
-        intakes: [{ id: 'i1' }],
-        settings: { minFontSize: 20 },
-      },
-    })
-  }
-
-  appOpts.syncConfig()
-  await new Promise((resolve) => setTimeout(resolve, 0))
-
-  assert.equal(requests.length, 1)
-  assert.equal(requests[0].method, 'get_config')
-  const store = storage.__stores().get('aibolit-data.json')
-  assert.deepEqual(store.get('medications'), [{ id: 'm1' }])
-  assert.deepEqual(store.get('intakes'), [{ id: 'i1' }])
-  assert.deepEqual(store.get('settings'), { minFontSize: 20 })
-  assert.equal(store.get('configRevision'), 3)
-})
-
-test('syncConfig игнорирует конфиг с не более новой ревизией', async () => {
-  appOpts.request = () => Promise.resolve({ config: { revision: 3, medications: [{ id: 'm1' }] } })
-
-  appOpts.syncConfig()
-  await new Promise((resolve) => setTimeout(resolve, 0))
-
-  appOpts.request = () => Promise.resolve({ config: { revision: 3, medications: [{ id: 'm2' }] } })
-
-  appOpts.syncConfig()
-  await new Promise((resolve) => setTimeout(resolve, 0))
-
-  const store = storage.__stores().get('aibolit-data.json')
-  assert.deepEqual(store.get('medications'), [{ id: 'm1' }])
-})
-
-test('syncConfig при неудачном запросе не сбрасывает конфигурацию, а ретрай применяет свежую', async () => {
-  const store = storage.__stores().get('aibolit-data.json')
-  store.set('medications', [{ id: 'm1' }])
-  store.set('intakes', [{ id: 'i1' }])
-  store.set('configRevision', 3)
-
-  let attempt = 0
-  appOpts.request = () => {
-    attempt++
-    if (attempt === 1) return Promise.reject(new Error('offline'))
-    return Promise.resolve({ config: { revision: 4, medications: [{ id: 'm2' }] } })
-  }
-
-  appOpts.syncConfig()
-  await new Promise((resolve) => setTimeout(resolve, 0))
-
-  assert.deepEqual(store.get('medications'), [{ id: 'm1' }], 'после первой неудачи конфиг не сброшен')
-  assert.deepEqual(store.get('intakes'), [{ id: 'i1' }], 'intakes не сброшены')
-  assert.equal(store.get('configRevision'), 3)
-
-  await new Promise((resolve) => setTimeout(resolve, 1100))
-
-  assert.deepEqual(store.get('medications'), [{ id: 'm2' }], 'ретрай применил свежий конфиг')
-  assert.equal(store.get('configRevision'), 4)
 })
 
 test('onCall CLEAR_DEBUG очищает отладочный лог на часах', () => {
@@ -125,14 +66,20 @@ test('onCall CLEAR_DEBUG очищает отладочный лог на час�
   assert.deepEqual(store.get('debugLog'), [])
 })
 
-test('syncConfig пишет источник в отладочный лог', async () => {
-  const store = storage.__stores().get('aibolit-data.json')
-  store.set('settings', { debugMode: true })
-  appOpts.request = () => Promise.resolve({ config: { revision: 3 } })
+test('onCreate запускает фоновую синхронизацию (get_config и get_take_logs)', async () => {
+  const sent = []
+  const fakeSide = {
+    request(payload) {
+      sent.push(payload)
+      if (payload.method === 'get_config') return Promise.resolve({ config: { revision: 9, medications: [], intakes: [] } })
+      if (payload.method === 'get_take_logs') return Promise.resolve({ records: [] })
+      return Promise.resolve({ success: true, count: 0 })
+    },
+  }
 
-  appOpts.syncConfig(0, 'уведомление')
-  await new Promise((resolve) => setTimeout(resolve, 0))
+  appOpts.onCreate.call({ globalData: { messaging: fakeSide } })
+  await new Promise((resolve) => setTimeout(resolve, 20))
 
-  const log = store.get('debugLog')
-  assert.ok(log.some(e => e.message.includes('запрос настроек с телефона (уведомление, попытка 1)')))
+  assert.ok(sent.some(p => p.method === 'get_config'), 'onCreate запрашивает конфиг')
+  assert.ok(sent.some(p => p.method === 'get_take_logs'), 'onCreate запрашивает take-логи')
 })

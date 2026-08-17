@@ -2,9 +2,10 @@ import { BaseApp } from '@zeppos/zml/base-app'
 import { appPlugin } from '@zeppos/zml/3.0/module/messaging/plugin/app'
 import { log as Logger } from '@zos/utils'
 import { refreshAlarms } from './utils/schedule'
-import { applyConfigToStorage, applyConfigFromSettings } from './utils/watch-config'
+import { applyConfigFromSettings } from './utils/watch-config'
 import { ZML_METHODS } from './utils/constants'
 import { initSync, retrySync } from './utils/sync'
+import { syncFromPhone } from './utils/sync-all'
 import { pushDebugSnapshot, addDebugEntry, clearDebugLog } from './utils/debug-log'
 import { saveAndQuit } from './utils/storage'
 
@@ -22,14 +23,21 @@ App(
       if (applyConfigFromSettings()) {
         logger.log('config applied from settings on create')
       }
-      this.syncConfig(0, 'при старте')
-      refreshAlarms()
+      const runSync = () => {
+        refreshAlarms()
+        syncFromPhone('при старте')
+      }
+      if (typeof setTimeout === 'function') {
+        setTimeout(runSync, 0)
+      } else {
+        runSync()
+      }
     },
     onCall(data) {
       logger.log(`app onCall method: ${data && data.method}`)
       if (data && data.method === ZML_METHODS.CONFIG_SYNCED) {
         addDebugEntry('получено уведомление об изменении настроек с телефона')
-        this.syncConfig(0, 'уведомление')
+        syncFromPhone('уведомление')
       }
       if (data && data.method === ZML_METHODS.REQUEST_DEBUG) {
         pushDebugSnapshot()
@@ -37,24 +45,6 @@ App(
       if (data && data.method === ZML_METHODS.CLEAR_DEBUG) {
         clearDebugLog()
       }
-    },
-    syncConfig(attempt = 0, source = '') {
-      addDebugEntry(`запрос настроек с телефона (${source ? source + ', ' : ''}попытка ${attempt + 1})`)
-      this.request({ method: ZML_METHODS.GET_CONFIG })
-        .then((result) => {
-          logger.log('app syncConfig result received')
-          applyConfigToStorage(result && result.config)
-          refreshAlarms()
-        })
-        .catch((error) => {
-          logger.log(`app syncConfig failed: ${error}`)
-          if (attempt < 5) {
-            addDebugEntry(`не удалось получить настройки с телефона: ${error}, повтор через 1 с`)
-            setTimeout(() => this.syncConfig(attempt + 1, source), 1000)
-          } else {
-            addDebugEntry('не удалось получить настройки с телефона: попытки исчерпаны')
-          }
-        })
     },
     onDestroy() {
       logger.log('app onDestroy invoked')
