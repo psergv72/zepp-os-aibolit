@@ -298,10 +298,17 @@ test('refreshAlarms создаёт тик-будильник один раз и 
     { id: 'i1', time: '08:00', weekDays: null, items: [{ medicationId: 'm1', amount: '1' }] },
   ])
   refreshAlarms()
+  const first = alarm.__getCalls().filter(c => c.method === 'set' && JSON.parse(c.option.param).mode === 'retry_tick')
+  assert.equal(first.length, 1, 'первый тик-будильник создан')
+  const tickId = first[0].id
+  const registry = getAlarmRegistry()
+  registry[tickId].endTime = Math.floor(Date.now() / 1000) + 12 * 60 * 60
+  setAlarmRegistry(registry)
+
   refreshAlarms()
+
   const tickSets = alarm.__getCalls().filter(c => c.method === 'set' && JSON.parse(c.option.param).mode === 'retry_tick')
   assert.equal(tickSets.length, 1, 'тик-будильник создаётся один раз')
-  const tickId = tickSets[0].id
   const cancels = alarm.__getCalls().filter(c => c.method === 'cancel')
   assert.ok(!cancels.some(c => c.id === tickId), 'тик-будильник не должен быть отменён')
 })
