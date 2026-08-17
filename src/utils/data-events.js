@@ -1,19 +1,20 @@
-const listeners = new Set()
+let listeners = []
 
 export function subscribeToData(fn) {
   if (typeof fn !== 'function') return () => {}
-  listeners.add(fn)
+  listeners.push(fn)
   return () => {
-    listeners.delete(fn)
+    listeners = listeners.filter((l) => l !== fn)
   }
 }
 
 export function emitDataChanged() {
-  for (const fn of Array.from(listeners)) {
+  const current = listeners.slice()
+  for (let i = 0; i < current.length; i++) {
     try {
-      fn()
+      current[i]()
     } catch (e) {
-      // ошибка слушателя не должна прерывать остальных
+      console.error('aibolit data-events: слушатель данных бросил', e)
     }
   }
 }
