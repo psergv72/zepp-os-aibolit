@@ -16,6 +16,16 @@ function seed() {
 
 beforeEach(() => {
   seed()
+  delete globalThis.__aibolitDataListeners
+})
+
+test('слушатели хранятся в глобальном списке, общем для всех бандлов приложения', () => {
+  const fn = () => {}
+  const off = subscribeToData(fn)
+  assert.ok(Array.isArray(globalThis.__aibolitDataListeners), 'список слушателей лежит в globalThis')
+  assert.equal(globalThis.__aibolitDataListeners.length, 1)
+  off()
+  assert.equal(globalThis.__aibolitDataListeners.length, 0)
 })
 
 test('подписка: эмит вызывает слушателя', () => {
