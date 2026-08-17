@@ -289,3 +289,42 @@ test('приёмы на плане отсортированы по времен�
   assert.ok(time8 && time10, 'оба приёма должны отображаться')
   assert.ok(time8.props.y < time10.props.y, '8:00 должен идти раньше 10:00')
 })
+
+test('build() не выполняет сетевых запросов к телефону', async () => {
+  const sent = []
+  globalThis.getApp = () => ({
+    _options: {
+      globalData: {
+        messaging: {
+          request(p) {
+            sent.push(p)
+            return Promise.resolve({ records: [] })
+          },
+        },
+      },
+    },
+  })
+  let page
+  try {
+    page = instance()
+    page.build()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    assert.equal(sent.length, 0, 'build не должен ходить в сеть')
+  } finally {
+    page.onDestroy()
+    delete globalThis.getApp
+  }
+})
+
+test('событие данных перерисовывает страницу, после onDestroy — нет', async () => {
+  const { emitDataChanged } = await import('../utils/data-events.js')
+  const page = instance()
+  page.build()
+  const before = __getRedrawCount()
+  emitDataChanged()
+  assert.ok(__getRedrawCount() > before, 'событие данных вызывает перерисовку')
+  page.onDestroy()
+  const afterDestroy = __getRedrawCount()
+  emitDataChanged()
+  assert.equal(__getRedrawCount(), afterDestroy, 'после onDestroy событие не перерисовывает')
+})
