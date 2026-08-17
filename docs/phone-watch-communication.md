@@ -64,13 +64,16 @@ this.call({ method: 'config_synced', params: { config } })
 
 ### Pull-запрос (request, `get_config`)
 
-Источники на часах:
-1. `app.js` `onCreate()` → `syncConfig()` — запрос с ретраями до 5 попыток
-   (интервал 1 с).
-2. `watch-config.js` `fetchConfigFromSide()` — вызывается из страниц
-   **home** и **plan** в `build()` (`pullConfig()`), до 6 попыток с интервалом 1 с.
-3. `watch-config.js` `applyConfigFromSettings()` — читает конфиг из
-   `settings.settingsStorage` напрямую (обход request), если storage доступен.
+Источники на часах (только старт/тик/пуш — при навигации запросов нет):
+1. `app.js` `onCreate()` → `syncFromPhone('при старте')` → `fetchConfigFromSide()`
+   — запрос с ретраями до 6 попыток (интервал 1 с).
+2. `app-service/reminder.js` фоновый sync-тик (`mode:'sync'`) →
+   `syncFromPhone('sync-тик')`.
+3. `app.js` `onCall(CONFIG_SYNCED)` (push-уведомление об изменении настроек) →
+   `syncFromPhone('уведомление')`.
+4. `watch-config.js` `applyConfigFromSettings()` — читает конфиг из
+   `settings.settingsStorage` напрямую (обход request), если storage доступен;
+   вызывается первым шагом `fetchConfigFromSide` и в `onCreate`.
 
 Ответ side service: `res(null, { config })`.
 
@@ -115,8 +118,9 @@ this.call({ method: 'config_synced', params: { config } })
 
 ### `get_take_logs` (вытягивание истории)
 
-Триггер: страницы **home** и **plan** в `build()` (`pullTakes()`) → запрашивают
-записи за сегодня.
+Триггер: единая фоновая синхронизация `syncFromPhone()` (`src/utils/sync-all.js`)
+— при старте приложения (`onCreate`), на фоновом sync-тике и при push
+`config_synced`. Запрашивает записи за сегодня.
 
 - Ответ: `res(null, { records })` из `history_${date}` на телефоне.
 - На часах: `mergeTakeRecords(records)` — добавляет в `takeLogs` только записи
@@ -139,14 +143,14 @@ this.call({ method: 'config_synced', params: { config } })
 |---------|----------|
 | Старт side service (телефон) | push `config_synced` |
 | Изменение `medications`/`intakes`/`settings` в настройках телефона | push `config_synced` |
-| Запуск приложения на часах (`onCreate`) | request `get_config` + `retrySync()` очереди |
-| Фоновый тик sync-alarm (`mode:'sync'`, каждые `syncInterval` мин) | `applyConfigFromSettings` + `refreshAlarms` + `retrySync()` |
-| Открытие страницы home/plan | request `get_config` + request `get_take_logs` |
+| Запуск приложения на часах (`onCreate`) | request `get_config` + `get_take_logs` + `retrySync()` очереди |
+| Фоновый тик sync-alarm (`mode:'sync'`, каждые `syncInterval` мин) | `syncFromPhone` (`get_config` + `get_take_logs`) + `retrySync()` |
+| Push `config_synced` на часах | `syncFromPhone` (`get_config` + `get_take_logs`) |
+| Открытие страницы home/plan | **сетевых запросов нет** — только локальные данные + перерисовка по событию |
 | Действие «принял» / «отложить» / «отменить» / «снять принятие» (take, home, plan, snooze) | request `sync_intake` (вся очередь) |
 
 - Единственные повторы — ретраи по запросу с интервалом 1 с:
-  - `app.syncConfig()`: до 5 попыток.
-  - `fetchConfigFromSide()`: до 6 попыток.
+  - `fetchConfigFromSide()` (внутри `syncFromPhone`): до 6 попыток.
   - `app.onCreate()`: разовый `retrySync()` для накопленной очереди.
 - Записи, не доставленные из-за отсутствия связи, живут в `syncQueue` до
   следующего `sendTakeLogToPhone` (попытка вместе с новыми) или следующего запуска.
@@ -204,13 +208,19 @@ this.call({ method: 'config_synced', params: { config } })
 ## Замечания для дальнейшей работы
 
 1. `syncInterval` реализован как фоновый sync-alarm (`REPEAT_MINUTE`) — будит
-   `app-service/reminder.js` с `mode:'sync'`, который применяет конфиг,
-   пересоздаёт будильники и ретраит очередь.
+   `app-service/reminder.js` с `mode:'sync'`, который тянет конфиг и take-логи
+   (`syncFromPhone`), продлевает окно sync-таймера (`renewSyncAlarmWindow`) и
+   ретраит очередь.
 2. Отмена приёма и снятие принятия (undo) встают в очередь `sync_intake`
    (`cancelled`/`undone`) и переживают обрыв связи.
 3. Восстановление отмены («вернуть прием») на часах не синхронизируется с
    телефоном (метод `restore_intake` объявлен, но не реализован).
-4. `get_take_logs` запрашивается только при открытии home/plan — после закрытия
-   приложения новые записи с телефона подтянутся только при следующем открытии.
+4. `get_take_logs` запрашивается единой фоновой синхронизацией `syncFromPhone`
+   (старт приложения, фоновый sync-тик, push `config_synced`) — при навигации
+   сетевых запросов нет.
 5. `mergeTakeRecords` на часах игнорирует не-`taken` записи и записи `taken`,
    для которых в очереди есть неотправленный `undone` той же пары.
+6. Страницы home/plan подписаны на локальную шину `data-events` и перерисовываются
+   при изменении конфига (`applyConfigToStorage`/`applyConfigFromSettings`) или
+   слиянии take-логов (`mergeTakeRecords`); локальные записи из lifecycle
+   уведомлений (`markSkipped`) пока не эмитят событие.
