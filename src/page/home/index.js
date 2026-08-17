@@ -21,6 +21,7 @@ Page({
     logger.log('home page build')
     this._destroyed = false
     this.refreshView()
+    if (this._offData) this._offData()
     this._offData = subscribeToData(() => this.refreshView())
   },
 
