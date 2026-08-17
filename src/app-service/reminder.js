@@ -1,6 +1,6 @@
 import { log as Logger } from '@zos/utils'
-import { fetchConfigFromSide } from '../utils/watch-config'
-import { refreshAlarms, createRetryTickAlarm } from '../utils/schedule'
+import { syncFromPhone } from '../utils/sync-all'
+import { createRetryTickAlarm } from '../utils/schedule'
 import { retrySync } from '../utils/sync'
 import { ALARM_MODES } from '../utils/constants'
 import { getTodayDateStr, clearSnoozeAlarmId, saveAndQuit } from '../utils/storage'
@@ -22,9 +22,8 @@ function handleEvent(e) {
   const { mode, intakeId, date } = params
 
   if (mode === ALARM_MODES.SYNC) {
-    logger.log('sync tick: apply config, refresh alarms, retry queue')
-    fetchConfigFromSide('sync-тик')
-    refreshAlarms()
+    logger.log('sync tick: apply config, fetch take logs, retry queue')
+    syncFromPhone('sync-тик')
     retrySync()
     return
   }

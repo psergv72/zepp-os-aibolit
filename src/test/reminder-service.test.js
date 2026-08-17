@@ -88,7 +88,7 @@ test('onInit игнорирует битый JSON', () => {
   assert.equal(notification.__calls.length, 0)
 })
 
-test('mode sync применяет настройки, обновляет будильники и ретраит очередь без уведомления', () => {
+test('mode sync применяет настройки, обновляет будильники и ретраит очередь без уведомления', async () => {
   const settingsMap = {
     configRevision: JSON.stringify(2),
     medications: JSON.stringify([{ id: 'm2', name: 'Ибупрофен', enabled: true }]),
@@ -106,7 +106,8 @@ test('mode sync применяет настройки, обновляет буд
   syncModule.initSync({
     request(payload) {
       sent.push(payload)
-      return Promise.resolve({ success: true, count: payload.params.records.length })
+      if (payload.method === 'get_take_logs') return Promise.resolve({ records: [] })
+      return Promise.resolve({ success: true, count: (payload.params && payload.params.records) ? payload.params.records.length : 0 })
     },
   })
   const store = storage.__stores().get('aibolit-data.json')
@@ -115,6 +116,7 @@ test('mode sync применяет настройки, обновляет буд
   serviceOpts.onInit(JSON.stringify({ mode: 'sync' }))
 
   delete globalThis.settings
+  await new Promise((resolve) => setTimeout(resolve, 0))
   assert.equal(notification.__calls.length, 0)
   assert.equal(store.get('configRevision'), 2)
   assert.deepEqual(store.get('medications'), [{ id: 'm2', name: 'Ибупрофен', enabled: true }])
