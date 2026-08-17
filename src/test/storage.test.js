@@ -84,8 +84,8 @@ test('данные записываются в по-ключевые файлы 
   const alarmFile = fsFiles['aibolit-key-sync-alarm-id.json']
   assert.ok(medFile, 'файл медикаментов создан')
   assert.ok(alarmFile, 'файл sync-alarm id создан')
-  // saveAndQuit пишет обычный JSON синхронно (NDJSON формирует асинхронный путь
-  // AsyncStorage); parseNdJson умеет читать оба формата, поэтому данные переживают рестарт.
+  // setItem пишет обычный JSON синхронно через Storage.WriteJson;
+  // parseNdJson умеет читать оба формата, поэтому данные переживают рестарт.
   assert.deepEqual(parseNdJson(medFile), { medications: [{ id: 'm1', name: 'Парацетамол', enabled: true }] })
   assert.deepEqual(parseNdJson(alarmFile), { syncAlarmId: 42 })
 })
@@ -112,6 +112,15 @@ test('setPendingNotification сохраняет объект, getPendingNotifica
   assert.deepEqual(getPendingNotification(), pending)
 })
 
+test('setPendingNotification синхронно пишет pending в файл (переживает перезапуск app-service)', () => {
+  const pending = { intakeId: 'i1', date: '2026-08-07', issuedAt: 123 }
+  setPendingNotification(pending)
+
+  const raw = fs.__fsFiles()['aibolit-pending.json']
+  assert.ok(raw, 'файл pending должен быть создан сразу после записи')
+  assert.deepEqual(parseNdJson(raw), { pendingNotification: pending })
+})
+
 test('clearPendingNotification сбрасывает pending в null', () => {
   setPendingNotification({ intakeId: 'i1', date: '2026-08-07' })
   clearPendingNotification()
@@ -130,6 +139,15 @@ test('setDebugLog сохраняет массив, getDebugLog его возвр
 test('setDebugLog игнорирует не-массив и сбрасывает в пустой', () => {
   setDebugLog('oops')
   assert.deepEqual(getDebugLog(), [])
+})
+
+test('setDebugLog синхронно пишет лог в файл (переживает перезапуск приложения)', () => {
+  setDebugLog([{ ts: 1, message: 'запуск 1' }, { ts: 2, message: 'запуск 2' }])
+
+  const files = fs.__fsFiles()
+  const raw = files['aibolit-debuglog.json']
+  assert.ok(raw, 'файл debuglog должен быть создан сразу после записи')
+  assert.deepEqual(parseNdJson(raw), { debugLog: [{ ts: 1, message: 'запуск 1' }, { ts: 2, message: 'запуск 2' }] })
 })
 
 test('getAlarmRegistry возвращает пустой объект, если реестр не задан', () => {

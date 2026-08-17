@@ -46,20 +46,22 @@ export function getItem(key, defaultValue = null) {
 export function setItem(key, value) {
   pendingCache.set(key, value)
   const path = FS_FILE_NAMES[key]
-  if (path) AsyncStorage.WriteJson(path, { [key]: value })
+  if (!path) return
+  // Запись всегда синхронная (Storage.WriteJson), а не AsyncStorage:
+  // async-очередь теряет данные при выгрузке app/app-service без saveAndQuit().
+  // Это критично для pendingNotification (повторные уведомления), debug-лога
+  // и служебных id будильников — они должны переживать перезапуск.
+  Storage.WriteJson(path, { [key]: value })
 }
 
-// Внимание: setItem ставит AsyncStorage.WriteJson в очередь (асинхронная запись ~2 мс).
-// Если удаление выполнится раньше срабатывания очереди, запись пересоздаст файл со старым значением.
-// Сейчас вызовы set/remove разнесены во времени, поэтому окно гонки не достигается.
+// setItem пишет синхронно, поэтому гонки set→remove/clear нет:
+// файл на диске всегда отражает текущее состояние к моменту возврата из setItem.
 export function removeItem(key) {
   pendingCache.delete(key)
   const path = FS_FILE_NAMES[key]
   if (path) Storage.RemoveFile(path)
 }
 
-// Внимание: аналогичная гонка set→clear — уже поставленные в очередь записи
-// (AsyncStorage.WriteJson) не отменяются и могут пересоздать файлы после удаления.
 export function clear() {
   pendingCache.clear()
   for (const path of Object.values(FS_FILE_NAMES)) {
@@ -68,6 +70,7 @@ export function clear() {
 }
 
 export function saveAndQuit() {
+  // Записи синхронные, очередь AsyncStorage пуста; вызов оставлен для совместимости.
   return AsyncStorage.SaveAndQuit()
 }
 
