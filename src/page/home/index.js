@@ -2,9 +2,9 @@ import { log as Logger } from '@zos/utils'
 import { createWidget, deleteWidget, widget, event, align, text_style, redraw } from '@zos/ui'
 import { replace as routerReplace } from '@zos/router'
 import { getMedications, getIntakes, getTakeLogs, getCancellations, addTakeLog, getTodayDateStr } from '../../utils/storage'
-import { sendTakeLogToPhone, fetchTakesFromPhone, mergeTakeRecords } from '../../utils/sync'
+import { sendTakeLogToPhone } from '../../utils/sync'
 import { getIntakeEntries, isIntakeOnDay, isIntakeTakenToday, isIntakeCancelledToday, isIntakeSkippedToday, medItemText, timeToMinutes, sortIntakeEntriesByTime } from '../../utils/intake-logic.js'
-import { fetchConfigFromSide } from '../../utils/watch-config'
+import { subscribeToData } from '../../utils/data-events'
 import { sysText, getUiScale } from '../../utils/ui-scale'
 import { getContentBounds, renderTimeHeader, renderNavButton, enableScroll } from '../../utils/screen-layout'
 import { createViewManager } from '../../utils/view-manager'
@@ -21,22 +21,7 @@ Page({
     logger.log('home page build')
     this._destroyed = false
     this.refreshView()
-    this.pullConfig()
-    this.pullTakes()
-  },
-
-  pullConfig() {
-    fetchConfigFromSide('страница home').then((config) => {
-      if (config && !this._destroyed) this.refreshView()
-    })
-  },
-
-  pullTakes() {
-    const todayDateStr = getTodayDateStr()
-    fetchTakesFromPhone(todayDateStr).then((records) => {
-      if (this._destroyed) return
-      if (mergeTakeRecords(records)) this.refreshView()
-    })
+    this._offData = subscribeToData(() => this.refreshView())
   },
 
   onInit() {
@@ -46,6 +31,7 @@ Page({
   onDestroy() {
     logger.log('home page onDestroy')
     this._destroyed = true
+    if (this._offData) this._offData()
     if (this.ui) this.ui.clear()
   },
 
